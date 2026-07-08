@@ -34,6 +34,9 @@ app.post("/messages", async (c) => {
   if (!body?.to || !body.content) {
     return c.json({ error: "to and content are required" }, 400);
   }
+  if (body.imageUrl && !isHttpUrl(body.imageUrl)) {
+    return c.json({ error: "imageUrl must be an http(s) url" }, 400);
+  }
 
   try {
     return c.json(await sendMessage(body.to, body.content, body.imageUrl));
@@ -42,5 +45,14 @@ app.post("/messages", async (c) => {
     return c.json({ error: message }, 502);
   }
 });
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export default app;
