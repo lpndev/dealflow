@@ -8,9 +8,9 @@
   --color-text: #e8edf5;
   --color-muted: #8794ac;
   --color-gold: #f5b841;
-  --color-gold-dim: #6b5526;
   --color-go: #35d08a;
   --color-fail: #f2555c;
+  --color-wa: #005c4b;
 
   --font-mono:
     ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;

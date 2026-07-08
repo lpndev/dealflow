@@ -49,6 +49,24 @@ function draftToForm(draft: Draft): Form {
   };
 }
 
+const STEPS = [
+  { n: "01", label: "Importar", hint: "Cole o link ou a mensagem da oferta" },
+  {
+    n: "02",
+    label: "Revisar",
+    hint: "O operador decide. Ajuste antes de publicar.",
+  },
+  {
+    n: "03",
+    label: "Enviar",
+    hint: "Uma vez enviada, a publicação é imutável.",
+  },
+];
+
+const API_DOWN = "A API não respondeu. Confira se ela está rodando.";
+
+const plural = (n: number) => (n === 1 ? "" : "s");
+
 export function App() {
   const [input, setInput] = useState("");
   const [form, setForm] = useState<Form | null>(null);
@@ -75,18 +93,8 @@ export function App() {
   }
 
   async function syncDestinations() {
-    setError(null);
-    try {
-      const res = await fetch(`${API}/destinations/sync`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Não deu para sincronizar os grupos.");
-        return;
-      }
-      setDestinations(data.destinations ?? []);
-    } catch {
-      setError("A API não respondeu. Confira se ela está rodando.");
-    }
+    const data = await post("/destinations/sync", {});
+    if (data) setDestinations(data.destinations ?? []);
   }
 
   async function importDeal() {
@@ -109,7 +117,7 @@ export function App() {
         setForm((current) => current ?? emptyForm);
       }
     } catch {
-      setError("A API não respondeu. Confira se ela está rodando.");
+      setError(API_DOWN);
       setForm((current) => current ?? emptyForm);
     } finally {
       setLoading(false);
@@ -137,7 +145,7 @@ export function App() {
       }
       return data;
     } catch {
-      setError("A API não respondeu. Confira se ela está rodando.");
+      setError(API_DOWN);
       return null;
     }
   }
@@ -189,17 +197,10 @@ export function App() {
       <TopBar />
 
       <div className="mx-auto grid max-w-5xl gap-8 px-5 py-8 lg:grid-cols-[180px_1fr] lg:px-8">
-        <Spine
-          stage={stage}
-          done={{ form: !!form, publicationId: !!publicationId, allSent }}
-        />
+        <Spine stage={stage} allSent={allSent} />
 
         <main className="min-w-0 space-y-10">
-          <Stage
-            n="01"
-            label="Importar"
-            hint="Cole o link ou a mensagem da oferta"
-          >
+          <Stage {...STEPS[0]}>
             <div className="space-y-3">
               <textarea
                 value={input}
@@ -225,11 +226,7 @@ export function App() {
           )}
 
           {form && (
-            <Stage
-              n="02"
-              label="Revisar"
-              hint="O operador decide. Ajuste antes de publicar."
-            >
+            <Stage {...STEPS[1]}>
               <div className="rise grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
                 <div className="space-y-4">
                   <Field
@@ -312,16 +309,12 @@ export function App() {
           )}
 
           {publicationId && (
-            <Stage
-              n="03"
-              label="Enviar"
-              hint="Uma vez enviada, a publicação é imutável."
-            >
+            <Stage {...STEPS[2]}>
               <div className="rise space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">
                     {selected.size > 0
-                      ? `${selected.size} grupo${selected.size > 1 ? "s" : ""} selecionado${selected.size > 1 ? "s" : ""}`
+                      ? `${selected.size} grupo${plural(selected.size)} selecionado${plural(selected.size)}`
                       : "Escolha os grupos"}
                   </span>
                   <button
@@ -369,7 +362,7 @@ export function App() {
                   className="w-full rounded-lg bg-go px-5 py-3 text-sm font-semibold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
                 >
                   Enviar para {selected.size || "os"} grupo
-                  {selected.size === 1 ? "" : "s"}
+                  {plural(selected.size)}
                 </button>
 
                 {results && (
@@ -507,30 +500,24 @@ function WhatsAppStatus() {
   );
 }
 
-function Spine(props: {
-  stage: number;
-  done: { form: boolean; publicationId: boolean; allSent: boolean };
-}) {
-  const nodes = [
-    { n: "01", label: "Importar", done: props.done.form },
-    { n: "02", label: "Revisar", done: props.done.publicationId },
-    { n: "03", label: "Enviar", done: props.done.allSent },
-  ];
+function Spine(props: { stage: number; allSent: boolean }) {
   return (
     <nav className="flex gap-3 lg:sticky lg:top-20 lg:flex-col lg:gap-0 lg:self-start">
-      {nodes.map((node, i) => {
+      {STEPS.map((step, i) => {
         const idx = i + 1;
+        const last = i === STEPS.length - 1;
+        const done = last ? props.allSent : idx < props.stage;
         const active = idx === props.stage;
         const reached = idx <= props.stage;
         return (
           <div
-            key={node.n}
+            key={step.n}
             className="flex flex-1 items-center gap-3 lg:flex-none lg:items-stretch"
           >
             <div className="flex flex-col items-center">
               <span
                 className={`grid h-9 w-9 place-items-center rounded-full border font-mono text-xs transition ${
-                  node.done
+                  done
                     ? "border-go bg-go/15 text-go"
                     : active
                       ? "border-gold bg-gold/15 text-gold"
@@ -539,9 +526,9 @@ function Spine(props: {
                         : "border-line text-muted"
                 }`}
               >
-                {node.done ? "✓" : node.n}
+                {done ? "✓" : step.n}
               </span>
-              {i < nodes.length - 1 && (
+              {!last && (
                 <span
                   className={`hidden w-px flex-1 lg:my-1 lg:block ${
                     idx < props.stage ? "bg-gold/40" : "bg-line"
@@ -552,9 +539,9 @@ function Spine(props: {
             <span
               className={`text-sm ${
                 active ? "font-semibold text-text" : "text-muted"
-              } ${i < nodes.length - 1 ? "lg:pb-8" : ""}`}
+              } ${!last ? "lg:pb-8" : ""}`}
             >
-              {node.label}
+              {step.label}
             </span>
           </div>
         );
@@ -594,7 +581,7 @@ function PreviewBubble(props: { text: string; ready: boolean }) {
           </span>
         )}
       </div>
-      <div className="rounded-xl rounded-tl-sm bg-[#005c4b] p-3 shadow-lg">
+      <div className="rounded-xl rounded-tl-sm bg-wa p-3 shadow-lg">
         <pre className="whitespace-pre-wrap break-words font-sans text-sm text-white">
           {props.text}
         </pre>

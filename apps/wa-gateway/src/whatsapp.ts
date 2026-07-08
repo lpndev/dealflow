@@ -15,10 +15,12 @@ const logger = pino({ level: "silent" });
 let sock: WASocket | undefined;
 let currentQr: string | undefined;
 let connection: "connecting" | "open" | "close" = "close";
+let version:
+  Awaited<ReturnType<typeof fetchLatestBaileysVersion>>["version"] | undefined;
 
 export async function connect(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  const { version } = await fetchLatestBaileysVersion();
+  if (!version) ({ version } = await fetchLatestBaileysVersion());
   sock = makeWASocket({
     auth: state,
     version,
