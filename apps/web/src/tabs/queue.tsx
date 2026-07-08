@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiGet, fmtTime } from "../lib";
+import { useEffect, useRef, useState } from "react";
+import { apiGet, apiPut, apiDelete, fmtTime } from "../lib";
 import { Panel, Empty, ErrorNote } from "../ui";
 
 type Item = {
@@ -20,7 +20,13 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   failed: { label: "falhou", cls: "text-fail" },
 };
 
-function Row(props: { item: Item; when: string | null }) {
+type Controls = {
+  onUp?: () => void;
+  onDown?: () => void;
+  onCancel: () => void;
+};
+
+function Row(props: { item: Item; when: string | null; controls?: Controls }) {
   const s = STATUS[props.item.status] ?? {
     label: props.item.status,
     cls: "text-muted",
@@ -49,27 +55,106 @@ function Row(props: { item: Item; when: string | null }) {
         <p className={`font-mono text-xs ${s.cls}`}>{s.label}</p>
         <p className="font-mono text-xs text-muted">{fmtTime(props.when)}</p>
       </div>
+      {props.controls && (
+        <div className="flex shrink-0 items-center gap-1">
+          <IconButton
+            label="Subir na fila"
+            disabled={!props.controls.onUp}
+            onClick={props.controls.onUp}
+          >
+            ↑
+          </IconButton>
+          <IconButton
+            label="Descer na fila"
+            disabled={!props.controls.onDown}
+            onClick={props.controls.onDown}
+          >
+            ↓
+          </IconButton>
+          <IconButton
+            label="Cancelar envio"
+            onClick={props.controls.onCancel}
+            danger
+          >
+            ✕
+          </IconButton>
+        </div>
+      )}
     </li>
+  );
+}
+
+function IconButton(props: {
+  label: string;
+  children: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      title={props.label}
+      aria-label={props.label}
+      onClick={props.onClick}
+      disabled={props.disabled}
+      className={`grid h-7 w-7 place-items-center rounded border border-line text-sm transition hover:border-muted disabled:opacity-30 ${
+        props.danger ? "text-fail hover:border-fail" : "text-muted"
+      }`}
+    >
+      {props.children}
+    </button>
   );
 }
 
 export function QueueTab(props: { refreshKey: number }) {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
+
+  function load() {
+    if (busy.current) return;
+    apiGet("/queue")
+      .then((d) => {
+        setItems(d.items ?? []);
+        setError(null);
+      })
+      .catch((e) => setError(e.message));
+  }
 
   useEffect(() => {
-    function load() {
-      apiGet("/queue")
-        .then((d) => {
-          setItems(d.items ?? []);
-          setError(null);
-        })
-        .catch((e) => setError(e.message));
-    }
     load();
     const timer = setInterval(load, 5000);
     return () => clearInterval(timer);
   }, [props.refreshKey]);
+
+  async function reorder(from: number, to: number) {
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setItems(next);
+    busy.current = true;
+    try {
+      await apiPut("/queue/order", { orderedIds: next.map((i) => i.id) });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "falha ao reordenar");
+    } finally {
+      busy.current = false;
+      load();
+    }
+  }
+
+  async function cancel(id: string) {
+    setItems((cur) => cur.filter((i) => i.id !== id));
+    busy.current = true;
+    try {
+      await apiDelete(`/queue/${id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "falha ao cancelar");
+    } finally {
+      busy.current = false;
+      load();
+    }
+  }
 
   return (
     <Panel title="Fila" hint="Próximos envios, espaçados para parecer humano">
@@ -78,8 +163,24 @@ export function QueueTab(props: { refreshKey: number }) {
         <Empty>Nada na fila. Agende uma oferta na aba Nova oferta.</Empty>
       ) : (
         <ul className="space-y-2">
-          {items.map((it) => (
-            <Row key={it.id} item={it} when={it.dueAt} />
+          {items.map((it, i) => (
+            <Row
+              key={it.id}
+              item={it}
+              when={it.dueAt}
+              controls={
+                it.status === "scheduled"
+                  ? {
+                      onUp: i > 0 ? () => reorder(i, i - 1) : undefined,
+                      onDown:
+                        i < items.length - 1
+                          ? () => reorder(i, i + 1)
+                          : undefined,
+                      onCancel: () => cancel(it.id),
+                    }
+                  : undefined
+              }
+            />
           ))}
         </ul>
       )}

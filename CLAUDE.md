@@ -148,7 +148,11 @@ caminho, mesma idempotência/dedupe). Falha vira `failed` e NÃO re-tenta sozinh
 (fail-closed; operador reenvia). Faixa de delay configurável em `settings`
 (tabela nova, default 1200–2400s = 20–40 min) na aba Config; "Enviar agora"
 (imediato) e "Agendar" coexistem. Sem Redis/fila externa — fiel ao custo-zero,
-exige só a API rodando. Adiado: cancelar/reagendar item da fila (sem UI ainda).
+exige só a API rodando. Fila é gerenciável (`features/queue/use-case.ts`):
+`cancelScheduled` deleta um `scheduled` (volta a pub p/ `ready` se era o último);
+`reorderQueue(orderedIds)` mantém os slots de `dueAt` fixos e só troca qual item
+ocupa cada slot (preserva o espaçamento). UI: setas ↑/↓ (swap) + ✕ na aba Fila,
+otimista com pausa no auto-refresh durante a ação.
 
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅.

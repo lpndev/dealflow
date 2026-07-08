@@ -45,3 +45,5 @@ export const apiPut = (path: string, body: unknown) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+
+export const apiDelete = (path: string) => request(path, { method: "DELETE" });
