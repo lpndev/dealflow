@@ -53,12 +53,24 @@ Fronteiras previstas (interface só quando separa dependência externa real):
 
 ## Estado atual
 
-Fundação + Slice 1 (importar URL) prontos. `apps/web` e `apps/api` sobem
-localmente; lint, typecheck, test e format funcionam.
+Fundação + Slice 1 (importar URL) + Slice 2 (criar publicação) prontos.
+`apps/web` e `apps/api` sobem localmente; lint, typecheck, test e format funcionam.
 
 Slice 1: `POST /deals/import { input }` → extrai URLs → normaliza → busca o HTML
 da página ML → parseia JSON-LD (fallback Open Graph) → devolve um `ExtractedDeal`
-editável. Sem persistência ainda. Web: colar → Importar → formulário editável.
+editável. Web: colar → Importar → formulário editável.
+
+Slice 2: `POST /publications/preview` (render puro) e `POST /publications`
+(persiste `product` + `deal_snapshot` + `affiliate_link` + `publication`,
+status `ready`). Template em `features/publications/render.ts`. Prices parseiam
+no servidor (`parsePrice`: vírgula = decimal BRL; só ponto = decimal). Web: form →
+Preview / Salvar publicação. Persistência: SQLite (`bun:sqlite`) + Drizzle,
+migrations em `apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no
+boot. Sem auth ainda: `workspaceId` fixo em `DEFAULT_WORKSPACE_ID`.
+
+Invariantes cobertas por teste: publicação usa nosso `affiliateUrl` (nunca a
+`sourceUrl`); rejeita afiliado ausente/inválido ou igual à origem; produto é
+reusado entre snapshots.
 
 Nota ML: de IP de datacenter o fetch simples cai no anti-bot ("negative_traffic")
 e não recebe JSON-LD; de IP residencial/navegador real costuma funcionar. Quando
@@ -67,11 +79,10 @@ futuro é a extensão de navegador (§24), não guerra anti-bot.
 
 Adiado até o slice que usa (nada de decoração):
 
-- **SQLite + Drizzle** → Slice 2 (ao persistir Publication/DealSnapshot).
 - **Better Auth** → quando existir rota protegida.
 - **`apps/wa-gateway`** (Baileys isolado) → Slice 3.
 
-Roadmap: S1 importar URL ✅ → S2 criar publicação → S3 WhatsApp → S4 importar
+Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp → S4 importar
 mensagem → S5 múltiplos grupos.
 
 ## Arquitetura
@@ -122,4 +133,8 @@ bun run lint
 bun run typecheck
 bun test
 bun run format
+bun run --filter '@dealflow/api' db:generate   # após mudar o schema
 ```
+
+DB local em `dealflow.db` (raiz da api, ignorado no git); override via
+`DATABASE_URL`.
