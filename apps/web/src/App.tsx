@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const GATEWAY = import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:3002";
 
 type Draft = {
   sourceUrl: string;
@@ -17,6 +18,13 @@ type Form = {
   coupon: string;
   sourceUrl: string;
   affiliateUrl: string;
+};
+
+type Destination = { id: string; name: string };
+type DeliveryResult = {
+  destinationId: string;
+  status: "sent" | "failed";
+  error?: string;
 };
 
 const emptyForm: Form = {
@@ -47,13 +55,46 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [publicationId, setPublicationId] = useState<string | null>(null);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [results, setResults] = useState<DeliveryResult[] | null>(null);
+
+  useEffect(() => {
+    void loadDestinations();
+  }, []);
+
+  async function loadDestinations() {
+    try {
+      const res = await fetch(`${API}/destinations`);
+      const data = await res.json();
+      setDestinations(data.destinations ?? []);
+    } catch {
+      // ponytail: silent; the sync button surfaces gateway errors
+    }
+  }
+
+  async function syncDestinations() {
+    setError(null);
+    try {
+      const res = await fetch(`${API}/destinations/sync`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "falha ao sincronizar grupos");
+        return;
+      }
+      setDestinations(data.destinations ?? []);
+    } catch {
+      setError("não foi possível falar com a api");
+    }
+  }
 
   async function importDeal() {
     setLoading(true);
     setError(null);
     setPreview(null);
-    setSaved(false);
+    setPublicationId(null);
+    setResults(null);
     try {
       const res = await fetch(`${API}/deals/import`, {
         method: "POST",
@@ -77,17 +118,17 @@ export function App() {
 
   function update(field: keyof Form, value: string) {
     setForm((current) => (current ? { ...current, [field]: value } : current));
-    setSaved(false);
+    setPublicationId(null);
+    setResults(null);
   }
 
-  async function send(path: string): Promise<Record<string, unknown> | null> {
-    if (!form) return null;
+  async function post(path: string, body: unknown) {
     setError(null);
     try {
       const res = await fetch(`${API}${path}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -102,21 +143,45 @@ export function App() {
   }
 
   async function showPreview() {
-    const data = await send("/publications/preview");
+    if (!form) return;
+    const data = await post("/publications/preview", form);
     if (data) setPreview(String(data.content));
   }
 
   async function save() {
-    const data = await send("/publications");
+    if (!form) return;
+    const data = await post("/publications", form);
     if (data) {
       setPreview(String(data.content));
-      setSaved(true);
+      setPublicationId(String(data.id));
     }
   }
+
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function sendPublication() {
+    if (!publicationId || selected.size === 0) return;
+    const data = await post(`/publications/${publicationId}/send`, {
+      destinationIds: [...selected],
+    });
+    if (data) setResults(data.results ?? []);
+  }
+
+  const nameOf = (id: string) =>
+    destinations.find((d) => d.id === id)?.name ?? id;
 
   return (
     <main className="mx-auto max-w-xl space-y-6 p-8">
       <h1 className="text-2xl font-semibold">Nova oferta</h1>
+
+      <WhatsAppPanel />
 
       <div className="space-y-2">
         <label className="text-sm text-gray-500">
@@ -207,7 +272,7 @@ export function App() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>Preview</span>
-            {saved && (
+            {publicationId && (
               <span className="rounded bg-green-100 px-2 py-0.5 text-green-700">
                 pronta para envio
               </span>
@@ -218,7 +283,114 @@ export function App() {
           </pre>
         </div>
       )}
+
+      {publicationId && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">Destinos</span>
+            <button
+              onClick={syncDestinations}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Sincronizar grupos
+            </button>
+          </div>
+
+          {destinations.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              Nenhum grupo. Conecte o WhatsApp e sincronize.
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {destinations.map((d) => (
+                <li key={d.id}>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(d.id)}
+                      onChange={() => toggle(d.id)}
+                    />
+                    <span>{d.name}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button
+            onClick={sendPublication}
+            disabled={selected.size === 0}
+            className="rounded bg-green-600 px-4 py-2 text-white disabled:opacity-40"
+          >
+            Enviar
+          </button>
+        </div>
+      )}
+
+      {results && (
+        <ul className="space-y-1 text-sm">
+          {results.map((r) => (
+            <li key={r.destinationId} className="flex items-center gap-2">
+              <span
+                className={
+                  r.status === "sent" ? "text-green-700" : "text-red-700"
+                }
+              >
+                {r.status === "sent" ? "✓" : "✗"}
+              </span>
+              <span>{nameOf(r.destinationId)}</span>
+              {r.error && <span className="text-gray-400">— {r.error}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
+  );
+}
+
+function WhatsAppPanel() {
+  const [connection, setConnection] = useState("desconhecido");
+  const [qr, setQr] = useState<string | null>(null);
+
+  async function refresh() {
+    try {
+      const session = await fetch(`${GATEWAY}/session`).then((r) => r.json());
+      setConnection(session.connection);
+      if (session.hasQr) {
+        const data = await fetch(`${GATEWAY}/session/qr`).then((r) => r.json());
+        setQr(data.qr ?? null);
+      } else {
+        setQr(null);
+      }
+    } catch {
+      setConnection("gateway offline");
+      setQr(null);
+    }
+  }
+
+  useEffect(() => {
+    void refresh();
+    const timer = setInterval(refresh, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="rounded border border-gray-200 p-3 text-sm">
+      <div className="flex items-center gap-2">
+        <span
+          className={connection === "open" ? "text-green-600" : "text-gray-400"}
+        >
+          ●
+        </span>
+        <span>WhatsApp: {connection}</span>
+      </div>
+      {qr && (
+        <div className="mt-2">
+          <p className="text-gray-500">Escaneie para conectar:</p>
+          <img src={qr} alt="QR" className="mt-1 h-48 w-48" />
+        </div>
+      )}
+    </div>
   );
 }
 
