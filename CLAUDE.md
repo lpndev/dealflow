@@ -134,8 +134,24 @@ Adiado até o slice que usa (nada de decoração):
 
 - **Better Auth** → quando existir rota protegida.
 
+Nota fila/agendamento (S5): a UI virou um dashboard com abas (Nova oferta / Fila
+/ Histórico / Config) em `apps/web/src/tabs/*` (App.tsx só faz o shell de abas;
+`lib.ts` = fetch helpers, `ui.tsx` = primitives). A "fila" NÃO é infra nova: um
+envio agendado é uma `delivery` com `status='scheduled'` + `dueAt` (coluna nova).
+`schedulePublication` (`features/publications/schedule/use-case.ts`) enfileira
+serial global: cada envio pega `dueAt = max(agora, cauda da fila) + aleatório[min,
+max]`, então a conta nunca dispara em rajada (parece humano). Um loop in-process
+(`scheduler.ts` `startScheduler`, setInterval 30s no boot da API) chama
+`dispatchDue` que pega o `scheduled` vencido mais antigo, um por vez, e reusa o
+`deliverOne` compartilhado (`send/deliver.ts`, extraído do send imediato — mesmo
+caminho, mesma idempotência/dedupe). Falha vira `failed` e NÃO re-tenta sozinha
+(fail-closed; operador reenvia). Faixa de delay configurável em `settings`
+(tabela nova, default 1200–2400s = 20–40 min) na aba Config; "Enviar agora"
+(imediato) e "Agendar" coexistem. Sem Redis/fila externa — fiel ao custo-zero,
+exige só a API rodando. Adiado: cancelar/reagendar item da fila (sem UI ainda).
+
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
-importar mensagem ✅ → S5 múltiplos grupos.
+importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅.
 
 ## Arquitetura
 
