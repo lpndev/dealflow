@@ -6,3 +6,6 @@ dist/
 # local sqlite (Slice 1+)
 *.db
 *.db-*
+
+# wa-gateway baileys session
+wa-auth/
