@@ -1,5 +1,9 @@
 import { extractUrls, normalizeUrl } from "@/shared/urls";
-import { parseMercadoLivre } from "@/integrations/mercado-livre/parse";
+import {
+  parseMercadoLivre,
+  mlbIdFromUrl,
+  productUrlFromSocialHtml,
+} from "@/integrations/mercado-livre/parse";
 import {
   fetchMercadoLivre,
   supportsMercadoLivre,
@@ -18,12 +22,40 @@ export async function importDeal(
   if (!url) {
     throw new ImportError("no supported product url found in the input");
   }
-  const html = await fetchHtml(url);
-  const deal = parseMercadoLivre(html, url);
-  const hints = extractMessageHints(input);
 
+  if (mlbIdFromUrl(url)) {
+    return withHints(parseMercadoLivre(await fetchHtml(url), url), input);
+  }
+
+  const landing = await fetchHtml(url);
+  const productUrl = productUrlFromSocialHtml(landing);
+  if (!productUrl) {
+    return withHints(parseMercadoLivre(landing, url), input, url);
+  }
+
+  const social = parseMercadoLivre(landing, url);
+  const product = parseMercadoLivre(await fetchHtml(productUrl), productUrl);
+  const merged: ExtractedDeal = {
+    sourceUrl: productUrl,
+    product: {
+      externalId: product.product.externalId ?? social.product.externalId,
+      title: product.product.title ?? social.product.title,
+      imageUrl: product.product.imageUrl ?? social.product.imageUrl,
+    },
+    price: product.price,
+  };
+  return withHints(merged, input, url);
+}
+
+function withHints(
+  deal: ExtractedDeal,
+  input: string,
+  affiliateUrl?: string,
+): ExtractedDeal {
+  const hints = extractMessageHints(input);
   return {
     ...deal,
+    affiliateUrl,
     price: {
       original: hints.original ?? deal.price.original,
       current: hints.current ?? deal.price.current,

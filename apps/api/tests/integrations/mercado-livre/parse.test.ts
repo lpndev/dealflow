@@ -2,6 +2,7 @@ import { it, expect } from "bun:test";
 import {
   mlbIdFromUrl,
   parseMercadoLivre,
+  productUrlFromSocialHtml,
 } from "@/integrations/mercado-livre/parse";
 
 it("reads the mlb id from a /p/ url", () => {
@@ -60,4 +61,29 @@ it("falls back to open graph tags when json-ld is missing", () => {
   expect(deal.product.title).toBe("Fone JBL");
   expect(deal.product.imageUrl).toBe("https://http2.mlstatic.com/jbl.jpg");
   expect(deal.price.current).toBeUndefined();
+});
+
+const socialHtml = `<html><head>
+<meta property="og:title" content="35pcs Jogo Soquete">
+</head><body>
+<a href="https://www.mercadolivre.com.br/35pcs-jogo-soquete/p/MLB63558681?matt_event=abc&ref=xyz">Ir para produto</a>
+</body></html>`;
+
+it("extracts the real product url from an affiliate social landing", () => {
+  expect(productUrlFromSocialHtml(socialHtml)).toBe(
+    "https://www.mercadolivre.com.br/35pcs-jogo-soquete/p/MLB63558681",
+  );
+});
+
+it("resolves a relative product href against the ml host", () => {
+  const html = `<a href="/produto/p/MLB77?x=1">Ir</a>`;
+  expect(productUrlFromSocialHtml(html)).toBe(
+    "https://www.mercadolivre.com.br/produto/p/MLB77",
+  );
+});
+
+it("returns undefined when no product link is present", () => {
+  expect(
+    productUrlFromSocialHtml("<a href='/ofertas'>ver</a>"),
+  ).toBeUndefined();
 });

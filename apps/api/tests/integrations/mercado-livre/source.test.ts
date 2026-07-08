@@ -11,6 +11,10 @@ it("supports mercado libre short links", () => {
   expect(supportsMercadoLivre("https://mercadolivre.com/sec/abc")).toBe(true);
 });
 
+it("supports meli.la affiliate short links", () => {
+  expect(supportsMercadoLivre("https://meli.la/14KCc6F")).toBe(true);
+});
+
 it("rejects a url that only mentions mercado livre in the path", () => {
   expect(supportsMercadoLivre("http://169.254.169.254/mercadolivre.com")).toBe(
     false,

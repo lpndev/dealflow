@@ -13,6 +13,19 @@ export function mlbIdFromUrl(url: string): string | undefined {
   return match ? `MLB${match[1]}` : undefined;
 }
 
+export function productUrlFromSocialHtml(html: string): string | undefined {
+  const match = html.match(/href=["']([^"']*\/p\/MLB\d+[^"']*)["']/i);
+  if (!match) return undefined;
+  try {
+    const url = new URL(match[1], "https://www.mercadolivre.com.br");
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export function parseMercadoLivre(
   html: string,
   sourceUrl: string,

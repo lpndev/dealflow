@@ -5,6 +5,7 @@ const GATEWAY = import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:3002";
 
 type Draft = {
   sourceUrl: string;
+  affiliateUrl?: string;
   product: { externalId?: string; title?: string; imageUrl?: string };
   price: { original?: number; current?: number };
   coupon?: string;
@@ -46,6 +47,7 @@ function draftToForm(draft: Draft): Form {
     currentPrice: draft.price.current?.toString() ?? "",
     coupon: draft.coupon ?? "",
     sourceUrl: draft.sourceUrl,
+    affiliateUrl: draft.affiliateUrl ?? "",
   };
 }
 
@@ -261,12 +263,6 @@ export function App() {
                     mono
                     value={form.imageUrl}
                     onChange={(v) => update("imageUrl", v)}
-                  />
-                  <Field
-                    label="URL de origem"
-                    mono
-                    value={form.sourceUrl}
-                    onChange={(v) => update("sourceUrl", v)}
                   />
                   <Field
                     label="Link afiliado"

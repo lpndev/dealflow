@@ -8,7 +8,7 @@ export function supportsMercadoLivre(url: string): boolean {
   } catch {
     return false;
   }
-  return /(?:^|\.)mercadoli(?:vre|bre)\.com(?:\.br)?$/i.test(host);
+  return /(?:^|\.)(?:mercadoli(?:vre|bre)\.com(?:\.br)?|meli\.la)$/i.test(host);
 }
 
 export async function fetchMercadoLivre(url: string): Promise<string> {
