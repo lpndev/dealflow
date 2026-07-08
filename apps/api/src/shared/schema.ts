@@ -72,3 +72,46 @@ export const publication = sqliteTable("publication", {
     .notNull()
     .$defaultFn(now),
 });
+
+export const destination = sqliteTable(
+  "destination",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    provider: text("provider").notNull(),
+    externalId: text("external_id").notNull(),
+    name: text("name").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(now),
+  },
+  (t) => [unique().on(t.workspaceId, t.provider, t.externalId)],
+);
+
+export const delivery = sqliteTable(
+  "delivery",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    publicationId: text("publication_id")
+      .notNull()
+      .references(() => publication.id),
+    destinationId: text("destination_id")
+      .notNull()
+      .references(() => destination.id),
+    status: text("status", {
+      enum: ["pending", "processing", "sent", "failed"],
+    })
+      .notNull()
+      .default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    externalMessageId: text("external_message_id"),
+    error: text("error"),
+    sentAt: integer("sent_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(now),
+  },
+  (t) => [unique().on(t.publicationId, t.destinationId)],
+);
