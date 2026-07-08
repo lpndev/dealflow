@@ -103,6 +103,8 @@ futuro é a extensão de navegador (§24), não guerra anti-bot.
 Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
 `FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
+`makeWASocket` precisa de `version` de `fetchLatestBaileysVersion()` — sem isso
+o handshake trava em `connecting` e nunca emite o QR.
 
 Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador);
 sem auth por request enquanto local (§17). Gateway valida `imageUrl` só por
