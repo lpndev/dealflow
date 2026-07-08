@@ -101,11 +101,12 @@ export const delivery = sqliteTable(
       .notNull()
       .references(() => destination.id),
     status: text("status", {
-      enum: ["pending", "processing", "sent", "failed"],
+      enum: ["pending", "scheduled", "processing", "sent", "failed"],
     })
       .notNull()
       .default("pending"),
     attempts: integer("attempts").notNull().default(0),
+    dueAt: integer("due_at", { mode: "timestamp" }),
     externalMessageId: text("external_message_id"),
     error: text("error"),
     sentAt: integer("sent_at", { mode: "timestamp" }),
@@ -115,3 +116,12 @@ export const delivery = sqliteTable(
   },
   (t) => [unique().on(t.publicationId, t.destinationId)],
 );
+
+export const settings = sqliteTable("settings", {
+  workspaceId: text("workspace_id").primaryKey(),
+  delayMinSeconds: integer("delay_min_seconds").notNull().default(1200),
+  delayMaxSeconds: integer("delay_max_seconds").notNull().default(2400),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(now),
+});
