@@ -1,1 +1,65 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #0e1320;
+  --color-panel: #171e2e;
+  --color-inset: #1f2739;
+  --color-line: #2b3448;
+  --color-text: #e8edf5;
+  --color-muted: #8794ac;
+  --color-gold: #f5b841;
+  --color-gold-dim: #6b5526;
+  --color-go: #35d08a;
+  --color-fail: #f2555c;
+
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-text);
+  font-feature-settings: "cv02", "cv11";
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-go {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 208, 138, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(53, 208, 138, 0);
+  }
+}
+
+.rise {
+  animation: rise 0.32s ease-out both;
+}
+
+.pulse-go {
+  animation: pulse-go 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pulse-go {
+    animation: none;
+  }
+}
