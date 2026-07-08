@@ -53,8 +53,9 @@ Fronteiras previstas (interface só quando separa dependência externa real):
 
 ## Estado atual
 
-Fundação + Slice 1 (importar URL) + Slice 2 (criar publicação) prontos.
-`apps/web` e `apps/api` sobem localmente; lint, typecheck, test e format funcionam.
+Fundação + Slice 1 (importar URL) + Slice 2 (criar publicação) + Slice 3
+(WhatsApp) prontos. `apps/web`, `apps/api` e `apps/wa-gateway` sobem localmente;
+lint, typecheck, test e format funcionam.
 
 Slice 1: `POST /deals/import { input }` → extrai URLs → normaliza → busca o HTML
 da página ML → parseia JSON-LD (fallback Open Graph) → devolve um `ExtractedDeal`
@@ -68,22 +69,37 @@ Preview / Salvar publicação. Persistência: SQLite (`bun:sqlite`) + Drizzle,
 migrations em `apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no
 boot. Sem auth ainda: `workspaceId` fixo em `DEFAULT_WORKSPACE_ID`.
 
+Slice 3: `apps/wa-gateway` (porta 3002) isola o Baileys — sessão em `wa-auth/`
+(`useMultiFileAuthState`), QR/estado via `connection.update`. API do gateway:
+`GET /health|/session|/session/qr|/groups`, `POST /messages`. A API fala com ele
+por HTTP atrás do `MessagingProvider` (`shared/messaging.ts`); o domínio só vê
+`externalId` opaco (o JID `@g.us` nunca vaza). `POST /destinations/sync` importa
+grupos; `POST /publications/:id/send { destinationIds }` cria `delivery` por
+destino, envia sequencial (sem fila), marca `sent`/`failed`, e a publicação vira
+`sent` quando todas passam. Web: painel WhatsApp (status + QR), sincronizar
+grupos, selecionar destinos, Enviar, status por destino.
+
 Invariantes cobertas por teste: publicação usa nosso `affiliateUrl` (nunca a
 `sourceUrl`); rejeita afiliado ausente/inválido ou igual à origem; produto é
-reusado entre snapshots.
+reusado entre snapshots; `unique(publicationId, destinationId)` (sem delivery
+duplicada); retry não reenvia delivery já `sent`; falha marca `failed` e um
+retry pode virar `sent`.
 
 Nota ML: de IP de datacenter o fetch simples cai no anti-bot ("negative_traffic")
 e não recebe JSON-LD; de IP residencial/navegador real costuma funcionar. Quando
 falha, o formulário continua editável (preenchimento manual). O caminho confiável
 futuro é a extensão de navegador (§24), não guerra anti-bot.
 
+Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
+testar no sandbox. As invariantes de delivery são testadas contra um
+`FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
+
 Adiado até o slice que usa (nada de decoração):
 
 - **Better Auth** → quando existir rota protegida.
-- **`apps/wa-gateway`** (Baileys isolado) → Slice 3.
 
-Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp → S4 importar
-mensagem → S5 múltiplos grupos.
+Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
+importar mensagem → S5 múltiplos grupos.
 
 ## Arquitetura
 
@@ -128,7 +144,7 @@ o que sobra.
 
 ```sh
 bun install
-bun run dev        # web (vite) + api (:3001)
+bun run dev        # web (vite) + api (:3001) + wa-gateway (:3002)
 bun run lint
 bun run typecheck
 bun test
