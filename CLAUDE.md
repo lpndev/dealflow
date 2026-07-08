@@ -154,6 +154,22 @@ exige só a API rodando. Fila é gerenciável (`features/queue/use-case.ts`):
 ocupa cada slot (preserva o espaçamento). UI: setas ↑/↓ (swap) + ✕ na aba Fila,
 otimista com pausa no auto-refresh durante a ação.
 
+Nota template de mensagem: a mensagem da oferta é personalizável (aba Config).
+`render.ts` exporta `DEFAULT_TEMPLATE` (reproduz o formato clássico) e
+`renderPublication(input, template)` faz substituição de placeholders
+(`{titulo}`, `{de}`, `{por}`, `{cupom}`, `{link}`) com **drop de linha**: uma
+linha cujos placeholders todos resolvem vazio some (ex.: sem cupom), e runs de
+linhas em branco colapsam. `settings.messageTemplate` guarda o template (default
+= `DEFAULT_TEMPLATE`); `updateSettings` é **partial-merge** e **rejeita template
+sem `{link}`** (fail-closed: sem o link a oferta sairia sem monetização).
+`preview`/`create` puxam o template de `settings`. `{de}`/`{por}` já vêm
+formatados via `formatBrl` (com R$). Editor na Config tem chips que inserem no
+cursor + preview ao vivo (client-side, valores de exemplo).
+
+FUTURO (marcado pelo usuário, adiado — hoje `workspaceId` é fixo em
+`DEFAULT_WORKSPACE_ID`): workspace multi-tenant com nome/logo, múltiplos números
+de WhatsApp, múltiplos grupos/nichos. Só quando existir 2+ número de verdade.
+
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅.
 

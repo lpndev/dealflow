@@ -11,14 +11,19 @@ settingsRoutes.put("/", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     delayMinSeconds?: number;
     delayMaxSeconds?: number;
+    messageTemplate?: string;
   } | null;
 
   if (
     typeof body?.delayMinSeconds !== "number" ||
-    typeof body.delayMaxSeconds !== "number"
+    typeof body.delayMaxSeconds !== "number" ||
+    typeof body.messageTemplate !== "string"
   ) {
     return c.json(
-      { error: "delayMinSeconds and delayMaxSeconds are required" },
+      {
+        error:
+          "delayMinSeconds, delayMaxSeconds and messageTemplate are required",
+      },
       400,
     );
   }
@@ -28,6 +33,7 @@ settingsRoutes.put("/", async (c) => {
       updateSettings(getDb(), {
         delayMinSeconds: body.delayMinSeconds,
         delayMaxSeconds: body.delayMaxSeconds,
+        messageTemplate: body.messageTemplate,
       }),
     );
   } catch (err) {

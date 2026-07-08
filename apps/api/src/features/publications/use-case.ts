@@ -7,6 +7,7 @@ import {
   publication,
 } from "@/shared/schema";
 import { renderPublication, type RenderInput } from "./render";
+import { getSettings } from "@/features/settings/use-case";
 import { parsePrice } from "@/shared/money";
 import { normalizeUrl } from "@/shared/urls";
 import { mlbIdFromUrl } from "@/integrations/mercado-livre/parse";
@@ -31,10 +32,12 @@ export type PublicationResult = {
   status: "ready";
 };
 
-export function previewPublication(input: PublicationInput): {
-  content: string;
-} {
-  return { content: renderPublication(toRenderInput(input)) };
+export function previewPublication(
+  input: PublicationInput,
+  db: Db,
+): { content: string } {
+  const { messageTemplate } = getSettings(db);
+  return { content: renderPublication(toRenderInput(input), messageTemplate) };
 }
 
 export function createPublication(
@@ -55,7 +58,7 @@ export function createPublication(
   }
 
   const render = toRenderInput(input);
-  const content = renderPublication(render);
+  const content = renderPublication(render, getSettings(db).messageTemplate);
   const workspaceId = DEFAULT_WORKSPACE_ID;
 
   const productId = upsertProduct(db, {

@@ -71,7 +71,7 @@ it("reuses the same product across snapshots", () => {
 
 it("previews content without persisting", () => {
   const conn = db();
-  const { content } = previewPublication(valid);
+  const { content } = previewPublication(valid, conn);
 
   expect(content).toContain("💰 *Por R$ 299,90*");
   expect(conn.select().from(publication).all()).toHaveLength(0);

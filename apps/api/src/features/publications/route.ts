@@ -13,7 +13,7 @@ publications.post("/preview", async (c) => {
   const body = (await c.req
     .json()
     .catch(() => null)) as PublicationInput | null;
-  return c.json(previewPublication(body ?? {}));
+  return c.json(previewPublication(body ?? {}, getDb()));
 });
 
 publications.post("/", async (c) => {

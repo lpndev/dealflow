@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `message_template` text;
