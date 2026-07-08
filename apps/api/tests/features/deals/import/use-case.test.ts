@@ -20,6 +20,16 @@ it("imports a draft from a mercado livre message", async () => {
   expect(deal.price.current).toBe(299.9);
 });
 
+it("fills coupon and de/por prices from the message text", async () => {
+  const input =
+    "🔥 Air Fryer\nDe R$ 399 por R$ 299,90\nCupom: AIR10\nhttps://www.mercadolivre.com.br/air-fryer/p/MLB123";
+  const deal = await importDeal(input, async () => html);
+
+  expect(deal.price.original).toBe(399);
+  expect(deal.price.current).toBe(299.9);
+  expect(deal.coupon).toBe("AIR10");
+});
+
 it("rejects input without any url", async () => {
   expect(importDeal("sem link", async () => html)).rejects.toBeInstanceOf(
     ImportError,

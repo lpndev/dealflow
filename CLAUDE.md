@@ -54,12 +54,22 @@ Fronteiras previstas (interface só quando separa dependência externa real):
 ## Estado atual
 
 Fundação + Slice 1 (importar URL) + Slice 2 (criar publicação) + Slice 3
-(WhatsApp) prontos. `apps/web`, `apps/api` e `apps/wa-gateway` sobem localmente;
-lint, typecheck, test e format funcionam.
+(WhatsApp) + Slice 4 (importar mensagem) prontos. `apps/web`, `apps/api` e
+`apps/wa-gateway` sobem localmente; lint, typecheck, test e format funcionam.
 
 Slice 1: `POST /deals/import { input }` → extrai URLs → normaliza → busca o HTML
 da página ML → parseia JSON-LD (fallback Open Graph) → devolve um `ExtractedDeal`
 editável. Web: colar → Importar → formulário editável.
+
+Slice 4: o mesmo `POST /deals/import` já aceita a mensagem inteira de um
+concorrente (o `extractUrls` do S1 acha a URL no texto). Além do produto (que vem
+sempre do ML, nunca do texto), `extractMessageHints`
+(`features/deals/import/message.ts`) lê do texto o cupom e os preços De/Por e
+pré-preenche `coupon` + `price.original`/`current`. Hints da mensagem têm
+precedência sobre o ML nos preços/cupom (o fetch do ML é instável e a mensagem é
+a própria oferta a replicar); identidade do produto nunca. Operador revisa o form
+editável antes de publicar. Coupon exige dígito ou caixa-alta (evita capturar
+palavra solta). TDD do parser em `tests/features/deals/import/message.test.ts`.
 
 Slice 2: `POST /publications/preview` (render puro) e `POST /publications`
 (persiste `product` + `deal_snapshot` + `affiliate_link` + `publication`,
@@ -106,7 +116,7 @@ Adiado até o slice que usa (nada de decoração):
 - **Better Auth** → quando existir rota protegida.
 
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
-importar mensagem → S5 múltiplos grupos.
+importar mensagem ✅ → S5 múltiplos grupos.
 
 ## Arquitetura
 
