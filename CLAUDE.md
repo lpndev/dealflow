@@ -100,6 +100,19 @@ e não recebe JSON-LD; de IP residencial/navegador real costuma funcionar. Quand
 falha, o formulário continua editável (preenchimento manual). O caminho confiável
 futuro é a extensão de navegador (§24), não guerra anti-bot.
 
+Nota afiliado (Slice A): colar `meli.la/xxx` (link de afiliado gerado pelo ML)
+funciona. `meli.la` redireciona para uma pré-página `/social/` — que NÃO é a
+página do produto, mas cujo HTML estático traz `og:title`+`og:image` e o link
+real do produto (`href=".../p/MLB\d+"`). `importDeal`: se a URL colada não tem
+MLB id (`mlbIdFromUrl`), busca a landing, extrai a URL do produto
+(`productUrlFromSocialHtml`), busca o produto e faz merge — dado do produto tem
+precedência, og da landing preenche lacunas (título/imagem). O `meli.la` colado
+vira o `affiliateUrl` pré-preenchido; a URL do produto resolvida vira o
+`sourceUrl` (removido da tela, mantido no modelo → invariante afiliado≠origem
+continua válida). Preços: a página `/p/` é anti-botada no servidor e os preços
+são renderizados por JS lá, então NÃO vêm no fetch — título+imagem preenchem,
+preço é manual (até a extensão §24). Campo "URL de origem" removido do form.
+
 Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
 `FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
