@@ -51,18 +51,27 @@ Use esse vocabulário de forma consistente.
 Fronteiras previstas (interface só quando separa dependência externa real):
 `ProductSource`, `AffiliateLinkProvider`, `MessagingProvider`.
 
-## Estado atual da fundação
+## Estado atual
 
-Existe: `apps/web` e `apps/api` sobem localmente; lint, typecheck, test e format
-funcionam. `GET /health` na API com teste.
+Fundação + Slice 1 (importar URL) prontos. `apps/web` e `apps/api` sobem
+localmente; lint, typecheck, test e format funcionam.
+
+Slice 1: `POST /deals/import { input }` → extrai URLs → normaliza → busca o HTML
+da página ML → parseia JSON-LD (fallback Open Graph) → devolve um `ExtractedDeal`
+editável. Sem persistência ainda. Web: colar → Importar → formulário editável.
+
+Nota ML: de IP de datacenter o fetch simples cai no anti-bot ("negative_traffic")
+e não recebe JSON-LD; de IP residencial/navegador real costuma funcionar. Quando
+falha, o formulário continua editável (preenchimento manual). O caminho confiável
+futuro é a extensão de navegador (§24), não guerra anti-bot.
 
 Adiado até o slice que usa (nada de decoração):
 
-- **SQLite + Drizzle** → Slice 1 (quando Product/DealSnapshot precisarem).
+- **SQLite + Drizzle** → Slice 2 (ao persistir Publication/DealSnapshot).
 - **Better Auth** → quando existir rota protegida.
 - **`apps/wa-gateway`** (Baileys isolado) → Slice 3.
 
-Roadmap: S1 importar URL → S2 criar publicação → S3 WhatsApp → S4 importar
+Roadmap: S1 importar URL ✅ → S2 criar publicação → S3 WhatsApp → S4 importar
 mensagem → S5 múltiplos grupos.
 
 ## Arquitetura
