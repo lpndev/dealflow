@@ -94,6 +94,13 @@ Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
 `FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
 
+Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador);
+sem auth por request enquanto local (§17). Gateway valida `imageUrl` só por
+protocolo (http/https) — o `imageUrl` vem da oferta do próprio operador e o
+gateway é local, então SSRF de IP privado está fora do modelo de ameaça. Se um
+dia o gateway aceitar entrada não confiável (SaaS): resolver DNS, bloquear
+faixas privadas/loopback/link-local e fixar o IP resolvido no fetch.
+
 Adiado até o slice que usa (nada de decoração):
 
 - **Better Auth** → quando existir rota protegida.
