@@ -1,5 +1,7 @@
 import makeWASocket, {
   useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  Browsers,
   DisconnectReason,
   type WASocket,
 } from "@whiskeysockets/baileys";
@@ -16,7 +18,13 @@ let connection: "connecting" | "open" | "close" = "close";
 
 export async function connect(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  sock = makeWASocket({ auth: state, logger });
+  const { version } = await fetchLatestBaileysVersion();
+  sock = makeWASocket({
+    auth: state,
+    version,
+    browser: Browsers.ubuntu("Chrome"),
+    logger,
+  });
 
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", (update) => {
@@ -25,7 +33,6 @@ export async function connect(): Promise<void> {
     if (update.connection === "open") currentQr = undefined;
     if (update.connection === "close") {
       const code = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
-      // ponytail: naive reconnect, no backoff; add if flapping becomes a problem
       if (code !== DisconnectReason.loggedOut) void connect();
     }
   });
