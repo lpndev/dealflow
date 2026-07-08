@@ -104,7 +104,11 @@ Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
 `FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
 `makeWASocket` precisa de `version` de `fetchLatestBaileysVersion()` — sem isso
-o handshake trava em `connecting` e nunca emite o QR.
+o handshake trava em `connecting` e nunca emite o QR. Baileys fixado em `7.x`
+(rc): grupos com `addressing_mode='lid'` quebram no `6.x` — o envio trava
+buscando a prekey do device no namespace errado e estoura o `defaultQueryTimeoutMs`
+(60s), falhando com "Timed Out". O `7.x` reescreve o roteamento LID e resolve;
+as creds do `6.x` são aceitas sem re-parear.
 
 Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador);
 sem auth por request enquanto local (§17). Gateway valida `imageUrl` só por
