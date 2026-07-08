@@ -46,10 +46,14 @@ export function App() {
   const [form, setForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   async function importDeal() {
     setLoading(true);
     setError(null);
+    setPreview(null);
+    setSaved(false);
     try {
       const res = await fetch(`${API}/deals/import`, {
         method: "POST",
@@ -73,6 +77,41 @@ export function App() {
 
   function update(field: keyof Form, value: string) {
     setForm((current) => (current ? { ...current, [field]: value } : current));
+    setSaved(false);
+  }
+
+  async function send(path: string): Promise<Record<string, unknown> | null> {
+    if (!form) return null;
+    setError(null);
+    try {
+      const res = await fetch(`${API}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "falha na operação");
+        return null;
+      }
+      return data;
+    } catch {
+      setError("não foi possível falar com a api");
+      return null;
+    }
+  }
+
+  async function showPreview() {
+    const data = await send("/publications/preview");
+    if (data) setPreview(String(data.content));
+  }
+
+  async function save() {
+    const data = await send("/publications");
+    if (data) {
+      setPreview(String(data.content));
+      setSaved(true);
+    }
   }
 
   return (
@@ -146,6 +185,37 @@ export function App() {
             value={form.affiliateUrl}
             onChange={(v) => update("affiliateUrl", v)}
           />
+
+          <div className="flex gap-2">
+            <button
+              onClick={showPreview}
+              className="rounded border border-gray-300 px-4 py-2"
+            >
+              Preview
+            </button>
+            <button
+              onClick={save}
+              className="rounded bg-black px-4 py-2 text-white"
+            >
+              Salvar publicação
+            </button>
+          </div>
+        </div>
+      )}
+
+      {preview && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Preview</span>
+            {saved && (
+              <span className="rounded bg-green-100 px-2 py-0.5 text-green-700">
+                pronta para envio
+              </span>
+            )}
+          </div>
+          <pre className="whitespace-pre-wrap rounded border border-gray-200 bg-gray-50 p-3 text-sm">
+            {preview}
+          </pre>
         </div>
       )}
     </main>
