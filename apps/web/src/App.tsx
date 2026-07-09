@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { WhatsAppStatus } from "./whatsapp-status";
-import { NewOffer } from "./tabs/new-offer";
-import { QueueTab, HistoryTab } from "./tabs/queue";
-import { SettingsTab } from "./tabs/settings";
+import { WhatsAppStatus } from "@/components";
+import { HistoryTab, NewOffer, QueueTab, SettingsTab } from "@/tabs";
 
 const TABS = [
   { id: "new", label: "Nova oferta" },
@@ -30,7 +28,7 @@ export function App() {
             <span className="text-base font-bold tracking-tight text-text">
               Dealflow
             </span>
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+            <span className="font-mono text-xs tracking-[0.2em] text-muted uppercase">
               dispatch
             </span>
           </div>

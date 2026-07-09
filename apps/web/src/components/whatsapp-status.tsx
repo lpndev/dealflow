@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { GATEWAY } from "./lib";
+import { usePolling } from "@/hooks";
+import { GATEWAY } from "@/lib";
 
 const CONNECTION_LABEL: Record<string, string> = {
   open: "conectado",
@@ -30,11 +31,7 @@ export function WhatsAppStatus() {
     }
   }
 
-  useEffect(() => {
-    void refresh();
-    const timer = setInterval(refresh, 3000);
-    return () => clearInterval(timer);
-  }, []);
+  usePolling(refresh, 3000);
 
   useEffect(() => {
     if (qr) setOpenQr(true);
@@ -58,7 +55,7 @@ export function WhatsAppStatus() {
       >
         <span
           className={`h-2 w-2 rounded-full ${
-            connected ? "bg-go pulse-go" : qr ? "bg-gold" : "bg-muted"
+            connected ? "pulse-go bg-go" : qr ? "bg-gold" : "bg-muted"
           }`}
         />
         WhatsApp: {label}

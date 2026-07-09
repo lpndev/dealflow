@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { apiGet, apiPut, fmtMin } from "../lib";
-import { Field, Panel, ErrorNote } from "../ui";
+import { apiGet, apiPut, fmtMin } from "@/lib";
+import { type Settings } from "@/types";
+import { Button, ErrorNote, Field, Panel, PreviewBubble } from "@/ui";
 
 const PLACEHOLDERS = [
   { key: "{titulo}", desc: "nome do produto" },
@@ -35,7 +36,7 @@ export function SettingsTab() {
 
   useEffect(() => {
     apiGet("/settings")
-      .then((s) => {
+      .then((s: Settings) => {
         setMin(String(Math.round(s.delayMinSeconds / 60)));
         setMax(String(Math.round(s.delayMaxSeconds / 60)));
         setTemplate(s.messageTemplate);
@@ -145,19 +146,7 @@ export function SettingsTab() {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <span className="font-mono text-xs uppercase tracking-wider text-muted">
-              Preview
-            </span>
-            <div className="rounded-xl rounded-tl-sm bg-wa p-3 shadow-lg">
-              <pre className="whitespace-pre-wrap break-words font-sans text-sm text-white">
-                {renderSample(template)}
-              </pre>
-              <div className="mt-1 text-right text-[10px] text-white/60">
-                agora ✓✓
-              </div>
-            </div>
-          </div>
+          <PreviewBubble text={renderSample(template)} />
         </div>
       </Panel>
 
@@ -169,13 +158,9 @@ export function SettingsTab() {
       )}
       {error && <ErrorNote>{error}</ErrorNote>}
       <div className="flex items-center gap-3">
-        <button
-          onClick={save}
-          disabled={missingLink}
-          className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+        <Button onClick={save} disabled={missingLink}>
           Salvar configurações
-        </button>
+        </Button>
         {saved && <span className="text-sm text-go">Salvo ✓</span>}
       </div>
     </div>

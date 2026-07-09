@@ -1,54 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { API, API_DOWN, apiGet, apiPost, plural } from "../lib";
-import { Field, Panel, Empty, ErrorNote, PreviewBubble } from "../ui";
-
-type Draft = {
-  sourceUrl: string;
-  affiliateUrl?: string;
-  product: { externalId?: string; title?: string; imageUrl?: string };
-  price: { original?: number; current?: number };
-  coupon?: string;
-};
-
-type Form = {
-  title: string;
-  imageUrl: string;
-  originalPrice: string;
-  currentPrice: string;
-  coupon: string;
-  sourceUrl: string;
-  affiliateUrl: string;
-};
-
-type Destination = { id: string; name: string };
-type DeliveryResult = {
-  destinationId: string;
-  status: "sent" | "failed";
-  error?: string;
-};
-
-const emptyForm: Form = {
-  title: "",
-  imageUrl: "",
-  originalPrice: "",
-  currentPrice: "",
-  coupon: "",
-  sourceUrl: "",
-  affiliateUrl: "",
-};
-
-function draftToForm(draft: Draft): Form {
-  return {
-    ...emptyForm,
-    title: draft.product.title ?? "",
-    imageUrl: draft.product.imageUrl ?? "",
-    originalPrice: draft.price.original?.toString() ?? "",
-    currentPrice: draft.price.current?.toString() ?? "",
-    coupon: draft.coupon ?? "",
-    sourceUrl: draft.sourceUrl,
-    affiliateUrl: draft.affiliateUrl ?? "",
-  };
-}
+import { ImportPanel, ReviewPanel, SendPanel } from "@/components/new-offer";
+import { usePolling } from "@/hooks";
+import {
+  API,
+  API_DOWN,
+  apiGet,
+  apiPost,
+  draftToForm,
+  emptyForm,
+  plural,
+} from "@/lib";
+import {
+  type DeliveryResult,
+  type Destination,
+  type Draft,
+  type Form,
+} from "@/types";
+import { Button, ErrorNote } from "@/ui";
 
 export function NewOffer(props: { onQueued: () => void }) {
   const [input, setInput] = useState("");
@@ -73,25 +41,16 @@ export function NewOffer(props: { onQueued: () => void }) {
       .catch(() => setDestinations([]));
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    const poll = async () => {
-      try {
-        const d = await apiGet("/deals/capture");
-        if (!alive || !d?.draft) return;
-        if (!formRef.current) setForm(draftToForm(d.draft));
-        else setCaptured(d.draft);
-      } catch {
-        /* extensão ou API offline — segue */
-      }
-    };
-    poll();
-    const t = setInterval(poll, 4000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
+  usePolling(async () => {
+    try {
+      const d = await apiGet("/deals/capture");
+      if (!d?.draft) return;
+      if (!formRef.current) setForm(draftToForm(d.draft));
+      else setCaptured(d.draft);
+    } catch {
+      /* extensão ou API offline — segue */
+    }
+  }, 4000);
 
   async function importDeal() {
     setLoading(true);
@@ -189,222 +148,54 @@ export function NewOffer(props: { onQueued: () => void }) {
     }
   }
 
-  const nameOf = (id: string) =>
-    destinations.find((d) => d.id === id)?.name ?? id;
-
   return (
     <div className="space-y-8">
-      <Panel
-        title="Importar"
-        eyebrow="01"
-        hint="Cole o link ou a mensagem da oferta"
-      >
-        <div className="space-y-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            rows={4}
-            placeholder="https://meli.la/…  ou a mensagem inteira do concorrente"
-            className="w-full resize-y rounded-lg border border-line bg-inset p-3 font-mono text-sm text-text placeholder:text-muted/60 focus:border-gold focus:outline-none"
-          />
-          <button
-            onClick={importDeal}
-            disabled={loading || input.trim() === ""}
-            className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {loading ? "Importando…" : "Importar oferta"}
-          </button>
-        </div>
-      </Panel>
+      <ImportPanel
+        value={input}
+        onChange={setInput}
+        loading={loading}
+        onImport={importDeal}
+      />
 
       {error && <ErrorNote>{error}</ErrorNote>}
 
       {captured && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-text">
           <span>Oferta capturada da extensão pronta para carregar.</span>
-          <button
+          <Button
+            size="sm"
             onClick={() => {
               setForm(draftToForm(captured));
               setCaptured(null);
             }}
-            className="rounded-lg bg-gold px-4 py-1.5 font-semibold text-ink transition hover:brightness-110"
           >
             Carregar
-          </button>
+          </Button>
         </div>
       )}
 
       {form && (
-        <Panel
-          title="Revisar"
-          eyebrow="02"
-          hint="O operador decide. Ajuste antes de publicar."
-        >
-          <div className="rise grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
-            <div className="space-y-4">
-              <Field
-                label="Título"
-                value={form.title}
-                onChange={(v) => update("title", v)}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Preço De"
-                  mono
-                  prefix="R$"
-                  value={form.originalPrice}
-                  onChange={(v) => update("originalPrice", v)}
-                />
-                <Field
-                  label="Preço Por"
-                  mono
-                  prefix="R$"
-                  value={form.currentPrice}
-                  onChange={(v) => update("currentPrice", v)}
-                />
-              </div>
-              <Field
-                label="Cupom"
-                mono
-                value={form.coupon}
-                onChange={(v) => update("coupon", v)}
-              />
-              <Field
-                label="Imagem (URL)"
-                mono
-                value={form.imageUrl}
-                onChange={(v) => update("imageUrl", v)}
-              />
-              <Field
-                label="Link afiliado"
-                mono
-                hint="Nosso link — é o que monetiza"
-                value={form.affiliateUrl}
-                onChange={(v) => update("affiliateUrl", v)}
-              />
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={showPreview}
-                  className="rounded-lg border border-line px-4 py-2 text-sm font-medium text-text transition hover:border-muted"
-                >
-                  Pré-visualizar
-                </button>
-                <button
-                  onClick={save}
-                  className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink transition hover:brightness-110"
-                >
-                  Salvar publicação
-                </button>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {form.imageUrl && (
-                <img
-                  src={form.imageUrl}
-                  alt=""
-                  className="max-h-52 w-full rounded-lg border border-line object-contain bg-inset p-2"
-                />
-              )}
-              {preview && (
-                <PreviewBubble text={preview} ready={!!publicationId} />
-              )}
-            </div>
-          </div>
-        </Panel>
+        <ReviewPanel
+          form={form}
+          onChange={update}
+          onPreview={showPreview}
+          onSave={save}
+          preview={preview}
+          ready={!!publicationId}
+        />
       )}
 
       {publicationId && (
-        <Panel
-          title="Enviar"
-          eyebrow="03"
-          hint="Agende para espaçar, ou envie agora."
-        >
-          <div className="rise space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">
-                {selected.size > 0
-                  ? `${selected.size} grupo${plural(selected.size)} selecionado${plural(selected.size)}`
-                  : "Escolha os grupos"}
-              </span>
-              <button
-                onClick={syncDestinations}
-                className="text-sm font-medium text-gold transition hover:brightness-110"
-              >
-                Sincronizar grupos
-              </button>
-            </div>
-
-            {destinations.length === 0 ? (
-              <Empty>
-                Nenhum grupo ainda. Conecte o WhatsApp e sincronize.
-              </Empty>
-            ) : (
-              <ul className="grid gap-1.5 sm:grid-cols-2">
-                {destinations.map((d) => {
-                  const on = selected.has(d.id);
-                  return (
-                    <li key={d.id}>
-                      <label
-                        className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition ${
-                          on
-                            ? "border-gold/60 bg-gold/10 text-text"
-                            : "border-line bg-panel text-muted hover:border-muted"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => toggle(d.id)}
-                          className="accent-gold"
-                        />
-                        <span className="truncate">{d.name}</span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={schedule}
-                disabled={selected.size === 0}
-                className="rounded-lg bg-go px-5 py-3 text-sm font-semibold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Agendar envio
-              </button>
-              <button
-                onClick={sendNow}
-                disabled={selected.size === 0}
-                className="rounded-lg border border-line px-5 py-3 text-sm font-medium text-text transition hover:border-muted disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Enviar agora
-              </button>
-            </div>
-
-            {notice && (
-              <p className="rounded-lg border border-go/40 bg-go/10 px-4 py-3 text-sm text-go">
-                {notice}
-              </p>
-            )}
-
-            {results && (
-              <ul className="space-y-1.5 border-t border-line pt-4 font-mono text-sm">
-                {results.map((r) => (
-                  <li key={r.destinationId} className="flex items-center gap-2">
-                    <span
-                      className={r.status === "sent" ? "text-go" : "text-fail"}
-                    >
-                      {r.status === "sent" ? "✓" : "✗"}
-                    </span>
-                    <span className="text-text">{nameOf(r.destinationId)}</span>
-                    {r.error && <span className="text-muted">— {r.error}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Panel>
+        <SendPanel
+          destinations={destinations}
+          selected={selected}
+          onToggle={toggle}
+          onSync={syncDestinations}
+          onSendNow={sendNow}
+          onSchedule={schedule}
+          notice={notice}
+          results={results}
+        />
       )}
     </div>
   );
