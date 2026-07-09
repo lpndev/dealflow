@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { deals } from "@/features/deals/import/route";
+import { capture } from "@/features/deals/capture/route";
 import { publications } from "@/features/publications/route";
 import { send } from "@/features/publications/send/route";
 import { schedule } from "@/features/publications/schedule/route";
@@ -14,6 +15,7 @@ app.use("/*", cors({ origin: "http://localhost:5173" }));
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/deals", deals);
+app.route("/deals", capture);
 app.route("/publications", publications);
 app.route("/publications", send);
 app.route("/publications", schedule);

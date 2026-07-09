@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Dealflow Capture",
+  "version": "0.1.0",
+  "description": "Captura ofertas do Mercado Livre, gera seu link de afiliado e envia pro Dealflow.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://*.mercadolivre.com.br/*",
+    "http://localhost:3001/*",
+    "http://localhost:5173/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Dealflow Capture"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.mercadolivre.com.br/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

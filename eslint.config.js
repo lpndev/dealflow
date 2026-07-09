@@ -9,4 +9,8 @@ export default [
   {
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
+  {
+    files: ["apps/extension/**/*.js"],
+    languageOptions: { globals: { ...globals.webextensions } },
+  },
 ];

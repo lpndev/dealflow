@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API, API_DOWN, apiGet, apiPost, plural } from "../lib";
 import { Field, Panel, Empty, ErrorNote, PreviewBubble } from "../ui";
 
@@ -61,11 +61,36 @@ export function NewOffer(props: { onQueued: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<DeliveryResult[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [captured, setCaptured] = useState<Draft | null>(null);
+  const formRef = useRef<Form | null>(null);
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   useEffect(() => {
     apiGet("/destinations")
       .then((d) => setDestinations(d.destinations ?? []))
       .catch(() => setDestinations([]));
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const d = await apiGet("/deals/capture");
+        if (!alive || !d?.draft) return;
+        if (!formRef.current) setForm(draftToForm(d.draft));
+        else setCaptured(d.draft);
+      } catch {
+        /* extensão ou API offline — segue */
+      }
+    };
+    poll();
+    const t = setInterval(poll, 4000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, []);
 
   async function importDeal() {
@@ -193,6 +218,21 @@ export function NewOffer(props: { onQueued: () => void }) {
       </Panel>
 
       {error && <ErrorNote>{error}</ErrorNote>}
+
+      {captured && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-text">
+          <span>Oferta capturada da extensão pronta para carregar.</span>
+          <button
+            onClick={() => {
+              setForm(draftToForm(captured));
+              setCaptured(null);
+            }}
+            className="rounded-lg bg-gold px-4 py-1.5 font-semibold text-ink transition hover:brightness-110"
+          >
+            Carregar
+          </button>
+        </div>
+      )}
 
       {form && (
         <Panel
