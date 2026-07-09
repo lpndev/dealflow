@@ -1,15 +1,10 @@
+import type { Settings } from "@dealflow/shared";
 import { eq } from "drizzle-orm";
+import { DEFAULT_TEMPLATE } from "@/features/publications/render";
 import type { Db } from "@/shared/db";
+import { SettingsError } from "@/shared/errors";
 import { settings } from "@/shared/schema";
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
-import { SettingsError } from "@/shared/errors";
-import { DEFAULT_TEMPLATE } from "@/features/publications/render";
-
-export type Settings = {
-  delayMinSeconds: number;
-  delayMaxSeconds: number;
-  messageTemplate: string;
-};
 
 const DEFAULTS: Settings = {
   delayMinSeconds: 1200,

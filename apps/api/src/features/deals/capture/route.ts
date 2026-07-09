@@ -1,5 +1,5 @@
+import type { ExtractedDeal } from "@dealflow/shared";
 import { Hono } from "hono";
-import type { ExtractedDeal } from "@/shared/types";
 import { storeCapture, takeCapture } from "./use-case";
 
 export const capture = new Hono();

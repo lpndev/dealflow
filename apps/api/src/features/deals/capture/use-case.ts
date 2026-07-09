@@ -1,4 +1,4 @@
-import type { ExtractedDeal } from "@/shared/types";
+import type { ExtractedDeal } from "@dealflow/shared";
 
 let pending: ExtractedDeal | null = null;
 

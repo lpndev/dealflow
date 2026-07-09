@@ -1,25 +1,19 @@
-import { inArray, and, eq, asc, desc } from "drizzle-orm";
-import type { Db } from "@/shared/db";
-import {
-  delivery,
-  publication,
-  dealSnapshot,
-  product,
-  destination,
-} from "@/shared/schema";
+import type { QueueItem } from "@dealflow/shared";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { refreshPublicationStatus } from "@/features/publications/send/deliver";
+import type { Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
+import {
+  dealSnapshot,
+  delivery,
+  destination,
+  product,
+  publication,
+} from "@/shared/schema";
 
-export type QueueItem = {
-  id: string;
-  publicationId: string;
-  title: string | null;
-  imageUrl: string | null;
-  destinationName: string;
-  status: string;
+type QueueItemRow = Omit<QueueItem, "dueAt" | "sentAt"> & {
   dueAt: Date | null;
   sentAt: Date | null;
-  error: string | null;
 };
 
 const columns = {
@@ -44,14 +38,14 @@ function query(db: Db) {
     .innerJoin(destination, eq(delivery.destinationId, destination.id));
 }
 
-export function listQueue(db: Db): QueueItem[] {
+export function listQueue(db: Db): QueueItemRow[] {
   return query(db)
     .where(inArray(delivery.status, ["scheduled", "processing"]))
     .orderBy(asc(delivery.dueAt))
     .all();
 }
 
-export function listHistory(db: Db): QueueItem[] {
+export function listHistory(db: Db): QueueItemRow[] {
   return query(db)
     .where(inArray(delivery.status, ["sent", "failed"]))
     .orderBy(desc(delivery.sentAt))

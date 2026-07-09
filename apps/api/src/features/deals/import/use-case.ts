@@ -1,7 +1,7 @@
-import { extractUrls, normalizeUrl } from "@/shared/urls";
+import type { ExtractedDeal } from "@dealflow/shared";
 import {
-  parseMercadoLivre,
   mlbIdFromUrl,
+  parseMercadoLivre,
   productUrlFromSocialHtml,
 } from "@/integrations/mercado-livre/parse";
 import {
@@ -9,8 +9,8 @@ import {
   supportsMercadoLivre,
 } from "@/integrations/mercado-livre/source";
 import { ImportError } from "@/shared/errors";
+import { extractUrls, normalizeUrl } from "@/shared/urls";
 import { extractMessageHints } from "./message";
-import type { ExtractedDeal } from "@/shared/types";
 
 type Fetcher = (url: string) => Promise<string>;
 

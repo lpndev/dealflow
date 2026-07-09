@@ -1,4 +1,4 @@
-import type { ExtractedDeal } from "@/shared/types";
+import type { ExtractedDeal } from "@dealflow/shared";
 
 type LdOffer = { price?: string | number };
 type LdNode = {

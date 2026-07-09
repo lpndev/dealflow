@@ -1,19 +1,17 @@
+import type { DeliveryResult } from "@dealflow/shared";
 import type { Db } from "@/shared/db";
-import type { MessagingProvider } from "@/shared/messaging";
 import { DeliveryError } from "@/shared/errors";
+import type { MessagingProvider } from "@/shared/messaging";
 import {
-  loadPublicationContent,
   deliverOne,
+  loadPublicationContent,
   refreshPublicationStatus,
-  type DeliveryResult,
 } from "./deliver";
 
 export type SendInput = {
   publicationId: string;
   destinationIds: string[];
 };
-
-export type { DeliveryResult };
 
 export async function sendPublication(
   input: SendInput,

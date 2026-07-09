@@ -1,26 +1,21 @@
+import type { DeliveryResult } from "@dealflow/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/shared/db";
+import { DeliveryError } from "@/shared/errors";
 import type { MessagingProvider } from "@/shared/messaging";
 import {
-  product,
   dealSnapshot,
-  publication,
-  destination,
   delivery,
+  destination,
+  product,
+  publication,
 } from "@/shared/schema";
-import { DeliveryError } from "@/shared/errors";
 
 export type PublicationContent = {
   id: string;
   workspaceId: string;
   content: string;
   imageUrl: string | null;
-};
-
-export type DeliveryResult = {
-  destinationId: string;
-  status: "sent" | "failed";
-  error?: string;
 };
 
 export function loadPublicationContent(

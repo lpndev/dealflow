@@ -8,6 +8,7 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@dealflow/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.6.16"
   },
