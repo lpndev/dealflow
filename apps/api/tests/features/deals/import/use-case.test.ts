@@ -59,9 +59,9 @@ it("resolves an affiliate link to the product and prefills the affiliate url", a
     if (u.includes("MLB63558681")) return productHtml;
     return "";
   };
-  const deal = await importDeal("https://meli.la/14KCc6F", fetchByUrl);
+  const deal = await importDeal("https://meli.la/xxxxxxx", fetchByUrl);
 
-  expect(deal.affiliateUrl).toBe("https://meli.la/14KCc6F");
+  expect(deal.affiliateUrl).toBe("https://meli.la/xxxxxxx");
   expect(deal.sourceUrl).toBe(
     "https://www.mercadolivre.com.br/jogo/p/MLB63558681",
   );

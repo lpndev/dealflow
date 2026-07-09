@@ -12,7 +12,7 @@ it("supports mercado libre short links", () => {
 });
 
 it("supports meli.la affiliate short links", () => {
-  expect(supportsMercadoLivre("https://meli.la/14KCc6F")).toBe(true);
+  expect(supportsMercadoLivre("https://meli.la/xxxxxxx")).toBe(true);
 });
 
 it("rejects a url that only mentions mercado livre in the path", () => {
