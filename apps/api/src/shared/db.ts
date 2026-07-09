@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { Database } from "bun:sqlite";
 import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { migrate as runMigrations } from "drizzle-orm/bun-sqlite/migrator";
@@ -5,7 +6,7 @@ import * as schema from "./schema";
 
 export type Db = BunSQLiteDatabase<typeof schema>;
 
-const migrationsFolder = new URL("../../drizzle", import.meta.url).pathname;
+const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 export function createDb(url: string): Db {
   const sqlite = new Database(url);
