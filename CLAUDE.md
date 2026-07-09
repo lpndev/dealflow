@@ -40,6 +40,19 @@ Use esse vocabulário de forma consistente.
 - **Custo zero no MVP** — 100% local. Sem VPS, banco gerenciado, Redis, filas,
   browser cloud, SaaS pago.
 - **Um operador, uma máquina.** Resolver esse caso antes de qualquer escala.
+- **Repositório público, licença anti-concorrência.** O código é source-available
+  sob PolyForm Perimeter 1.0.1 (`LICENSE.md`): self-host à vontade, inclusive
+  comercial pro próprio uso; proibido é oferecer a terceiros um produto que
+  compete com o Dealflow (revenda, cópia como serviço concorrente) — a monetização
+  é a nossa cloud. O nome/logo "Dealflow" não são licenciados. Como o repo é
+  público, **NADA sensível entra nele, em nenhum lugar (código, testes, docs,
+  histórico)**: sem segredos, tokens, sessão do WhatsApp (`wa-auth/`), banco
+  (`*.db`), emails, telefones, JIDs, etiquetas ou links de afiliado reais. Use
+  placeholders/fakes (`meli.la/xxxxxxx`, `ct`+timestamp, `0@g.us`). Ao mexer,
+  varra o diff antes de commitar. Segurança sobe de prioridade daqui pra frente
+  (ver Nota segurança): hoje o modelo é local (`127.0.0.1`, sem auth); ao expor
+  qualquer superfície a entrada não confiável, endurecer antes (validar na
+  fronteira, sem SSRF, sem vazar dados de um operador pra outro).
 
 Trajetória MVP → SaaS (decisão arquitetural durável): o produto vai virar SaaS
 numa VPS e ser monetizado. Mas **scraping SÓ funciona em contexto residencial +
@@ -138,6 +151,25 @@ são renderizados por JS lá, então NÃO vêm no fetch — título+imagem preen
 preço é manual até o `PlaywrightSource` entrar (ver Nota aquisição de dados).
 Campo "URL de origem" removido do form.
 
+Nota geração do link de afiliado (reverse-engineered 2026-07-09, verificado no
+browser logado do operador): o botão "Compartilhar" da barra de afiliado do ML
+faz DUAS chamadas na própria sessão logada (só cookie, sem CSRF/token):
+`GET /affiliate-program/api/v2/stripe/user/tags` → `{ tags: [{ tag, in_use,
+generated_date }] }` (a etiqueta do afiliado, formato `ct` + timestamp); e
+`POST /affiliate-program/api/v2/stripe/user/links` com body
+`{ url: "<url do produto /p/MLBxxxx>", tag: "<a tag>" }` → resposta
+`{ id, short_url: "https://meli.la/xxx", long_url: "/social/<tag>?...",
+origin_url, type_url: "SOCIAL_PROFILE_ENCRYPTED", ... }`. O `short_url` é o nosso
+`meli.la`. Dedupe por `(url, tag)`: mesmo par sempre devolve o mesmo short link.
+Provado que um `fetch(..., { method:'POST', credentials:'include', body })` puro
+replica a geração (status 200, mesmo `meli.la`). É exatamente o que a
+`ExtensionSource` faz: a extensão roda no `mercadolivre.com.br` do usuário
+(content script), lê a `tag` em uso e chama `/links` com a URL do produto pra
+gerar O NOSSO link — sem OAuth, sem dev center (contorna o `USER_BLOCKER` do
+operador). API oficial (`MlApiSource`) fica como caminho paralelo quando o
+suporte do ML liberar a conta; a extensão é o fallback permanente pra quem tiver
+a mesma restrição.
+
 Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
 `FakeMessaging` (`tests/support/`); o gateway é integração (só typecheck).
@@ -195,16 +227,35 @@ FUTURO (marcado pelo usuário, adiado — hoje `workspaceId` é fixo em
 `DEFAULT_WORKSPACE_ID`): workspace multi-tenant com nome/logo, múltiplos números
 de WhatsApp, múltiplos grupos/nichos. Só quando existir 2+ número de verdade.
 
+Nota extensão de captura (Slice E, `apps/extension/`): extensão MV3 (JS puro, sem
+build — load unpacked) que roda no `mercadolivre.com.br` logado do operador.
+`content.js` mostra um botão flutuante "Capturar oferta" na página de produto
+(`/p/MLB…`); ao clicar (ou automático, via toggle no popup) ele: gera O NOSSO
+`meli.la` (ver Nota geração do link de afiliado), raspa título/imagem/De/Por do
+DOM+JSON-LD (a página logada não é anti-botada, o preço vem completo), monta um
+`ExtractedDeal` e manda pro `background.js`, que faz `POST /deals/capture` na API
+(fora do content script pra escapar do CORS). A API guarda o draft num slot único
+em memória (`features/deals/capture/route.ts`, ponytail: handoff transiente numa
+máquina; virar tabela se precisar sobreviver a restart) e o `background` foca/abre
+a aba do Dealflow. O web "Nova oferta" faz poll de `GET /deals/capture` (consome e
+limpa); com o form vazio já preenche, com edição em andamento mostra um banner
+"Carregar" (não sobrescreve). Isto é a `ExtensionSource` na prática e **supera o
+S6 PlaywrightSource** como aquisição de preço (sem browser pesado, sem guerra
+anti-bot, roda na sessão real do usuário). Verificado ao vivo: geração do link e
+raspagem na conta logada, e o handoff da API por teste + curl. Config no popup
+(auto, apiUrl, webUrl) em `chrome.storage.local`.
+
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅ (inclui
-reordenar/cancelar fila e template de mensagem personalizável).
+reordenar/cancelar fila e template de mensagem personalizável) → Slice E extensão
+de captura (link de afiliado + preço automático) ✅.
 
 Próximos passos:
 
-- **S6 — `PlaywrightSource` (preço automático):** browser local resolve o preço
-  (e confirma título/imagem) no import (`meli.la` e URL direta), atrás da
-  fronteira `ProductSource`, com fallback manual. Aprovado pelo usuário. Remove o
-  atrito de digitar preço.
+- **`MlApiSource` (API oficial), quando o suporte do ML liberar a conta:** OAuth do
+  usuário, caminho paralelo à extensão (que fica como fallback permanente pra quem
+  tiver a mesma restrição `USER_BLOCKER`). `PlaywrightSource` fica arquivado — a
+  extensão já resolve o preço sem browser pesado.
 - **Endurecer a fila:** retry de `failed` na UI; anti-rajada no restart (respeitar
   o espaçamento mesmo nos vencidos acumulados).
 - **Split aquisição ↔ orquestração (pré-SaaS):** preparar a troca do
