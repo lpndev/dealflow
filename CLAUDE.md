@@ -41,6 +41,16 @@ Use esse vocabulário de forma consistente.
   browser cloud, SaaS pago.
 - **Um operador, uma máquina.** Resolver esse caso antes de qualquer escala.
 
+Trajetória MVP → SaaS (decisão arquitetural durável): o produto vai virar SaaS
+numa VPS e ser monetizado. Mas **scraping SÓ funciona em contexto residencial +
+browser real — NÃO porta pra VPS de datacenter** (é justo o IP que o ML bloqueia
+mais forte; ver Nota aquisição de dados). Logo, ao escalar, separa as camadas: a
+**aquisição de dados** fica client-side (extensão no browser do usuário) ou
+por-usuário via API OAuth; a **orquestração** (fila, publicação, agendamento,
+painel) sobe na VPS sem problema. Scraping direto da VPS só com proxy residencial
+pago (come a margem do SaaS) — evitar. Toda dependência de raspagem fica atrás da
+fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
+
 ## Stack
 
 - **Monorepo:** Bun workspaces (`apps/*`)
@@ -53,9 +63,9 @@ Fronteiras previstas (interface só quando separa dependência externa real):
 
 ## Estado atual
 
-Fundação + Slice 1 (importar URL) + Slice 2 (criar publicação) + Slice 3
-(WhatsApp) + Slice 4 (importar mensagem) prontos. `apps/web`, `apps/api` e
-`apps/wa-gateway` sobem localmente; lint, typecheck, test e format funcionam.
+Fundação + Slices 1–5 + import de afiliado (`meli.la`) prontos. `apps/web`,
+`apps/api` e `apps/wa-gateway` sobem localmente; lint, typecheck, test e format
+funcionam. Detalhes de cada peça nas notas abaixo e no roadmap.
 
 Slice 1: `POST /deals/import { input }` → extrai URLs → normaliza → busca o HTML
 da página ML → parseia JSON-LD (fallback Open Graph) → devolve um `ExtractedDeal`
@@ -95,10 +105,24 @@ reusado entre snapshots; `unique(publicationId, destinationId)` (sem delivery
 duplicada); retry não reenvia delivery já `sent`; falha marca `failed` e um
 retry pode virar `sent`.
 
-Nota ML: de IP de datacenter o fetch simples cai no anti-bot ("negative_traffic")
-e não recebe JSON-LD; de IP residencial/navegador real costuma funcionar. Quando
-falha, o formulário continua editável (preenchimento manual). O caminho confiável
-futuro é a extensão de navegador (§24), não guerra anti-bot.
+Nota aquisição de dados / anti-bot ML (investigado 2026-07-08): o ML fechou o
+acesso público. API (`/items`, `/products`, `/sites/MLB/search`) exige token OAuth
+(403/401). A página web de produto serve um desafio JS anti-bot
+(`suspicious-traffic` → redireciona pra `/gz/account-verification`) que bloqueia
+IP de datacenter mais forte. `curl`/`fetch` apanha **mesmo de IP residencial** (é
+TLS-fingerprint + desafio JS, não só IP). Verificado que um **motor de browser
+real** (Playwright headless) de IP residencial **passa o desafio** e lê o preço
+do JSON-LD (ex.: 189,96 em ~4,5s). A landing `/social/` do afiliado não é
+bloqueada mas só tem título+imagem (sem preço).
+
+Decisão: aquisição de preço fica atrás da fronteira `ProductSource`. Impl. atual
+aprovada = `PlaywrightSource` (local, IP residencial); título+imagem podem vir do
+`/social/`, o preço vem do `ProductSource`; fallback sempre pro preenchimento
+manual se falhar. Playwright é dep pesada (~114MB Chromium, ~4,5s/import) mas
+justificada: mata o atrito de digitar preço em toda oferta, e está isolada atrás
+da fronteira. Impls. futuras do `ProductSource` p/ SaaS: `ExtensionSource`
+(browser do usuário), `MlApiSource` (OAuth do usuário). Nunca guerra anti-bot no
+servidor.
 
 Nota afiliado (Slice A): colar `meli.la/xxx` (link de afiliado gerado pelo ML)
 funciona. `meli.la` redireciona para uma pré-página `/social/` — que NÃO é a
@@ -111,7 +135,8 @@ vira o `affiliateUrl` pré-preenchido; a URL do produto resolvida vira o
 `sourceUrl` (removido da tela, mantido no modelo → invariante afiliado≠origem
 continua válida). Preços: a página `/p/` é anti-botada no servidor e os preços
 são renderizados por JS lá, então NÃO vêm no fetch — título+imagem preenchem,
-preço é manual (até a extensão §24). Campo "URL de origem" removido do form.
+preço é manual até o `PlaywrightSource` entrar (ver Nota aquisição de dados).
+Campo "URL de origem" removido do form.
 
 Nota Baileys: conexão real exige rede + scan de QR num telefone; não dá para
 testar no sandbox. As invariantes de delivery são testadas contra um
@@ -171,7 +196,26 @@ FUTURO (marcado pelo usuário, adiado — hoje `workspaceId` é fixo em
 de WhatsApp, múltiplos grupos/nichos. Só quando existir 2+ número de verdade.
 
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
-importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅.
+importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅ (inclui
+reordenar/cancelar fila e template de mensagem personalizável).
+
+Próximos passos:
+
+- **S6 — `PlaywrightSource` (preço automático):** browser local resolve o preço
+  (e confirma título/imagem) no import (`meli.la` e URL direta), atrás da
+  fronteira `ProductSource`, com fallback manual. Aprovado pelo usuário. Remove o
+  atrito de digitar preço.
+- **Endurecer a fila:** retry de `failed` na UI; anti-rajada no restart (respeitar
+  o espaçamento mesmo nos vencidos acumulados).
+- **Split aquisição ↔ orquestração (pré-SaaS):** preparar a troca do
+  `ProductSource` local por extensão/API quando for pra VPS.
+
+NORTE (visão do usuário, longo prazo): **automação 100% da escolha de produto** —
+o sistema descobre e seleciona ofertas sozinho, sem o operador colar link ou
+garimpar. Isso reformula `Signal` de "URL colada" para "descoberta automática"; o
+humano decide só o que publica ("a automação assiste, o humano decide" levado ao
+limite). Toda a estrutura (Signal → Product → DealSnapshot → …, fronteiras,
+fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
 
 ## Arquitetura
 
