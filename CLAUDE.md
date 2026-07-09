@@ -66,10 +66,15 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 
 ## Stack
 
-- **Monorepo:** Bun workspaces (`apps/*`)
+- **Monorepo:** Bun workspaces (`apps/*`, `packages/*`)
 - **Web:** React + Vite + Tailwind v4 (`@tailwindcss/vite`) — `apps/web`
 - **API:** Hono + Bun (porta 3001) — `apps/api`
-- **Qualidade:** TypeScript strict, ESLint (flat), Prettier, `bun test`
+- **Shared:** `@dealflow/shared` (`packages/shared`) — contratos-fio cross-app,
+  só tipos, consumido como source `.ts` (sem build)
+- **Qualidade:** TypeScript strict, ESLint (flat, + `eslint-plugin-react-hooks`
+  oficial no web — nada de plugins de terceiro), Prettier (+
+  `@ianvs/prettier-plugin-sort-imports` e `prettier-plugin-tailwindcss`),
+  `bun test`
 
 Fronteiras previstas (interface só quando separa dependência externa real):
 `ProductSource`, `AffiliateLinkProvider`, `MessagingProvider`.
@@ -281,6 +286,22 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
   `insertDealSnapshot`, `createDeliveries`, `markDeliverySent`.
 - Adapters isolados; detalhes externos (JID, `@g.us`, Baileys, seletores DOM)
   nunca vazam para o domínio.
+- **Web (`apps/web/src`) por responsabilidade, não por página:** `ui/`
+  (primitives reutilizáveis: `Button` com `variant`/`size`, `Field`, `Panel`,
+  `PreviewBubble`, `IconButton`), `components/` (peças de feature, ex.:
+  `new-offer/{import,review,send}-panel`, `queue-row`, `whatsapp-status`),
+  `hooks/` (`usePolling` — latest-ref, substitui `setInterval` cru), `lib/`
+  (`env`/`api`/`format`/`offer` + barrel), `types/`, `styles/globals.css`,
+  `tabs/` (só orquestração: estado + handlers; JSX grande vira componente com
+  props). **Barrel `index.ts` em cada pasta.**
+- **Contratos-fio em `@dealflow/shared`** (`ExtractedDeal`, `DeliveryResult`,
+  `QueueItem`, `Settings`): o que atravessa o HTTP mora aí e é importado de
+  `@dealflow/shared` — **sem shim/barrel local de re-export**. No fio datas são
+  `string`; o servidor deriva a variante com `Date` via
+  `Omit<QueueItem,"dueAt"|"sentAt"> & { dueAt: Date | null }`. NÃO confundir com
+  `apps/api/src/shared/` (infra server-only cross-feature: `db`, `schema`,
+  `messaging`, `money` — não cruza fronteira app↔app). A extensão é JS puro sem
+  build: segue o contrato à mão.
 
 ## Filosofia (ponytail)
 
@@ -299,7 +320,14 @@ o que sobra.
 
 - **Testes** ficam em `tests/` espelhando `src/`, não colocados. Ex.:
   `apps/api/tests/app.test.ts`.
-- **Path alias** `@/*` → `src/*` (tsconfig + alias no Vite). Evite `../../`.
+- **Path alias** `@/*` → `src/*` (tsconfig + Vite; api e web). Use `@/` para
+  traversal de pai; mantenha `./irmão` na mesma pasta (mais legível que
+  `@/features/.../use-case`). Contrato cross-app vem de `@dealflow/shared`.
+- **Barrel `index.ts`** por pasta (`ui`, `components`, `hooks`, `lib`, `types`,
+  `tabs`) — importa-se a pasta, não o arquivo.
+- **Verificar no browser** (app rodando) toda feature nova antes de commitar —
+  teste verde não prova comportamento ponta-a-ponta. Refactor type-only/config
+  dispensa (typecheck+lint+test+build cobrem).
 - **Sem comentários** no código. Nomes explícitos falam por si.
 - **Prettier** manda na formatação; **ESLint** na qualidade (não acoplados).
 - **Commits** em inglês, minúsculos, uma linha, poucas palavras, convencionais
