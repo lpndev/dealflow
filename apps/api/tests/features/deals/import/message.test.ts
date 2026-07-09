@@ -1,4 +1,4 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import { extractMessageHints } from "@/features/deals/import/message";
 
 it("extracts de/por prices and coupon from a deal message", () => {

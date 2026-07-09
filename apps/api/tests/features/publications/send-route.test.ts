@@ -1,4 +1,4 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import app from "@/app";
 
 process.env.DATABASE_URL = ":memory:";

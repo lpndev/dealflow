@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { importDeal } from "./use-case";
 import { ImportError } from "@/shared/errors";
+import { importDeal } from "./use-case";
 
 export const deals = new Hono();
 

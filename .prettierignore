@@ -1,2 +1,7 @@
 dist
 bun.lock
+
+# gerados / sensíveis — nunca formatar
+**/wa-auth/
+**/*.db
+**/drizzle/**

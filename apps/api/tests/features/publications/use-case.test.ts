@@ -1,14 +1,14 @@
-import { it, expect } from "bun:test";
-import { createDb } from "@/shared/db";
+import { expect, it } from "bun:test";
 import {
   createPublication,
   previewPublication,
 } from "@/features/publications/use-case";
+import { createDb } from "@/shared/db";
 import { PublicationError } from "@/shared/errors";
 import {
-  product,
-  dealSnapshot,
   affiliateLink,
+  dealSnapshot,
+  product,
   publication,
 } from "@/shared/schema";
 

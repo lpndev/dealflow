@@ -1,10 +1,10 @@
-import { it, expect } from "bun:test";
-import { createDb, type Db } from "@/shared/db";
-import { createPublication } from "@/features/publications/use-case";
+import { expect, it } from "bun:test";
 import { schedulePublication } from "@/features/publications/schedule/use-case";
+import { createPublication } from "@/features/publications/use-case";
 import { updateSettings } from "@/features/settings/use-case";
+import { createDb, type Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
-import { destination, delivery, publication } from "@/shared/schema";
+import { delivery, destination, publication } from "@/shared/schema";
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 
 const deal = {

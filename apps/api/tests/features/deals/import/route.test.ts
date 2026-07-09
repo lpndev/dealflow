@@ -1,4 +1,4 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import app from "@/app";
 
 async function post(body: unknown) {

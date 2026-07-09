@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { getSession, getQrDataUrl, listGroups, sendMessage } from "@/whatsapp";
+import { getQrDataUrl, getSession, listGroups, sendMessage } from "@/whatsapp";
 
 export const app = new Hono();
 

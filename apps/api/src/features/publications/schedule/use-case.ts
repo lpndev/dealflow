@@ -1,8 +1,8 @@
-import { and, eq, desc } from "drizzle-orm";
-import type { Db } from "@/shared/db";
-import { publication, destination, delivery } from "@/shared/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { getSettings } from "@/features/settings/use-case";
+import type { Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
+import { delivery, destination, publication } from "@/shared/schema";
 
 export type ScheduleInput = {
   publicationId: string;

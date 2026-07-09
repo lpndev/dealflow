@@ -1,7 +1,7 @@
-import { it, expect } from "bun:test";
-import { createDb } from "@/shared/db";
-import { getSettings, updateSettings } from "@/features/settings/use-case";
+import { expect, it } from "bun:test";
 import { DEFAULT_TEMPLATE } from "@/features/publications/render";
+import { getSettings, updateSettings } from "@/features/settings/use-case";
+import { createDb } from "@/shared/db";
 import { SettingsError } from "@/shared/errors";
 
 const base = {

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { getDb } from "@/shared/db";
-import { sendPublication } from "./use-case";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
+import { getDb } from "@/shared/db";
 import { DeliveryError } from "@/shared/errors";
+import { sendPublication } from "./use-case";
 
 export const send = new Hono();
 

@@ -1,9 +1,9 @@
-import { it, expect } from "bun:test";
-import { createDb, type Db } from "@/shared/db";
-import { createPublication } from "@/features/publications/use-case";
+import { expect, it } from "bun:test";
 import { sendPublication } from "@/features/publications/send/use-case";
+import { createPublication } from "@/features/publications/use-case";
+import { createDb, type Db } from "@/shared/db";
 import { DeliveryError } from "@/shared/errors";
-import { destination, delivery, publication } from "@/shared/schema";
+import { delivery, destination, publication } from "@/shared/schema";
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 import { FakeMessaging } from "../../support/fake-messaging";
 

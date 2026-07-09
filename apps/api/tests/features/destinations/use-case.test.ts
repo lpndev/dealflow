@@ -1,9 +1,9 @@
-import { it, expect } from "bun:test";
-import { createDb } from "@/shared/db";
+import { expect, it } from "bun:test";
 import {
   listDestinations,
   syncDestinations,
 } from "@/features/destinations/use-case";
+import { createDb } from "@/shared/db";
 import { FakeMessaging } from "../../support/fake-messaging";
 
 function providerWith(names: string[]) {

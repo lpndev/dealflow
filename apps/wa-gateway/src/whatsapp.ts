@@ -1,11 +1,11 @@
+import { Boom } from "@hapi/boom";
 import makeWASocket, {
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
   Browsers,
   DisconnectReason,
+  fetchLatestBaileysVersion,
+  useMultiFileAuthState,
   type WASocket,
 } from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
 import pino from "pino";
 import qrcode from "qrcode";
 

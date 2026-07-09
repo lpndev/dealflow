@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { deals } from "@/features/deals/import/route";
 import { capture } from "@/features/deals/capture/route";
-import { publications } from "@/features/publications/route";
-import { send } from "@/features/publications/send/route";
-import { schedule } from "@/features/publications/schedule/route";
+import { deals } from "@/features/deals/import/route";
 import { destinations } from "@/features/destinations/route";
-import { settingsRoutes } from "@/features/settings/route";
+import { publications } from "@/features/publications/route";
+import { schedule } from "@/features/publications/schedule/route";
+import { send } from "@/features/publications/send/route";
 import { queue } from "@/features/queue/route";
+import { settingsRoutes } from "@/features/settings/route";
 
 export const app = new Hono();
 

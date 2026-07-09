@@ -1,5 +1,5 @@
-import { it, expect } from "bun:test";
-import { parsePrice, formatBrl } from "@/shared/money";
+import { expect, it } from "bun:test";
+import { formatBrl, parsePrice } from "@/shared/money";
 
 it("parses a brl price with comma decimals", () => {
   expect(parsePrice("R$ 299,90")).toBe(299.9);

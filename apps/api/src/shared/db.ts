@@ -6,7 +6,9 @@ import * as schema from "./schema";
 
 export type Db = BunSQLiteDatabase<typeof schema>;
 
-const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
+const migrationsFolder = fileURLToPath(
+  new URL("../../drizzle", import.meta.url),
+);
 
 export function createDb(url: string): Db {
   const sqlite = new Database(url);

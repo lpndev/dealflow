@@ -1,18 +1,18 @@
 import { and, eq } from "drizzle-orm";
+import { getSettings } from "@/features/settings/use-case";
+import { mlbIdFromUrl } from "@/integrations/mercado-livre/parse";
 import type { Db } from "@/shared/db";
+import { PublicationError } from "@/shared/errors";
+import { parsePrice } from "@/shared/money";
 import {
-  product,
-  dealSnapshot,
   affiliateLink,
+  dealSnapshot,
+  product,
   publication,
 } from "@/shared/schema";
-import { renderPublication, type RenderInput } from "./render";
-import { getSettings } from "@/features/settings/use-case";
-import { parsePrice } from "@/shared/money";
 import { normalizeUrl } from "@/shared/urls";
-import { mlbIdFromUrl } from "@/integrations/mercado-livre/parse";
-import { PublicationError } from "@/shared/errors";
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
+import { renderPublication, type RenderInput } from "./render";
 
 const PROVIDER = "mercado-livre";
 

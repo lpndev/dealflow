@@ -1,7 +1,7 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import {
-  renderPublication,
   DEFAULT_TEMPLATE,
+  renderPublication,
 } from "@/features/publications/render";
 
 it("renders a full offer", () => {

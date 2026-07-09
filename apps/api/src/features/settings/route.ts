@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getDb } from "@/shared/db";
-import { getSettings, updateSettings } from "./use-case";
 import { SettingsError } from "@/shared/errors";
+import { getSettings, updateSettings } from "./use-case";
 
 export const settingsRoutes = new Hono();
 

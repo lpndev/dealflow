@@ -1,7 +1,7 @@
-import app from "./app";
-import { getDb } from "@/shared/db";
 import { startScheduler } from "@/features/publications/schedule/scheduler";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
+import { getDb } from "@/shared/db";
+import app from "./app";
 
 startScheduler(getDb(), whatsappGateway);
 

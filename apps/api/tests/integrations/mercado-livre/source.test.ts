@@ -1,4 +1,4 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import { supportsMercadoLivre } from "@/integrations/mercado-livre/source";
 
 it("supports a real mercado livre host", () => {

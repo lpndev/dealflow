@@ -1,4 +1,4 @@
-import { it, expect } from "bun:test";
+import { expect, it } from "bun:test";
 import { extractUrls, normalizeUrl } from "@/shared/urls";
 
 it("extracts a bare url", () => {

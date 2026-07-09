@@ -1,7 +1,7 @@
 import { Hono } from "hono";
+import { whatsappGateway } from "@/integrations/whatsapp/gateway";
 import { getDb } from "@/shared/db";
 import { listDestinations, syncDestinations } from "./use-case";
-import { whatsappGateway } from "@/integrations/whatsapp/gateway";
 
 export const destinations = new Hono();
 

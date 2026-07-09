@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getDb } from "@/shared/db";
-import { schedulePublication } from "./use-case";
 import { ScheduleError } from "@/shared/errors";
+import { schedulePublication } from "./use-case";
 
 export const schedule = new Hono();
 

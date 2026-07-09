@@ -1,6 +1,6 @@
 import type {
-  MessagingProvider,
   MessagingDestination,
+  MessagingProvider,
   SendMessageInput,
   SendMessageResult,
 } from "@/shared/messaging";
