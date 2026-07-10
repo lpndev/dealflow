@@ -31,7 +31,7 @@ export function WhatsAppStatus() {
     }
   }
 
-  usePolling(refresh, 3000);
+  usePolling(refresh, connection === "open" ? 20000 : 3000);
 
   useEffect(() => {
     if (qr) setOpenQr(true);

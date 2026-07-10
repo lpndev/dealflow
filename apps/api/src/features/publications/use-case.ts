@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { getSettings } from "@/features/settings/use-case";
-import { mlbIdFromUrl } from "@/integrations/mercado-livre/parse";
 import type { Db } from "@/shared/db";
 import { PublicationError } from "@/shared/errors";
 import { parsePrice } from "@/shared/money";
@@ -24,6 +23,7 @@ export type PublicationInput = {
   coupon?: string;
   sourceUrl?: string;
   affiliateUrl?: string;
+  externalId?: string;
 };
 
 export type PublicationResult = {
@@ -63,7 +63,7 @@ export function createPublication(
 
   const productId = upsertProduct(db, {
     workspaceId,
-    externalId: sourceUrl ? mlbIdFromUrl(sourceUrl) : undefined,
+    externalId: input.externalId?.trim() || undefined,
     canonicalUrl: sourceUrl,
     title,
     imageUrl: input.imageUrl?.trim() || undefined,

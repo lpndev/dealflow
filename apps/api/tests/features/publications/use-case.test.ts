@@ -24,6 +24,7 @@ const valid = {
   coupon: "CASA20",
   sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
   affiliateUrl: "https://mercadolivre.com/sec/ours",
+  externalId: "MLB123",
 };
 
 it("persists a publication and returns ready content", () => {

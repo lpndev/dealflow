@@ -44,8 +44,14 @@ export function getSession() {
   return { connection, hasQr: currentQr !== undefined };
 }
 
+let qrCache: { qr: string; dataUrl: string } | undefined;
+
 export async function getQrDataUrl(): Promise<string | undefined> {
-  return currentQr ? qrcode.toDataURL(currentQr) : undefined;
+  if (!currentQr) return undefined;
+  if (qrCache?.qr !== currentQr) {
+    qrCache = { qr: currentQr, dataUrl: await qrcode.toDataURL(currentQr) };
+  }
+  return qrCache.dataUrl;
 }
 
 export async function listGroups(): Promise<{ id: string; name: string }[]> {

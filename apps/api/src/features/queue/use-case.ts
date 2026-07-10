@@ -76,15 +76,17 @@ export function cancelScheduled(db: Db, id: string): void {
 }
 
 export function reorderQueue(db: Db, orderedIds: string[]): void {
-  const rows = orderedIds.map((id) => {
-    const row = db
-      .select()
-      .from(delivery)
-      .where(and(eq(delivery.id, id), eq(delivery.status, "scheduled")))
-      .get();
-    if (!row) throw new ScheduleError(`not a scheduled delivery: ${id}`);
-    return row;
-  });
+  const rows = db
+    .select({ id: delivery.id, dueAt: delivery.dueAt })
+    .from(delivery)
+    .where(
+      and(inArray(delivery.id, orderedIds), eq(delivery.status, "scheduled")),
+    )
+    .all();
+
+  const found = new Set(rows.map((r) => r.id));
+  const missing = orderedIds.find((id) => !found.has(id));
+  if (missing) throw new ScheduleError(`not a scheduled delivery: ${missing}`);
 
   const slots = rows
     .map((r) => r.dueAt)
