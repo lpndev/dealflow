@@ -16,4 +16,4 @@ export type Form = {
   externalId: string;
 };
 
-export type Destination = { id: string; name: string };
+export type Destination = { id: string; name: string; enabled: boolean };

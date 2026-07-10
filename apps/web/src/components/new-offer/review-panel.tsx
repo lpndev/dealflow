@@ -1,5 +1,7 @@
+import { EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { Field, Panel, PreviewBubble } from "@/components";
+import { Button } from "@/components/ui/button";
 import { type Form } from "@/types";
-import { Button, Field, Panel, PreviewBubble } from "@/ui";
 
 export function ReviewPanel(props: {
   form: Form;
@@ -18,14 +20,14 @@ export function ReviewPanel(props: {
       eyebrow="02"
       hint="O operador decide. Ajuste antes de publicar."
     >
-      <div className="rise grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
-        <div className="space-y-4">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <div className="flex flex-1 flex-col gap-4 lg:min-w-0">
           <Field
             label="Título"
             value={form.title}
             onChange={(v) => onChange("title", v)}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex gap-4 *:flex-1">
             <Field
               label="Preço De"
               mono
@@ -61,7 +63,7 @@ export function ReviewPanel(props: {
             onChange={(v) => onChange("affiliateUrl", v)}
           />
           {props.needsAffiliate && (
-            <div className="space-y-2 rounded-lg border border-fail/40 bg-fail/10 px-3 py-3 text-sm text-fail">
+            <div className="flex flex-col gap-2 border border-destructive/40 bg-destructive/10 px-4 py-4 text-xs text-destructive">
               <p>
                 Falta o seu link de afiliado — nunca publique com o link de
                 outra pessoa. Gere o seu abaixo (abre o produto no ML e traz o
@@ -72,21 +74,23 @@ export function ReviewPanel(props: {
               </Button>
             </div>
           )}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={props.onPreview}>
+              <EyeIcon />
               Pré-visualizar
             </Button>
             <Button size="sm" onClick={props.onSave}>
+              <FloppyDiskIcon />
               Salvar publicação
             </Button>
           </div>
         </div>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4 lg:w-80">
           {form.imageUrl && (
             <img
               src={form.imageUrl}
               alt=""
-              className="max-h-52 w-full rounded-lg border border-line bg-inset object-contain p-2"
+              className="max-h-52 w-full border bg-muted object-contain p-2"
             />
           )}
           {props.preview && (

@@ -1,5 +1,8 @@
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { ErrorNote } from "@/components";
 import { ImportPanel, ReviewPanel, SendPanel } from "@/components/new-offer";
+import { Button } from "@/components/ui/button";
 import { usePolling } from "@/hooks";
 import {
   API_DOWN,
@@ -15,7 +18,6 @@ import {
   type Draft,
   type Form,
 } from "@/types";
-import { Button, ErrorNote } from "@/ui";
 
 const DRAFT_INPUT_KEY = "dealflow:draft:input";
 const DRAFT_FORM_KEY = "dealflow:draft:form";
@@ -49,7 +51,11 @@ export function NewOffer(props: { onQueued: () => void }) {
 
   useEffect(() => {
     apiGet("/destinations")
-      .then((d) => setDestinations(d.destinations ?? []))
+      .then((d) => {
+        const list: Destination[] = d.destinations ?? [];
+        setDestinations(list);
+        setSelected(new Set(list.filter((x) => x.enabled).map((x) => x.id)));
+      })
       .catch(() => setDestinations([]));
   }, []);
 
@@ -176,7 +182,7 @@ export function NewOffer(props: { onQueued: () => void }) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <ImportPanel
         value={input}
         onChange={setInput}
@@ -187,7 +193,7 @@ export function NewOffer(props: { onQueued: () => void }) {
       {error && <ErrorNote>{error}</ErrorNote>}
 
       {captured && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-text">
+        <div className="flex items-center justify-between gap-4 border border-primary/40 bg-primary/10 px-4 py-2 text-xs text-foreground">
           <span>Oferta capturada da extensão pronta para carregar.</span>
           <Button
             size="sm"
@@ -196,6 +202,7 @@ export function NewOffer(props: { onQueued: () => void }) {
               setCaptured(null);
             }}
           >
+            <DownloadSimpleIcon />
             Carregar
           </Button>
         </div>

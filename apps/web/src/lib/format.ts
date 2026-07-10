@@ -11,3 +11,14 @@ export function fmtTime(value: string | number | Date | null): string {
 }
 
 export const fmtMin = (seconds: number) => `${Math.round(seconds / 60)} min`;
+
+const CONNECTION_LABEL: Record<string, string> = {
+  open: "conectado",
+  connecting: "conectando…",
+  close: "desconectado",
+  desconhecido: "verificando…",
+  "gateway offline": "gateway offline",
+};
+
+export const connectionLabel = (connection: string) =>
+  CONNECTION_LABEL[connection] ?? connection;

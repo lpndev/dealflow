@@ -1,6 +1,16 @@
+import {
+  ArrowsClockwiseIcon,
+  CalendarDotsIcon,
+  CheckIcon,
+  PaperPlaneTiltIcon,
+  XIcon,
+} from "@phosphor-icons/react";
+import { useState } from "react";
+import { Empty, GroupToggle, Panel } from "@/components";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { plural } from "@/lib";
 import { type DeliveryResult, type Destination } from "@/types";
-import { Button, Empty, Panel } from "@/ui";
 
 export function SendPanel(props: {
   destinations: Destination[];
@@ -17,108 +27,116 @@ export function SendPanel(props: {
   const nameOf = (id: string) =>
     props.destinations.find((d) => d.id === id)?.name ?? id;
 
+  const [scheduling, setScheduling] = useState(false);
+  const clearSchedule = () => {
+    props.onStartAt("");
+    setScheduling(false);
+  };
+
   return (
     <Panel
       title="Enviar"
       eyebrow="03"
       hint="Agende para espaçar, ou envie agora."
     >
-      <div className="rise space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted">
-            {props.selected.size > 0
-              ? `${props.selected.size} grupo${plural(props.selected.size)} selecionado${plural(props.selected.size)}`
-              : "Escolha os grupos"}
-          </span>
-          <button
-            onClick={props.onSync}
-            className="text-sm font-medium text-gold transition hover:brightness-110"
-          >
-            Sincronizar grupos
-          </button>
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {props.selected.size > 0
+            ? `${props.selected.size} grupo${plural(props.selected.size)} selecionado${plural(props.selected.size)}`
+            : "Escolha os grupos"}
+        </span>
+        <Button variant="ghost" size="sm" onClick={props.onSync}>
+          <ArrowsClockwiseIcon />
+          Sincronizar grupos
+        </Button>
+      </div>
 
-        {props.destinations.length === 0 ? (
-          <Empty>Nenhum grupo ainda. Conecte o WhatsApp e sincronize.</Empty>
-        ) : (
-          <ul className="grid gap-1.5 sm:grid-cols-2">
-            {props.destinations.map((d) => {
-              const on = props.selected.has(d.id);
-              return (
-                <li key={d.id}>
-                  <label
-                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition ${
-                      on
-                        ? "border-gold/60 bg-gold/10 text-text"
-                        : "border-line bg-panel text-muted hover:border-muted"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() => props.onToggle(d.id)}
-                      className="accent-gold"
-                    />
-                    <span className="truncate">{d.name}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      {props.destinations.length === 0 ? (
+        <Empty>Nenhum grupo ainda. Conecte o WhatsApp e sincronize.</Empty>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {props.destinations.map((d) => (
+            <GroupToggle
+              key={d.id}
+              name={d.name}
+              checked={props.selected.has(d.id)}
+              onCheckedChange={() => props.onToggle(d.id)}
+            />
+          ))}
+        </ul>
+      )}
 
-        <label className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          Começar a fila em
-          <input
+      {scheduling ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>Começar em</span>
+          <Input
             type="datetime-local"
             value={props.startAt}
             onChange={(e) => props.onStartAt(e.target.value)}
-            className="rounded-lg border border-line bg-panel px-3 py-2 text-sm text-text"
+            className="w-auto"
           />
-          <span className="text-xs">
-            vazio = agora; o intervalo só espaça os itens da fila
-          </span>
-        </label>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="go"
-            size="lg"
-            onClick={props.onSchedule}
-            disabled={props.selected.size === 0}
+          <button
+            onClick={clearSchedule}
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Agendar envio
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={props.onSendNow}
-            disabled={props.selected.size === 0}
-          >
-            Enviar agora
-          </Button>
+            enviar agora
+          </button>
         </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setScheduling(true)}
+          className="self-start"
+        >
+          <CalendarDotsIcon />
+          Agendar para outro horário
+        </Button>
+      )}
 
-        {props.notice && (
-          <p className="rounded-lg border border-go/40 bg-go/10 px-4 py-3 text-sm text-go">
-            {props.notice}
-          </p>
-        )}
-
-        {props.results && (
-          <ul className="space-y-1.5 border-t border-line pt-4 font-mono text-sm">
-            {props.results.map((r) => (
-              <li key={r.destinationId} className="flex items-center gap-2">
-                <span className={r.status === "sent" ? "text-go" : "text-fail"}>
-                  {r.status === "sent" ? "✓" : "✗"}
-                </span>
-                <span className="text-text">{nameOf(r.destinationId)}</span>
-                {r.error && <span className="text-muted">— {r.error}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="lg"
+          onClick={props.onSchedule}
+          disabled={props.selected.size === 0}
+        >
+          <CalendarDotsIcon />
+          Agendar envio
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={props.onSendNow}
+          disabled={props.selected.size === 0}
+        >
+          <PaperPlaneTiltIcon />
+          Enviar agora
+        </Button>
       </div>
+
+      {props.notice && (
+        <p className="border border-emerald-500/40 bg-emerald-500/10 px-4 py-4 text-xs text-emerald-500">
+          {props.notice}
+        </p>
+      )}
+
+      {props.results && (
+        <ul className="flex flex-col gap-2 border-t pt-4 font-mono text-xs">
+          {props.results.map((r) => (
+            <li key={r.destinationId} className="flex items-center gap-2">
+              {r.status === "sent" ? (
+                <CheckIcon className="size-4 text-emerald-500" />
+              ) : (
+                <XIcon className="size-4 text-destructive" />
+              )}
+              <span className="text-foreground">{nameOf(r.destinationId)}</span>
+              {r.error && (
+                <span className="text-muted-foreground">— {r.error}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }

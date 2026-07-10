@@ -1,12 +1,20 @@
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ClockIcon,
+  XIcon,
+} from "@phosphor-icons/react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fmtTime } from "@/lib";
 import { type QueueItem } from "@/types";
-import { IconButton } from "@/ui";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  scheduled: { label: "agendado", cls: "text-gold" },
-  processing: { label: "enviando…", cls: "text-gold" },
-  sent: { label: "enviado", cls: "text-go" },
-  failed: { label: "falhou", cls: "text-fail" },
+  scheduled: { label: "agendado", cls: "text-primary" },
+  processing: { label: "enviando…", cls: "text-primary" },
+  sent: { label: "enviado", cls: "text-emerald-500" },
+  failed: { label: "falhou", cls: "text-destructive" },
 };
 
 type Controls = {
@@ -15,62 +23,109 @@ type Controls = {
   onCancel: () => void;
 };
 
+function toLocalInput(value: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 export function QueueRow(props: {
   item: QueueItem;
   when: string | null;
   controls?: Controls;
+  onReschedule?: (dueAt: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const s = STATUS[props.item.status] ?? {
     label: props.item.status,
-    cls: "text-muted",
+    cls: "text-muted-foreground",
   };
   return (
-    <li className="flex items-center gap-3 rounded-lg border border-line bg-inset px-3 py-2.5">
+    <li className="flex items-center gap-4 border bg-card px-4 py-2">
       {props.item.imageUrl && (
         <img
           src={props.item.imageUrl}
           alt=""
-          className="h-10 w-10 shrink-0 rounded bg-panel object-contain"
+          className="h-10 w-10 shrink-0 bg-muted object-contain"
         />
       )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-text">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="truncate text-xs text-foreground">
           {props.item.title ?? "sem título"}
         </p>
-        <p className="truncate text-xs text-muted">
+        <p className="truncate text-xs text-muted-foreground">
           {props.item.destinationName}
           {props.item.error && (
-            <span className="text-fail"> — {props.item.error}</span>
+            <span className="text-destructive"> — {props.item.error}</span>
           )}
         </p>
       </div>
-      <div className="shrink-0 text-right">
+      <div className="flex shrink-0 flex-col items-end gap-1">
         <p className={`font-mono text-xs ${s.cls}`}>{s.label}</p>
-        <p className="font-mono text-xs text-muted">{fmtTime(props.when)}</p>
+        {editing && props.onReschedule ? (
+          <Input
+            type="datetime-local"
+            autoFocus
+            defaultValue={toLocalInput(props.when)}
+            onBlur={() => setEditing(false)}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              props.onReschedule?.(new Date(e.target.value).toISOString());
+              setEditing(false);
+            }}
+            className="w-auto font-mono"
+          />
+        ) : (
+          <p className="font-mono text-xs text-muted-foreground">
+            {fmtTime(props.when)}
+          </p>
+        )}
       </div>
       {props.controls && (
         <div className="flex shrink-0 items-center gap-1">
-          <IconButton
-            label="Subir na fila"
+          {props.onReschedule && (
+            <Button
+              variant="outline"
+              size="icon"
+              title="Editar horário"
+              aria-label="Editar horário"
+              onClick={() => setEditing(true)}
+            >
+              <ClockIcon />
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            title="Subir na fila"
+            aria-label="Subir na fila"
             disabled={!props.controls.onUp}
             onClick={props.controls.onUp}
           >
-            ↑
-          </IconButton>
-          <IconButton
-            label="Descer na fila"
+            <ArrowUpIcon />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="Descer na fila"
+            aria-label="Descer na fila"
             disabled={!props.controls.onDown}
             onClick={props.controls.onDown}
           >
-            ↓
-          </IconButton>
-          <IconButton
-            label="Cancelar envio"
+            <ArrowDownIcon />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="Cancelar envio"
+            aria-label="Cancelar envio"
+            className="text-destructive hover:text-destructive"
             onClick={props.controls.onCancel}
-            danger
           >
-            ✕
-          </IconButton>
+            <XIcon />
+          </Button>
         </div>
       )}
     </li>

@@ -1,14 +1,7 @@
+import { QrCodeIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { usePolling } from "@/hooks";
-import { GATEWAY } from "@/lib";
-
-const CONNECTION_LABEL: Record<string, string> = {
-  open: "conectado",
-  connecting: "conectando…",
-  close: "desconectado",
-  desconhecido: "verificando…",
-  "gateway offline": "gateway offline",
-};
+import { connectionLabel, fetchSession } from "@/lib";
 
 export function WhatsAppStatus() {
   const [connection, setConnection] = useState("desconhecido");
@@ -16,19 +9,9 @@ export function WhatsAppStatus() {
   const [openQr, setOpenQr] = useState(false);
 
   async function refresh() {
-    try {
-      const session = await fetch(`${GATEWAY}/session`).then((r) => r.json());
-      setConnection(session.connection);
-      if (session.hasQr) {
-        const data = await fetch(`${GATEWAY}/session/qr`).then((r) => r.json());
-        setQr(data.qr ?? null);
-      } else {
-        setQr(null);
-      }
-    } catch {
-      setConnection("gateway offline");
-      setQr(null);
-    }
+    const session = await fetchSession();
+    setConnection(session.connection);
+    setQr(session.qr);
   }
 
   usePolling(refresh, connection === "open" ? 20000 : 3000);
@@ -39,34 +22,43 @@ export function WhatsAppStatus() {
   }, [qr, connection]);
 
   const connected = connection === "open";
-  const label = CONNECTION_LABEL[connection] ?? connection;
+  const label = connectionLabel(connection);
 
   return (
     <div className="relative">
       <button
         onClick={() => qr && setOpenQr((v) => !v)}
-        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+        className={`flex items-center gap-2 border px-4 py-2 text-xs font-medium transition-colors ${
           connected
-            ? "border-go/40 bg-go/10 text-go"
+            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
             : qr
-              ? "border-gold/50 bg-gold/10 text-gold hover:brightness-110"
-              : "border-line bg-panel text-muted"
+              ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
+              : "border-border bg-card text-muted-foreground"
         }`}
       >
         <span
-          className={`h-2 w-2 rounded-full ${
-            connected ? "pulse-go bg-go" : qr ? "bg-gold" : "bg-muted"
+          className={`h-2 w-2 ${
+            connected
+              ? "animate-pulse bg-emerald-500"
+              : qr
+                ? "bg-primary"
+                : "bg-muted-foreground"
           }`}
         />
         WhatsApp: {label}
-        {qr && !connected && <span className="text-gold">· ver QR</span>}
+        {qr && !connected && (
+          <span className="flex items-center gap-1 text-primary">
+            <QrCodeIcon className="size-3" />
+            ver QR
+          </span>
+        )}
       </button>
 
       {qr && openQr && !connected && (
-        <div className="rise absolute right-0 z-20 mt-2 w-64 rounded-xl border border-line bg-panel p-4 shadow-2xl">
-          <p className="mb-2 text-xs text-muted">
+        <div className="absolute top-full right-0 z-20 flex w-64 flex-col gap-2 border bg-popover p-4 shadow-2xl">
+          <p className="text-xs text-muted-foreground">
             No WhatsApp:{" "}
-            <span className="text-text">
+            <span className="text-foreground">
               Aparelhos conectados → Conectar um aparelho
             </span>
             , e aponte para o código.
@@ -74,7 +66,7 @@ export function WhatsAppStatus() {
           <img
             src={qr}
             alt="QR de conexão do WhatsApp"
-            className="w-full rounded-lg bg-white p-2"
+            className="w-full bg-white p-2"
           />
         </div>
       )}

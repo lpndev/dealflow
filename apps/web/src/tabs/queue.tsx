@@ -1,12 +1,14 @@
+import { PauseIcon, PlayIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { QueueRow } from "@/components";
+import { Empty, ErrorNote, Panel, QueueRow } from "@/components";
+import { Button } from "@/components/ui/button";
 import { usePolling } from "@/hooks";
-import { apiDelete, apiGet, apiPut } from "@/lib";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib";
 import { type QueueItem } from "@/types";
-import { Empty, ErrorNote, Panel } from "@/ui";
 
 export function QueueTab(props: { refreshKey: number }) {
   const [items, setItems] = useState<QueueItem[]>([]);
+  const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
 
@@ -15,12 +17,39 @@ export function QueueTab(props: { refreshKey: number }) {
     apiGet("/queue")
       .then((d) => {
         setItems(d.items ?? []);
+        setPaused(!!d.paused);
         setError(null);
       })
       .catch((e) => setError(e.message));
   }
 
   usePolling(load, 5000, props.refreshKey);
+
+  async function togglePause() {
+    const next = !paused;
+    setPaused(next);
+    busy.current = true;
+    try {
+      await apiPost(next ? "/queue/pause" : "/queue/resume", {});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "falha ao pausar");
+    } finally {
+      busy.current = false;
+      load();
+    }
+  }
+
+  async function reschedule(id: string, dueAt: string) {
+    busy.current = true;
+    try {
+      await apiPut(`/queue/${id}/time`, { dueAt });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "falha ao reagendar");
+    } finally {
+      busy.current = false;
+      load();
+    }
+  }
 
   async function reorder(from: number, to: number) {
     const next = [...items];
@@ -54,15 +83,37 @@ export function QueueTab(props: { refreshKey: number }) {
   return (
     <Panel title="Fila" hint="Próximos envios, espaçados para parecer humano">
       {error && <ErrorNote>{error}</ErrorNote>}
+
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-xs text-muted-foreground">
+          {paused
+            ? "Fila pausada — nada será enviado até continuar."
+            : "Fila ativa."}
+        </span>
+        <Button
+          variant={paused ? "default" : "outline"}
+          size="sm"
+          onClick={togglePause}
+        >
+          {paused ? <PlayIcon /> : <PauseIcon />}
+          {paused ? "Continuar fila" : "Pausar fila"}
+        </Button>
+      </div>
+
       {items.length === 0 ? (
         <Empty>Nada na fila. Agende uma oferta na aba Nova oferta.</Empty>
       ) : (
-        <ul className="space-y-2">
+        <ul className="flex flex-col gap-2">
           {items.map((it, i) => (
             <QueueRow
               key={it.id}
               item={it}
               when={it.dueAt}
+              onReschedule={
+                it.status === "scheduled"
+                  ? (dueAt) => reschedule(it.id, dueAt)
+                  : undefined
+              }
               controls={
                 it.status === "scheduled"
                   ? {
@@ -87,14 +138,27 @@ export function HistoryTab(props: { refreshKey: number }) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function load() {
     apiGet("/history")
       .then((d) => {
         setItems(d.items ?? []);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, [props.refreshKey]);
+  }
+
+  useEffect(load, [props.refreshKey]);
+
+  async function clear() {
+    setItems([]);
+    try {
+      await apiDelete("/history");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "falha ao limpar");
+    } finally {
+      load();
+    }
+  }
 
   return (
     <Panel title="Histórico" hint="Ofertas já enviadas">
@@ -102,11 +166,19 @@ export function HistoryTab(props: { refreshKey: number }) {
       {items.length === 0 ? (
         <Empty>Nada enviado ainda.</Empty>
       ) : (
-        <ul className="space-y-2">
-          {items.map((it) => (
-            <QueueRow key={it.id} item={it} when={it.sentAt} />
-          ))}
-        </ul>
+        <>
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={clear}>
+              <TrashIcon />
+              Limpar histórico
+            </Button>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {items.map((it) => (
+              <QueueRow key={it.id} item={it} when={it.sentAt} />
+            ))}
+          </ul>
+        </>
       )}
     </Panel>
   );

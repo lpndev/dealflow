@@ -1,7 +1,17 @@
+import { CheckIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import {
+  ErrorNote,
+  Field,
+  GroupsConfig,
+  Panel,
+  PreviewBubble,
+  WhatsAppConfig,
+} from "@/components";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPut, fmtMin } from "@/lib";
 import { type Settings } from "@/types";
-import { Button, ErrorNote, Field, Panel, PreviewBubble } from "@/ui";
 
 const PLACEHOLDERS = [
   { key: "{titulo}", desc: "nome do produto" },
@@ -90,14 +100,18 @@ export function SettingsTab() {
   const missingLink = !template.includes("{link}");
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
+      <WhatsAppConfig />
+
+      <GroupsConfig />
+
       <Panel title="Espaçamento" hint="Como a fila distribui os envios">
-        <div className="max-w-md space-y-4">
-          <p className="text-sm text-muted">
+        <div className="flex max-w-md flex-col gap-4">
+          <p className="text-xs text-muted-foreground">
             Intervalo aleatório entre envios da fila. Um valor entre o mínimo e
             o máximo é sorteado a cada envio, para não disparar em rajada.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex gap-4 *:flex-1">
             <Field
               label="Mínimo"
               mono
@@ -113,40 +127,45 @@ export function SettingsTab() {
               onChange={touch(setMax)}
             />
           </div>
-          <p className="text-xs text-muted">{delayPreview}</p>
+          <p className="text-xs text-muted-foreground">{delayPreview}</p>
         </div>
       </Panel>
 
       <Panel title="Mensagem" hint="O template de toda oferta publicada">
-        <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="flex flex-1 flex-col gap-4 lg:min-w-0">
+            <div className="flex flex-wrap gap-2">
               {PLACEHOLDERS.map((p) => (
-                <button
+                <Button
                   key={p.key}
+                  variant="outline"
+                  size="xs"
                   onClick={() => insert(p.key)}
                   title={`Inserir ${p.desc}`}
-                  className="rounded-md border border-line bg-inset px-2 py-1 font-mono text-xs text-gold transition hover:border-gold"
+                  className="font-mono text-primary"
                 >
                   {p.key}
-                </button>
+                </Button>
               ))}
             </div>
-            <textarea
+            <Textarea
               ref={ref}
               value={template}
               onChange={(e) => touch(setTemplate)(e.target.value)}
               rows={9}
-              className="w-full resize-y rounded-lg border border-line bg-inset p-3 font-mono text-sm text-text focus:border-gold focus:outline-none"
+              className="resize-y font-mono"
             />
-            <p className="text-xs text-muted">
+            <p className="text-xs text-muted-foreground">
               Uma linha some sozinha quando seu único campo fica vazio (ex.: sem
-              cupom). O <span className="font-mono text-gold">{"{link}"}</span>{" "}
-              é obrigatório — é o que monetiza.
+              cupom). O{" "}
+              <span className="font-mono text-primary">{"{link}"}</span> é
+              obrigatório — é o que monetiza.
             </p>
           </div>
 
-          <PreviewBubble text={renderSample(template)} />
+          <div className="lg:w-80">
+            <PreviewBubble text={renderSample(template)} />
+          </div>
         </div>
       </Panel>
 
@@ -157,11 +176,17 @@ export function SettingsTab() {
         </ErrorNote>
       )}
       {error && <ErrorNote>{error}</ErrorNote>}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <Button onClick={save} disabled={missingLink}>
+          <FloppyDiskIcon />
           Salvar configurações
         </Button>
-        {saved && <span className="text-sm text-go">Salvo ✓</span>}
+        {saved && (
+          <span className="flex items-center gap-1 text-xs text-emerald-500">
+            <CheckIcon className="size-4" />
+            Salvo
+          </span>
+        )}
       </div>
     </div>
   );

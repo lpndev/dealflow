@@ -7,3 +7,6 @@ node_modules/
 bun.lock
 drizzle/
 wa-auth/
+
+# shadcn
+apps/web/src/components/ui/
