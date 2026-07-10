@@ -12,6 +12,7 @@ settingsRoutes.put("/", async (c) => {
     delayMinSeconds?: number;
     delayMaxSeconds?: number;
     messageTemplate?: string;
+    mlAffiliateTag?: string | null;
   } | null;
 
   if (
@@ -34,6 +35,9 @@ settingsRoutes.put("/", async (c) => {
         delayMinSeconds: body.delayMinSeconds,
         delayMaxSeconds: body.delayMaxSeconds,
         messageTemplate: body.messageTemplate,
+        ...(body.mlAffiliateTag !== undefined && {
+          mlAffiliateTag: body.mlAffiliateTag,
+        }),
       }),
     );
   } catch (err) {

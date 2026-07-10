@@ -26,6 +26,11 @@ export function productUrlFromSocialHtml(html: string): string | undefined {
   }
 }
 
+export function affiliateTagFromSocialHtml(html: string): string | undefined {
+  const match = html.match(/\/social\/(ct\d+)/i);
+  return match ? match[1] : undefined;
+}
+
 export function parseMercadoLivre(
   html: string,
   sourceUrl: string,

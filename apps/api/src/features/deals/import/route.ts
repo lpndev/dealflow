@@ -1,4 +1,7 @@
 import { Hono } from "hono";
+import { getSettings } from "@/features/settings/use-case";
+import { fetchMercadoLivre } from "@/integrations/mercado-livre/source";
+import { getDb } from "@/shared/db";
 import { ImportError } from "@/shared/errors";
 import { importDeal } from "./use-case";
 
@@ -12,7 +15,8 @@ deals.post("/import", async (c) => {
   }
 
   try {
-    const draft = await importDeal(input);
+    const tag = getSettings(getDb()).mlAffiliateTag;
+    const draft = await importDeal(input, fetchMercadoLivre, tag);
     return c.json({ draft });
   } catch (err) {
     if (err instanceof ImportError) {

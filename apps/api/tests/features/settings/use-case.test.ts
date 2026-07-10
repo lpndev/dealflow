@@ -9,6 +9,7 @@ const base = {
   delayMaxSeconds: 2400,
   queuePaused: false,
   messageTemplate: DEFAULT_TEMPLATE,
+  mlAffiliateTag: null,
 };
 
 it("returns defaults when nothing is stored", () => {

@@ -1,5 +1,6 @@
 import type { ExtractedDeal } from "@dealflow/shared";
 import {
+  affiliateTagFromSocialHtml,
   mlbIdFromUrl,
   parseMercadoLivre,
   productUrlFromSocialHtml,
@@ -17,6 +18,7 @@ type Fetcher = (url: string) => Promise<string>;
 export async function importDeal(
   input: string,
   fetchHtml: Fetcher = fetchMercadoLivre,
+  ourTag?: string | null,
 ): Promise<ExtractedDeal> {
   const url = extractUrls(input).map(normalizeUrl).find(supportsMercadoLivre);
   if (!url) {
@@ -33,6 +35,8 @@ export async function importDeal(
     return withHints(parseMercadoLivre(landing, url), input);
   }
 
+  const ours =
+    ourTag && affiliateTagFromSocialHtml(landing) === ourTag ? url : undefined;
   const social = parseMercadoLivre(landing, url);
   const product = parseMercadoLivre(await fetchHtml(productUrl), productUrl);
   const merged: ExtractedDeal = {
@@ -44,14 +48,18 @@ export async function importDeal(
     },
     price: product.price,
   };
-  return withHints(merged, input);
+  return withHints(merged, input, ours);
 }
 
-function withHints(deal: ExtractedDeal, input: string): ExtractedDeal {
+function withHints(
+  deal: ExtractedDeal,
+  input: string,
+  affiliateUrl?: string,
+): ExtractedDeal {
   const hints = extractMessageHints(input);
   return {
     ...deal,
-    affiliateUrl: undefined,
+    affiliateUrl,
     price: {
       original: hints.original ?? deal.price.original,
       current: hints.current ?? deal.price.current,

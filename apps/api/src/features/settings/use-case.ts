@@ -11,6 +11,7 @@ const DEFAULTS: Settings = {
   delayMaxSeconds: 2400,
   queuePaused: false,
   messageTemplate: DEFAULT_TEMPLATE,
+  mlAffiliateTag: null,
 };
 
 export function getSettings(db: Db): Settings {
@@ -25,11 +26,13 @@ export function getSettings(db: Db): Settings {
     delayMaxSeconds: row.delayMaxSeconds,
     queuePaused: row.queuePaused,
     messageTemplate: row.messageTemplate ?? DEFAULT_TEMPLATE,
+    mlAffiliateTag: row.mlAffiliateTag ?? null,
   };
 }
 
 export function updateSettings(db: Db, input: Partial<Settings>): Settings {
   const next: Settings = { ...getSettings(db), ...input };
+  next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null;
 
   if (
     !Number.isInteger(next.delayMinSeconds) ||

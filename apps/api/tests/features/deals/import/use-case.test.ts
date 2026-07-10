@@ -103,3 +103,51 @@ it("leaves affiliate url unset for a direct product paste", async () => {
   );
   expect(deal.affiliateUrl).toBeUndefined();
 });
+
+const ownSocialHtml = `<html><head>
+<link rel="canonical" href="https://www.mercadolivre.com.br/social/ct1234567890000?ref=x">
+</head><body>
+<a href="https://www.mercadolivre.com.br/jogo/p/MLB63558681">produto</a>
+</body></html>`;
+
+it("trusts the pasted meli.la as ours when the resolved tag matches", async () => {
+  const fetchByUrl = async (u: string) =>
+    u.includes("meli.la") ? ownSocialHtml : productHtml;
+  const deal = await importDeal(
+    "https://meli.la/mine",
+    fetchByUrl,
+    "ct1234567890000",
+  );
+
+  expect(deal.affiliateUrl).toBe("https://meli.la/mine");
+  expect(deal.sourceUrl).toBe(
+    "https://www.mercadolivre.com.br/jogo/p/MLB63558681",
+  );
+});
+
+it("stays fail-closed when the tag matches but no product url resolves", async () => {
+  const noProductLanding = `<html><head>
+<link rel="canonical" href="https://www.mercadolivre.com.br/social/ct1234567890000">
+<meta property="og:title" content="Sem link do produto">
+</head></html>`;
+  const deal = await importDeal(
+    "https://meli.la/mine",
+    async () => noProductLanding,
+    "ct1234567890000",
+  );
+
+  expect(deal.affiliateUrl).toBeUndefined();
+  expect(deal.affiliateUrl).not.toBe(deal.sourceUrl);
+});
+
+it("never trusts the pasted meli.la when the tag is a stranger's", async () => {
+  const fetchByUrl = async (u: string) =>
+    u.includes("meli.la") ? ownSocialHtml : productHtml;
+  const deal = await importDeal(
+    "https://meli.la/theirs",
+    fetchByUrl,
+    "ct99999999999999",
+  );
+
+  expect(deal.affiliateUrl).toBeUndefined();
+});

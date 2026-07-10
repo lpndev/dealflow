@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `ml_affiliate_tag` text;

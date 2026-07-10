@@ -125,6 +125,7 @@ export const settings = sqliteTable("settings", {
     .notNull()
     .default(false),
   messageTemplate: text("message_template"),
+  mlAffiliateTag: text("ml_affiliate_tag"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(now),

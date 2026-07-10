@@ -24,6 +24,7 @@ export type Settings = {
   delayMaxSeconds: number;
   queuePaused: boolean;
   messageTemplate: string;
+  mlAffiliateTag: string | null;
 };
 
 export type QueueItem = {

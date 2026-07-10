@@ -36,6 +36,13 @@
       "when": 1783644550823,
       "tag": "0004_moaning_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783665018243,
+      "tag": "0005_previous_rage",
+      "breakpoints": true
     }
   ]
 }
