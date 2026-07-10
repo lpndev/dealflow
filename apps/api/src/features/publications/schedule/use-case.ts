@@ -7,6 +7,7 @@ import { delivery, destination, publication } from "@/shared/schema";
 export type ScheduleInput = {
   publicationId: string;
   destinationIds: string[];
+  startAt?: Date;
 };
 
 export type ScheduledDelivery = {
@@ -36,7 +37,9 @@ export function schedulePublication(
 
   const { delayMinSeconds, delayMaxSeconds } = getSettings(db);
 
-  let cursor = queueTail(db, now);
+  const startMs = Math.max(now.getTime(), input.startAt?.getTime() ?? 0);
+  const tail = queueTail(db);
+  let cursor: number | null = null;
   const scheduled: ScheduledDelivery[] = [];
 
   for (const destinationId of input.destinationIds) {
@@ -60,7 +63,12 @@ export function schedulePublication(
       .get();
     if (existing) continue;
 
-    cursor += randomDelay(delayMinSeconds, delayMaxSeconds, rand) * 1000;
+    const gap = randomDelay(delayMinSeconds, delayMaxSeconds, rand) * 1000;
+    if (cursor === null) {
+      cursor = tail === null ? startMs : Math.max(startMs, tail + gap);
+    } else {
+      cursor += gap;
+    }
     const dueAt = new Date(cursor);
     db.insert(delivery)
       .values({
@@ -85,14 +93,14 @@ export function schedulePublication(
   return scheduled;
 }
 
-function queueTail(db: Db, now: Date): number {
+function queueTail(db: Db): number | null {
   const last = db
     .select({ dueAt: delivery.dueAt })
     .from(delivery)
     .where(eq(delivery.status, "scheduled"))
     .orderBy(desc(delivery.dueAt))
     .get();
-  return Math.max(now.getTime(), last?.dueAt?.getTime() ?? 0);
+  return last?.dueAt?.getTime() ?? null;
 }
 
 function randomDelay(min: number, max: number, rand: () => number): number {

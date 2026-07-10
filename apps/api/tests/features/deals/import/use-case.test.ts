@@ -53,7 +53,7 @@ const productHtml = `<html><head>
 {"@type":"Product","name":"Jogo Soquete","image":"https://img/s.jpg","offers":{"price":"189.96"}}
 </script></head></html>`;
 
-it("resolves an affiliate link to the product and prefills the affiliate url", async () => {
+it("resolves the product behind an affiliate link but never trusts the pasted link", async () => {
   const fetchByUrl = async (u: string) => {
     if (u.includes("meli.la")) return socialHtml;
     if (u.includes("MLB63558681")) return productHtml;
@@ -61,7 +61,7 @@ it("resolves an affiliate link to the product and prefills the affiliate url", a
   };
   const deal = await importDeal("https://meli.la/xxxxxxx", fetchByUrl);
 
-  expect(deal.affiliateUrl).toBe("https://meli.la/xxxxxxx");
+  expect(deal.affiliateUrl).toBeUndefined();
   expect(deal.sourceUrl).toBe(
     "https://www.mercadolivre.com.br/jogo/p/MLB63558681",
   );
@@ -84,14 +84,14 @@ it("keeps title and image from the landing when the product page is blocked", as
   expect(deal.product.title).toBe("Jogo Soquete 35pcs");
   expect(deal.product.imageUrl).toBe("https://img/soquete.webp");
   expect(deal.product.externalId).toBe("MLB63558681");
-  expect(deal.affiliateUrl).toBe("https://meli.la/xxx");
+  expect(deal.affiliateUrl).toBeUndefined();
 });
 
 it("falls back to landing og data when the product link is missing", async () => {
   const landing = `<html><head><meta property="og:title" content="Só OG"></head></html>`;
   const deal = await importDeal("https://meli.la/xxx", async () => landing);
 
-  expect(deal.affiliateUrl).toBe("https://meli.la/xxx");
+  expect(deal.affiliateUrl).toBeUndefined();
   expect(deal.product.title).toBe("Só OG");
   expect(deal.price.current).toBeUndefined();
 });

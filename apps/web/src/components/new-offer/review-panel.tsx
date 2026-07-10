@@ -8,6 +8,8 @@ export function ReviewPanel(props: {
   onSave: () => void;
   preview: string | null;
   ready: boolean;
+  needsAffiliate: boolean;
+  onGenerate: () => void;
 }) {
   const { form, onChange } = props;
   return (
@@ -58,6 +60,18 @@ export function ReviewPanel(props: {
             value={form.affiliateUrl}
             onChange={(v) => onChange("affiliateUrl", v)}
           />
+          {props.needsAffiliate && (
+            <div className="space-y-2 rounded-lg border border-fail/40 bg-fail/10 px-3 py-3 text-sm text-fail">
+              <p>
+                Falta o seu link de afiliado — nunca publique com o link de
+                outra pessoa. Gere o seu abaixo (abre o produto no ML e traz o
+                link de volta automático).
+              </p>
+              <Button variant="outline" size="sm" onClick={props.onGenerate}>
+                Abrir no ML e gerar meu link
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2 pt-1">
             <Button variant="outline" size="sm" onClick={props.onPreview}>
               Pré-visualizar

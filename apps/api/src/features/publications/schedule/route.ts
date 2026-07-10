@@ -9,6 +9,7 @@ schedule.post("/:id/schedule", async (c) => {
   const publicationId = c.req.param("id");
   const body = (await c.req.json().catch(() => null)) as {
     destinationIds?: unknown;
+    startAt?: unknown;
   } | null;
   const destinationIds = body?.destinationIds;
 
@@ -16,9 +17,18 @@ schedule.post("/:id/schedule", async (c) => {
     return c.json({ error: "destinationIds is required" }, 400);
   }
 
+  let startAt: Date | undefined;
+  if (body?.startAt != null) {
+    const parsed = new Date(String(body.startAt));
+    if (Number.isNaN(parsed.getTime())) {
+      return c.json({ error: "startAt is not a valid date" }, 400);
+    }
+    startAt = parsed;
+  }
+
   try {
     const scheduled = schedulePublication(
-      { publicationId, destinationIds: destinationIds as string[] },
+      { publicationId, destinationIds: destinationIds as string[], startAt },
       getDb(),
     );
     return c.json({ scheduled });

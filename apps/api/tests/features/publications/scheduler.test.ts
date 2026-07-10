@@ -64,7 +64,19 @@ it("dispatches one due send at a time, earliest first", async () => {
 });
 
 it("does not dispatch a send before it is due", async () => {
-  const { db } = setup(["G1"]);
+  const db = createDb(":memory:");
+  const pub = createPublication(deal, db);
+  const dests = seed(db, ["G1"]);
+  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
+  schedulePublication(
+    {
+      publicationId: pub.id,
+      destinationIds: dests,
+      startAt: new Date(T0.getTime() + 100_000),
+    },
+    db,
+    { now: T0, rand: () => 0 },
+  );
   const provider = new FakeMessaging();
 
   const r = await dispatchDue(db, provider, new Date(T0.getTime() + 50_000));

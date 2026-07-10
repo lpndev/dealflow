@@ -9,6 +9,8 @@ export function SendPanel(props: {
   onSync: () => void;
   onSendNow: () => void;
   onSchedule: () => void;
+  startAt: string;
+  onStartAt: (value: string) => void;
   notice: string | null;
   results: DeliveryResult[] | null;
 }) {
@@ -64,6 +66,19 @@ export function SendPanel(props: {
             })}
           </ul>
         )}
+
+        <label className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          Começar a fila em
+          <input
+            type="datetime-local"
+            value={props.startAt}
+            onChange={(e) => props.onStartAt(e.target.value)}
+            className="rounded-lg border border-line bg-panel px-3 py-2 text-sm text-text"
+          />
+          <span className="text-xs">
+            vazio = agora; o intervalo só espaça os itens da fila
+          </span>
+        </label>
 
         <div className="flex flex-wrap gap-2">
           <Button

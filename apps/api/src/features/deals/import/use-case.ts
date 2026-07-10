@@ -30,7 +30,7 @@ export async function importDeal(
   const landing = await fetchHtml(url);
   const productUrl = productUrlFromSocialHtml(landing);
   if (!productUrl) {
-    return withHints(parseMercadoLivre(landing, url), input, url);
+    return withHints(parseMercadoLivre(landing, url), input);
   }
 
   const social = parseMercadoLivre(landing, url);
@@ -44,18 +44,14 @@ export async function importDeal(
     },
     price: product.price,
   };
-  return withHints(merged, input, url);
+  return withHints(merged, input);
 }
 
-function withHints(
-  deal: ExtractedDeal,
-  input: string,
-  affiliateUrl?: string,
-): ExtractedDeal {
+function withHints(deal: ExtractedDeal, input: string): ExtractedDeal {
   const hints = extractMessageHints(input);
   return {
     ...deal,
-    affiliateUrl,
+    affiliateUrl: undefined,
     price: {
       original: hints.original ?? deal.price.original,
       current: hints.current ?? deal.price.current,

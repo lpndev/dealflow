@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ImportPanel, ReviewPanel, SendPanel } from "@/components/new-offer";
 import { usePolling } from "@/hooks";
 import {
-  API,
   API_DOWN,
   apiGet,
   apiPost,
@@ -18,9 +17,17 @@ import {
 } from "@/types";
 import { Button, ErrorNote } from "@/ui";
 
+const DRAFT_INPUT_KEY = "dealflow:draft:input";
+const DRAFT_FORM_KEY = "dealflow:draft:form";
+
 export function NewOffer(props: { onQueued: () => void }) {
-  const [input, setInput] = useState("");
-  const [form, setForm] = useState<Form | null>(null);
+  const [input, setInput] = useState(
+    () => localStorage.getItem(DRAFT_INPUT_KEY) ?? "",
+  );
+  const [form, setForm] = useState<Form | null>(() => {
+    const saved = localStorage.getItem(DRAFT_FORM_KEY);
+    return saved ? (JSON.parse(saved) as Form) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -30,9 +37,14 @@ export function NewOffer(props: { onQueued: () => void }) {
   const [results, setResults] = useState<DeliveryResult[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [captured, setCaptured] = useState<Draft | null>(null);
-  const formRef = useRef<Form | null>(null);
+  const [startAt, setStartAt] = useState("");
+
   useEffect(() => {
-    formRef.current = form;
+    localStorage.setItem(DRAFT_INPUT_KEY, input);
+  }, [input]);
+  useEffect(() => {
+    if (form) localStorage.setItem(DRAFT_FORM_KEY, JSON.stringify(form));
+    else localStorage.removeItem(DRAFT_FORM_KEY);
   }, [form]);
 
   useEffect(() => {
@@ -45,12 +57,30 @@ export function NewOffer(props: { onQueued: () => void }) {
     try {
       const d = await apiGet("/deals/capture");
       if (!d?.draft) return;
-      if (!formRef.current) setForm(draftToForm(d.draft));
-      else setCaptured(d.draft);
+      const draft = d.draft as Draft;
+      if (!form) {
+        setForm(draftToForm(draft));
+      } else if (
+        !form.affiliateUrl &&
+        draft.affiliateUrl &&
+        form.externalId &&
+        form.externalId === draft.product.externalId
+      ) {
+        const affiliateUrl = draft.affiliateUrl;
+        setForm((c) => (c ? { ...c, affiliateUrl } : c));
+        setNotice("Seu link de afiliado foi gerado e preenchido.");
+      } else {
+        setCaptured(draft);
+      }
     } catch {
       /* extensão ou API offline — segue */
     }
   }, 4000);
+
+  function generateAffiliate() {
+    if (!form?.sourceUrl) return;
+    window.open(`${form.sourceUrl}#dealflow-auto`, "_blank", "noopener");
+  }
 
   async function importDeal() {
     setLoading(true);
@@ -60,19 +90,15 @@ export function NewOffer(props: { onQueued: () => void }) {
     setResults(null);
     setNotice(null);
     try {
-      const res = await fetch(`${API}/deals/import`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input }),
-      });
-      const data = await res.json();
-      if (res.ok) setForm(draftToForm(data.draft));
-      else {
-        setError(data.error ?? "Não deu para importar. Preencha à mão abaixo.");
-        setForm((c) => c ?? emptyForm);
-      }
-    } catch {
-      setError(API_DOWN);
+      const data = await apiPost("/deals/import", { input });
+      setForm(draftToForm(data.draft));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : API_DOWN;
+      setError(
+        msg === API_DOWN
+          ? API_DOWN
+          : "Não deu para importar. Preencha à mão abaixo.",
+      );
       setForm((c) => c ?? emptyForm);
     } finally {
       setLoading(false);
@@ -136,6 +162,7 @@ export function NewOffer(props: { onQueued: () => void }) {
     if (!publicationId || selected.size === 0) return;
     const data = await call(`/publications/${publicationId}/schedule`, {
       destinationIds: [...selected],
+      startAt: startAt ? new Date(startAt).toISOString() : undefined,
     });
     if (data) {
       const n = data.scheduled?.length ?? 0;
@@ -182,6 +209,8 @@ export function NewOffer(props: { onQueued: () => void }) {
           onSave={save}
           preview={preview}
           ready={!!publicationId}
+          needsAffiliate={!form.affiliateUrl && !!form.externalId}
+          onGenerate={generateAffiliate}
         />
       )}
 
@@ -193,6 +222,8 @@ export function NewOffer(props: { onQueued: () => void }) {
           onSync={syncDestinations}
           onSendNow={sendNow}
           onSchedule={schedule}
+          startAt={startAt}
+          onStartAt={setStartAt}
           notice={notice}
           results={results}
         />

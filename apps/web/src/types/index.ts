@@ -13,6 +13,7 @@ export type Form = {
   coupon: string;
   sourceUrl: string;
   affiliateUrl: string;
+  externalId: string;
 };
 
 export type Destination = { id: string; name: string };

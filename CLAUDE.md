@@ -28,6 +28,10 @@ Use esse vocabulário de forma consistente.
 ## Invariantes revenue-critical (protegidas por teste)
 
 - Publication nunca reutiliza o link externo do Signal — usa nosso AffiliateLink.
+- Import **nunca** confia num `meli.la` colado como nosso afiliado (pode ser de
+  concorrente; server não distingue). `affiliateUrl` sai sempre vazio do import;
+  só a extensão o preenche (captura na página ML — inclusive o botão "gerar meu
+  link" que abre o produto e traz o nosso de volta).
 - Publication não é enviada sem AffiliateLink.
 - `unique(publicationId, destinationId)` — sem envio duplicado ao mesmo destino.
 - Retry não duplica delivery já enviada.
@@ -148,10 +152,11 @@ página do produto, mas cujo HTML estático traz `og:title`+`og:image` e o link
 real do produto (`href=".../p/MLB\d+"`). `importDeal`: se a URL colada não tem
 MLB id (`mlbIdFromUrl`), busca a landing, extrai a URL do produto
 (`productUrlFromSocialHtml`), busca o produto e faz merge — dado do produto tem
-precedência, og da landing preenche lacunas (título/imagem). O `meli.la` colado
-vira o `affiliateUrl` pré-preenchido; a URL do produto resolvida vira o
-`sourceUrl` (removido da tela, mantido no modelo → invariante afiliado≠origem
-continua válida). Preços: a página `/p/` é anti-botada no servidor e os preços
+precedência, og da landing preenche lacunas (título/imagem). A URL do produto
+resolvida vira o `sourceUrl` (removido da tela, mantido no modelo → invariante
+afiliado≠origem continua válida). O `meli.la` colado **NÃO** vira o `affiliateUrl`
+(fail-closed: podia ser link de concorrente — um amigo quase publicou o link do
+outro grupo; ver Nota auto-mint). O afiliado sai vazio; a extensão gera o nosso. Preços: a página `/p/` é anti-botada no servidor e os preços
 são renderizados por JS lá, então NÃO vêm no fetch — título+imagem preenchem,
 preço é manual até o `PlaywrightSource` entrar (ver Nota aquisição de dados).
 Campo "URL de origem" removido do form.
@@ -201,8 +206,13 @@ Nota fila/agendamento (S5): a UI virou um dashboard com abas (Nova oferta / Fila
 `lib.ts` = fetch helpers, `ui.tsx` = primitives). A "fila" NÃO é infra nova: um
 envio agendado é uma `delivery` com `status='scheduled'` + `dueAt` (coluna nova).
 `schedulePublication` (`features/publications/schedule/use-case.ts`) enfileira
-serial global: cada envio pega `dueAt = max(agora, cauda da fila) + aleatório[min,
-max]`, então a conta nunca dispara em rajada (parece humano). Um loop in-process
+serial global. O intervalo aleatório[min,max] é o **espaçamento ENTRE itens**, não
+um atraso do primeiro: fila vazia → o 1º envio sai no `startAt` (default agora, sem
+esperar), os seguintes espaçados por aleatório[min,max]; fila não-vazia → o novo
+lote entra depois da cauda existente (`cauda + aleatório`). `startAt` (ISO no body
+do `/schedule`, seletor datetime-local no painel Enviar; passado in the past →
+clamp pra agora) deixa o operador escolher quando a fila começa. Assim a conta
+nunca dispara em rajada e um envio único não fica preso 20–40 min à toa. Um loop in-process
 (`scheduler.ts` `startScheduler`, setInterval 30s no boot da API) chama
 `dispatchDue` que pega o `scheduled` vencido mais antigo, um por vez, e reusa o
 `deliverOne` compartilhado (`send/deliver.ts`, extraído do send imediato — mesmo
@@ -248,7 +258,20 @@ limpa); com o form vazio já preenche, com edição em andamento mostra um banne
 S6 PlaywrightSource** como aquisição de preço (sem browser pesado, sem guerra
 anti-bot, roda na sessão real do usuário). Verificado ao vivo: geração do link e
 raspagem na conta logada, e o handoff da API por teste + curl. Config no popup
-(auto, apiUrl, webUrl) em `chrome.storage.local`.
+(auto, apiUrl, webUrl) em `chrome.storage.local`. O `content.js` re-monta o botão
+via poll idempotente de 1s (o ML é SPA — o content script só injeta no load; sem o
+poll o botão sumia ao navegar client-side, batia com "sumiu depois de 10 min").
+Auto-mint do afiliado (fail-closed): quando o import cai sem afiliado (mensagem de
+concorrente / URL de produto crua), o painel Revisar mostra "Abrir no ML e gerar
+meu link" → `window.open(sourceUrl + '#dealflow-auto')`; o `content.js`, ao ver o
+hash `dealflow-auto`, força um capture (mint no contexto da página logada — cookies
+provados — + raspagem) e faz o handoff normal por `/deals/capture`; o web, que já dá
+poll nesse slot, casa o produto por MLB id e preenche **só** o `affiliateUrl` (não
+sobrescreve preços/edições; produto diferente → banner "Carregar" de sempre). Reusa
+o pipeline de captura já testado ao vivo, em vez de fetch no service worker (cookies
+do ML no SW = incerto). Sem extensão/login o campo fica vazio com aviso. Mata o
+bate-e-volta de ir ao ML só pra pegar o link; 100% automático fica pro
+`MlApiSource`/OAuth.
 
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅ (inclui
@@ -315,6 +338,14 @@ extensibilidade necessária.
 Antes de implementar: entenda o fluxo → menor vertical slice → invariantes caras
 → testes onde importam → caminho mais direto → rode test/lint/typecheck → remova
 o que sobra.
+
+## Regras permanentes
+
+- **NUNCA iniciar servidor de dev** (`bun run dev`, `vite`, `bun --watch`, API,
+  web, wa-gateway) — o dev cuida disso e já deixa rodando. Para verificar no
+  browser, use a instância que o dev tem no ar; se estiver fora, peça pra ele
+  subir. Se você subiu algum processo por engano, mate só o seu (confira PID/porta)
+  e nunca reinicie.
 
 ## Convenções do projeto
 

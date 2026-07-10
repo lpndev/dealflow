@@ -8,6 +8,7 @@ export const emptyForm: Form = {
   coupon: "",
   sourceUrl: "",
   affiliateUrl: "",
+  externalId: "",
 };
 
 export function draftToForm(draft: Draft): Form {
@@ -20,5 +21,6 @@ export function draftToForm(draft: Draft): Form {
     coupon: draft.coupon ?? "",
     sourceUrl: draft.sourceUrl,
     affiliateUrl: draft.affiliateUrl ?? "",
+    externalId: draft.product.externalId ?? "",
   };
 }

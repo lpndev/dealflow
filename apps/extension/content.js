@@ -84,8 +84,7 @@ async function capture(setStatus) {
   return draft;
 }
 
-function mountButton() {
-  if (!productId() || document.getElementById("dealflow-capture")) return;
+function mountButton(runAuto) {
   const btn = document.createElement("button");
   btn.id = "dealflow-capture";
   btn.textContent = "Capturar oferta";
@@ -125,9 +124,30 @@ function mountButton() {
   };
   btn.addEventListener("click", run);
   document.body.appendChild(btn);
-  chrome.storage.local.get({ auto: false }, ({ auto }) => {
-    if (auto) run();
-  });
+  if (runAuto) {
+    if (location.hash.includes("dealflow-auto")) run();
+    else
+      chrome.storage.local.get({ auto: false }, ({ auto }) => {
+        if (auto) run();
+      });
+  }
 }
 
-mountButton();
+let mountedFor = null;
+function sync() {
+  const id = productId();
+  const existing = document.getElementById("dealflow-capture");
+  if (!id) {
+    existing?.remove();
+    mountedFor = null;
+    return;
+  }
+  if (id === mountedFor && existing) return;
+  existing?.remove();
+  const changedProduct = id !== mountedFor;
+  mountedFor = id;
+  mountButton(changedProduct);
+}
+
+sync();
+setInterval(sync, 1000);

@@ -40,7 +40,7 @@ function setup() {
 const T0 = new Date("2026-07-08T12:00:00Z");
 const noJitter = () => 0;
 
-it("spaces each send by the min delay when jitter is zero", () => {
+it("sends the first offer now and spaces the rest by the interval", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1", "G2", "G3"]);
   updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 200 });
@@ -52,17 +52,17 @@ it("spaces each send by the min delay when jitter is zero", () => {
   );
 
   expect(scheduled.map((s) => s.dueAt.getTime())).toEqual([
+    T0.getTime(),
     T0.getTime() + 100_000,
     T0.getTime() + 200_000,
-    T0.getTime() + 300_000,
   ]);
   const rows = db.select().from(delivery).all();
   expect(rows.every((r) => r.status === "scheduled")).toBe(true);
 });
 
-it("keeps a random delay inside the configured range", () => {
+it("keeps the spacing between sends inside the configured range", () => {
   const { db, pub } = setup();
-  const dests = seed(db, ["G1"]);
+  const dests = seed(db, ["G1", "G2"]);
   updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 200 });
 
   const scheduled = schedulePublication(
@@ -71,9 +71,40 @@ it("keeps a random delay inside the configured range", () => {
     { now: T0, rand: () => 0.5 },
   );
 
-  const offset = (scheduled[0].dueAt.getTime() - T0.getTime()) / 1000;
-  expect(offset).toBeGreaterThanOrEqual(100);
-  expect(offset).toBeLessThanOrEqual(200);
+  const gap =
+    (scheduled[1].dueAt.getTime() - scheduled[0].dueAt.getTime()) / 1000;
+  expect(gap).toBeGreaterThanOrEqual(100);
+  expect(gap).toBeLessThanOrEqual(200);
+});
+
+it("starts the queue at an explicit start time", () => {
+  const { db, pub } = setup();
+  const dests = seed(db, ["G1", "G2"]);
+  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
+  const startAt = new Date(T0.getTime() + 3_600_000);
+
+  const scheduled = schedulePublication(
+    { publicationId: pub.id, destinationIds: dests, startAt },
+    db,
+    { now: T0, rand: noJitter },
+  );
+
+  expect(scheduled[0].dueAt.getTime()).toBe(startAt.getTime());
+  expect(scheduled[1].dueAt.getTime()).toBe(startAt.getTime() + 100_000);
+});
+
+it("clamps a start time in the past to now", () => {
+  const { db, pub } = setup();
+  const dests = seed(db, ["G1"]);
+  const startAt = new Date(T0.getTime() - 3_600_000);
+
+  const scheduled = schedulePublication(
+    { publicationId: pub.id, destinationIds: dests, startAt },
+    db,
+    { now: T0, rand: noJitter },
+  );
+
+  expect(scheduled[0].dueAt.getTime()).toBe(T0.getTime());
 });
 
 it("queues new sends after existing pending ones (global serial)", () => {
