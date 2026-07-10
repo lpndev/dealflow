@@ -1,20 +1,14 @@
 import { QrCodeIcon } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { usePolling } from "@/hooks";
-import { connectionLabel, fetchSession } from "@/lib";
+import { connectionLabel } from "@/lib";
+import { sessionQuery } from "@/lib/query";
 
 export function WhatsAppStatus() {
-  const [connection, setConnection] = useState("desconhecido");
-  const [qr, setQr] = useState<string | null>(null);
+  const { data } = useQuery(sessionQuery);
+  const connection = data?.connection ?? "desconhecido";
+  const qr = data?.qr ?? null;
   const [openQr, setOpenQr] = useState(false);
-
-  async function refresh() {
-    const session = await fetchSession();
-    setConnection(session.connection);
-    setQr(session.qr);
-  }
-
-  usePolling(refresh, connection === "open" ? 20000 : 3000);
 
   useEffect(() => {
     if (qr) setOpenQr(true);

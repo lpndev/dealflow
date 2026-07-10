@@ -28,10 +28,15 @@ Use esse vocabulário de forma consistente.
 ## Invariantes revenue-critical (protegidas por teste)
 
 - Publication nunca reutiliza o link externo do Signal — usa nosso AffiliateLink.
-- Import **nunca** confia num `meli.la` colado como nosso afiliado (pode ser de
-  concorrente; server não distingue). `affiliateUrl` sai sempre vazio do import;
-  só a extensão o preenche (captura na página ML — inclusive o botão "gerar meu
-  link" que abre o produto e traz o nosso de volta).
+- Import **nunca** confia num `meli.la` colado como nosso afiliado **pelo código
+  curto sozinho** (pode ser de concorrente; server não distingue o código). Exceção
+  segura: se o operador configurar sua `tag` de afiliado (`settings.mlAffiliateTag`,
+  aba Config), o import resolve o `/social/<tag>` da landing e **só quando a tag
+  bate com a dele** confia no `meli.la` colado como nosso `affiliateUrl` — um link
+  de concorrente resolve pra outra tag e continua saindo vazio (fail-closed
+  preservado; ver Nota reconhecer link próprio). Sem tag configurada, sai sempre
+  vazio e só a extensão o preenche (captura na página ML — inclusive o botão "gerar
+  meu link" que abre o produto e traz o nosso de volta).
 - Publication não é enviada sem AffiliateLink.
 - `unique(publicationId, destinationId)` — sem envio duplicado ao mesmo destino.
 - Retry não duplica delivery já enviada.
@@ -71,7 +76,11 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 ## Stack
 
 - **Monorepo:** Bun workspaces (`apps/*`, `packages/*`)
-- **Web:** React + Vite + Tailwind v4 (`@tailwindcss/vite`) — `apps/web`
+- **Web:** React + Vite + Tailwind v4 (`@tailwindcss/vite`) — `apps/web`.
+  UI **shadcn/ui** (base-lyra, phosphor). Rotas reais com **React Router (data
+  mode)**, server-state com **TanStack Query**, toasts com **Sonner** (shadcn),
+  forms com **TanStack Form** ligado às primitives `Field` do shadcn; **Zustand**
+  instalado e ocioso (staged p/ estado global futuro) (ver Nota SPA)
 - **API:** Hono + Bun (porta 3001) — `apps/api`
 - **Shared:** `@dealflow/shared` (`packages/shared`) — contratos-fio cross-app,
   só tipos, consumido como source `.ts` (sem build)
@@ -154,12 +163,32 @@ MLB id (`mlbIdFromUrl`), busca a landing, extrai a URL do produto
 (`productUrlFromSocialHtml`), busca o produto e faz merge — dado do produto tem
 precedência, og da landing preenche lacunas (título/imagem). A URL do produto
 resolvida vira o `sourceUrl` (removido da tela, mantido no modelo → invariante
-afiliado≠origem continua válida). O `meli.la` colado **NÃO** vira o `affiliateUrl`
-(fail-closed: podia ser link de concorrente — um amigo quase publicou o link do
-outro grupo; ver Nota auto-mint). O afiliado sai vazio; a extensão gera o nosso. Preços: a página `/p/` é anti-botada no servidor e os preços
-são renderizados por JS lá, então NÃO vêm no fetch — título+imagem preenchem,
-preço é manual até o `PlaywrightSource` entrar (ver Nota aquisição de dados).
-Campo "URL de origem" removido do form.
+afiliado≠origem continua válida). Por padrão o `meli.la` colado **NÃO** vira o
+`affiliateUrl` (fail-closed: podia ser link de concorrente — um amigo quase
+publicou o link do outro grupo; ver Nota auto-mint e Nota reconhecer link próprio).
+O afiliado sai vazio; a extensão gera o nosso. Preços: a página `/p/` é anti-botada
+no servidor e os preços são renderizados por JS lá, então NÃO vêm no fetch —
+título+imagem preenchem, preço vem da extensão/`ProductSource` (ver Nota aquisição
+de dados). Campo "URL de origem" removido do form.
+
+Nota reconhecer link próprio + re-verificar (2026-07-10): dois atritos reais do
+operador. (1) Ao colar SEU próprio `meli.la`, o server não distinguia do de
+concorrente e pedia "gerar meu link" de novo. Fix: `settings.mlAffiliateTag` (aba
+Config, coluna nova, formato `ct`+timestamp = a `tag` em uso na conta de afiliado).
+No import, `affiliateTagFromSocialHtml` lê o `/social/<tag>` da landing; se bate com
+a tag configurada, o `meli.la` colado vira o `affiliateUrl` (senão, vazio como
+antes — invariante fail-closed intacta: link de concorrente resolve pra outra tag).
+Tag lida do HTML da landing (mesmo estilo do `productUrlFromSocialHtml`); se o ML
+parar de expor a tag no HTML, trocar pelo URL final do redirect (`res.url`).
+(2) "Abrir no ML e gerar meu link" só preenchia o afiliado e descartava o resto
+que a extensão já raspava (a captura traz título/imagem/De/Por/afiliado completos
+da página logada). Fix: o poll de `/deals/capture` no web, quando o produto capturado
+bate com o do form (mesmo `externalId`), faz `mergeCapture` = **puxa tudo do ML**
+(sobrescreve preço/título/imagem com o dado real recém-raspado — o ML às vezes troca
+o preço ao gerar o link; mantém o cupom digitado; cola o afiliado novo). O botão
+`Revisar` agora aparece quando falta afiliado **OU** preço (label muda: "gerar meu
+link" vs "atualizar preço"), então um link próprio já com afiliado mas sem preço
+também puxa o preço real. Extensão inalterada — já mandava o deal completo.
 
 Nota geração do link de afiliado (reverse-engineered 2026-07-09, verificado no
 browser logado do operador): o botão "Compartilhar" da barra de afiliado do ML
@@ -201,9 +230,9 @@ Adiado até o slice que usa (nada de decoração):
 
 - **Better Auth** → quando existir rota protegida.
 
-Nota fila/agendamento (S5): a UI virou um dashboard com abas (Nova oferta / Fila
-/ Histórico / Config) em `apps/web/src/tabs/*` (App.tsx só faz o shell de abas;
-`lib.ts` = fetch helpers, `ui.tsx` = primitives). A "fila" NÃO é infra nova: um
+Nota fila/agendamento (S5): a UI é um dashboard de 4 telas (Nova oferta / Fila /
+Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver Nota
+SPA; antes eram abas com `useState`). A "fila" NÃO é infra nova: um
 envio agendado é uma `delivery` com `status='scheduled'` + `dueAt` (coluna nova).
 `schedulePublication` (`features/publications/schedule/use-case.ts`) enfileira
 serial global. O intervalo aleatório[min,max] é o **espaçamento ENTRE itens**, não
@@ -238,6 +267,55 @@ sem `{link}`** (fail-closed: sem o link a oferta sairia sem monetização).
 formatados via `formatBrl` (com R$). Editor na Config tem chips que inserem no
 cursor + preview ao vivo (client-side, valores de exemplo).
 
+Nota SPA (rotas + state stack): o web deixou de trocar de "aba" por `useState` e
+passou a ter **rotas reais** (URL, back/forward, deep-link). Quatro libs
+first-party, cada uma resolvendo um atrito concreto do código atual (não é
+scaffolding "for later" — foi decisão explícita do operador visando o futuro com
+auth/usuários):
+
+- **React Router (data mode, v8):** `main.tsx` monta `createBrowserRouter` +
+  `RouterProvider` (de `react-router/dom`) dentro de `ThemeProvider` →
+  `QueryClientProvider`. `routes/layout.tsx` = shell (header + `NavLink` +
+  `Outlet` + `<Toaster>` do Sonner); rotas filhas `/`=Nova oferta, `/queue`,
+  `/history`, `/settings`. **Paths sempre em inglês** (mesmo com a UI em pt); os
+  labels do `NavLink` ficam em pt. Matou o `tab` state, o `refreshKey` e o
+  `goQueue` (agendar dispara `toast` + `invalidateQueries(["queue"])` +
+  `navigate("/queue")`). Data mode, NÃO framework mode (é SPA client-only local;
+  framework mode brigaria com Vite/Tailwind sem ganho). Upgrade p/ major seguinte
+  = só `bun add react-router@latest`.
+- **TanStack Query:** todo server-state via `useQuery` (`refetchInterval`) +
+  `useMutation` (`invalidateQueries`/optimistic com `onMutate`/rollback). Apagou o
+  `usePolling` (hook removido), o `refreshKey` e o boilerplate de
+  `useState`+`busy`-ref+`error` repetido por tela. `queryClient` em `lib/query.ts`
+  (`retry:false`, `refetchOnWindowFocus:false` — fail-fast, fiel ao local). Keys
+  compartilhadas dedupam: `["wa-session"]` (status+config do WhatsApp),
+  `["destinations"]` (nova-oferta + grupos-config); mais `["queue"]`, `["history"]`,
+  `["capture"]`, `["settings"]`.
+- **Sonner (toast, shadcn):** `components/ui/sonner.tsx` (`<Toaster>` no layout;
+  o `useTheme` foi religado do `next-themes` pro nosso `theme-provider` — sem
+  `next-themes`). Toasts via `import { toast } from "sonner"` →
+  `toast.success/error`. Substituiu o toaster à mão + o `useUiStore` (removidos).
+  Qualquer rota levanta toast (settings salvo, erros de mutation da fila/import).
+- **Zustand:** instalado mas **ocioso** — o toast migrou pro Sonner e não há
+  estado global cross-rota hoje. Mantido de propósito (decisão do operador),
+  staged pro futuro (sessão/UI global quando auth/usuários chegarem); sem `store/`
+  até existir consumidor real.
+- **TanStack Form + shadcn `Field`:** o form de **Config** (`SettingsForm`,
+  montado após o `useQuery(["settings"])` resolver p/ ter `defaultValues`) usa a
+  integração shadcn↔TanStack Form: `form.Field` ligado às primitives `Field`/
+  `FieldLabel`/`FieldError` (`ui/field`) e `InputGroup`/`InputGroupAddon` (`ui/
+input-group`, o prefixo `min`/`R$` nativo — sem hack de `pl-`). Validators
+  funções (sem zod): `min>0`, `max≥min`, template contém `{link}` — `FieldError`
+  inline + `canSubmit` desabilita o Salvar. O form da nova-oferta ficou de fora
+  de propósito (god component de ~15 `useState`; precisa **decompor** antes).
+- **Segurança:** essas libs são estrutura/DX de client — NÃO adicionam segurança.
+  O backend continua a fonte de verdade e valida na fronteira (fail-closed); um
+  client manipulado chama a API do jeito que quiser. Better Auth (quando vier) é o
+  boundary de auth, e é server-side. Ver Nota segurança e §Restrições.
+- Follow-ups (ponytail, adiado): code-split por rota (`lazy` do Router — bundle ~734KB
+  hoje, ok p/ tool local); migrar o god component da nova-oferta p/ TanStack Form
+  depois de decompô-lo.
+
 FUTURO (marcado pelo usuário, adiado — hoje `workspaceId` é fixo em
 `DEFAULT_WORKSPACE_ID`): workspace multi-tenant com nome/logo, múltiplos números
 de WhatsApp, múltiplos grupos/nichos. Só quando existir 2+ número de verdade.
@@ -266,8 +344,9 @@ concorrente / URL de produto crua), o painel Revisar mostra "Abrir no ML e gerar
 meu link" → `window.open(sourceUrl + '#dealflow-auto')`; o `content.js`, ao ver o
 hash `dealflow-auto`, força um capture (mint no contexto da página logada — cookies
 provados — + raspagem) e faz o handoff normal por `/deals/capture`; o web, que já dá
-poll nesse slot, casa o produto por MLB id e preenche **só** o `affiliateUrl` (não
-sobrescreve preços/edições; produto diferente → banner "Carregar" de sempre). Reusa
+poll nesse slot, casa o produto por MLB id e faz `mergeCapture` (ver Nota reconhecer
+link próprio + re-verificar: puxa tudo do ML — sobrescreve preço/título/imagem, mantém
+o cupom digitado, cola o afiliado novo; produto diferente → banner "Carregar"). Reusa
 o pipeline de captura já testado ao vivo, em vez de fetch no service worker (cookies
 do ML no SW = incerto). Sem extensão/login o campo fica vazio com aviso. Mata o
 bate-e-volta de ir ao ML só pra pegar o link; 100% automático fica pro
@@ -309,14 +388,15 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
   `insertDealSnapshot`, `createDeliveries`, `markDeliverySent`.
 - Adapters isolados; detalhes externos (JID, `@g.us`, Baileys, seletores DOM)
   nunca vazam para o domínio.
-- **Web (`apps/web/src`) por responsabilidade, não por página:** `ui/`
-  (primitives reutilizáveis: `Button` com `variant`/`size`, `Field`, `Panel`,
-  `PreviewBubble`, `IconButton`), `components/` (peças de feature, ex.:
-  `new-offer/{import,review,send}-panel`, `queue-row`, `whatsapp-status`),
-  `hooks/` (`usePolling` — latest-ref, substitui `setInterval` cru), `lib/`
-  (`env`/`api`/`format`/`offer` + barrel), `types/`, `styles/globals.css`,
-  `tabs/` (só orquestração: estado + handlers; JSX grande vira componente com
-  props). **Barrel `index.ts` em cada pasta.**
+- **Web (`apps/web/src`) por responsabilidade, não por página:** `components/ui/`
+  (primitives **shadcn**: `Button`, `Field`, `Input`, `InputGroup`, `Card`,
+  `sonner`…), `components/` (peças de feature, ex.:
+  `new-offer/{import,review,send}-panel`, `queue-row`, `whatsapp-status`; `Panel`
+  = wrapper de `Card`), `lib/` (`env`/`api`/`format`/`offer`/`query` + barrel),
+  `types/`, `styles/globals.css`, `routes/` (um arquivo por rota + `layout.tsx`;
+  só orquestração: estado + handlers; JSX grande vira componente com props).
+  **Barrel `index.ts` em cada pasta.** (`store/` só volta quando Zustand tiver
+  consumidor real.)
 - **Contratos-fio em `@dealflow/shared`** (`ExtractedDeal`, `DeliveryResult`,
   `QueueItem`, `Settings`): o que atravessa o HTTP mora aí e é importado de
   `@dealflow/shared` — **sem shim/barrel local de re-export**. No fio datas são
@@ -374,6 +454,16 @@ o que sobra.
   teste verde não prova comportamento ponta-a-ponta. Refactor type-only/config
   dispensa (typecheck+lint+test+build cobrem).
 - **Sem comentários** no código. Nomes explícitos falam por si.
+- **shadcn-first (web):** sempre usar componentes shadcn; **verificar o registro
+  antes de criar um à mão** (`https://ui.shadcn.com/docs/components`). Só criar
+  componente próprio quando compõe várias coisas que o shadcn não dá pronto — e
+  ainda assim por cima das primitives shadcn, nunca reimplementando input/label/
+  toast/form etc. `bunx shadcn@latest add <nome>` (o prompt de sobrescrever é
+  interativo; se travar, pegar o arquivo do registro `.../r/styles/base-lyra/
+<nome>.json` e trocar os imports `@/registry/base-lyra/…` → `@/…`).
+- **Sem hacks de espaçamento:** nada de `pl-`/margens ou paddings negativos
+  (`-mb-px` etc.) em itens. Espaço sempre em container via `padding`/`gap`
+  (flex/grid). Prefixo de input = `InputGroupAddon` do shadcn, não `pl-`.
 - **Prettier** manda na formatação; **ESLint** na qualidade (não acoplados).
 - **Commits** em inglês, minúsculos, uma linha, poucas palavras, convencionais
   (`feat:`, `chore:`, `docs:`, `fix:`...). Ex.: `feat: add web app`. Sem trailer

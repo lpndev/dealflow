@@ -21,7 +21,6 @@ export function SendPanel(props: {
   onSchedule: () => void;
   startAt: string;
   onStartAt: (value: string) => void;
-  notice: string | null;
   results: DeliveryResult[] | null;
 }) {
   const nameOf = (id: string) =>
@@ -113,12 +112,6 @@ export function SendPanel(props: {
           Enviar agora
         </Button>
       </div>
-
-      {props.notice && (
-        <p className="border border-emerald-500/40 bg-emerald-500/10 px-4 py-4 text-xs text-emerald-500">
-          {props.notice}
-        </p>
-      )}
 
       {props.results && (
         <ul className="flex flex-col gap-2 border-t pt-4 font-mono text-xs">

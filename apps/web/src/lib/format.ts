@@ -1,5 +1,8 @@
 export const plural = (n: number) => (n === 1 ? "" : "s");
 
+export const errMsg = (e: unknown, fallback: string) =>
+  e instanceof Error ? e.message : fallback;
+
 export function fmtTime(value: string | number | Date | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("pt-BR", {

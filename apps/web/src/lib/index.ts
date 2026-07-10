@@ -8,5 +8,5 @@ export {
   gatewayPost,
   fetchSession,
 } from "./api";
-export { plural, fmtTime, fmtMin, connectionLabel } from "./format";
-export { emptyForm, draftToForm } from "./offer";
+export { plural, fmtTime, fmtMin, connectionLabel, errMsg } from "./format";
+export { emptyForm, draftToForm, mergeCapture } from "./offer";

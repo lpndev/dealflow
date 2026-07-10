@@ -1,15 +1,19 @@
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { ErrorNote } from "@/components";
 import { ImportPanel, ReviewPanel, SendPanel } from "@/components/new-offer";
 import { Button } from "@/components/ui/button";
-import { usePolling } from "@/hooks";
 import {
   API_DOWN,
   apiGet,
   apiPost,
   draftToForm,
   emptyForm,
+  errMsg,
+  mergeCapture,
   plural,
 } from "@/lib";
 import {
@@ -22,7 +26,10 @@ import {
 const DRAFT_INPUT_KEY = "dealflow:draft:input";
 const DRAFT_FORM_KEY = "dealflow:draft:form";
 
-export function NewOffer(props: { onQueued: () => void }) {
+export function NewOffer() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
   const [input, setInput] = useState(
     () => localStorage.getItem(DRAFT_INPUT_KEY) ?? "",
   );
@@ -30,14 +37,11 @@ export function NewOffer(props: { onQueued: () => void }) {
     const saved = localStorage.getItem(DRAFT_FORM_KEY);
     return saved ? (JSON.parse(saved) as Form) : null;
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [publicationId, setPublicationId] = useState<string | null>(null);
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<DeliveryResult[] | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [captured, setCaptured] = useState<Draft | null>(null);
   const [startAt, setStartAt] = useState("");
 
@@ -49,67 +53,75 @@ export function NewOffer(props: { onQueued: () => void }) {
     else localStorage.removeItem(DRAFT_FORM_KEY);
   }, [form]);
 
-  useEffect(() => {
-    apiGet("/destinations")
-      .then((d) => {
-        const list: Destination[] = d.destinations ?? [];
-        setDestinations(list);
-        setSelected(new Set(list.filter((x) => x.enabled).map((x) => x.id)));
-      })
-      .catch(() => setDestinations([]));
-  }, []);
+  const { data: destData } = useQuery<{ destinations: Destination[] }>({
+    queryKey: ["destinations"],
+    queryFn: () => apiGet("/destinations"),
+  });
+  const destinations = destData?.destinations ?? [];
 
-  usePolling(async () => {
-    try {
-      const d = await apiGet("/deals/capture");
-      if (!d?.draft) return;
-      const draft = d.draft as Draft;
-      if (!form) {
-        setForm(draftToForm(draft));
-      } else if (
-        !form.affiliateUrl &&
-        draft.affiliateUrl &&
-        form.externalId &&
-        form.externalId === draft.product.externalId
-      ) {
-        const affiliateUrl = draft.affiliateUrl;
-        setForm((c) => (c ? { ...c, affiliateUrl } : c));
-        setNotice("Seu link de afiliado foi gerado e preenchido.");
-      } else {
-        setCaptured(draft);
-      }
-    } catch {
-      /* extensão ou API offline — segue */
+  const initSelected = useRef(false);
+  useEffect(() => {
+    if (initSelected.current || !destData) return;
+    initSelected.current = true;
+    setSelected(
+      new Set(destData.destinations.filter((x) => x.enabled).map((x) => x.id)),
+    );
+  }, [destData]);
+
+  const { data: capture } = useQuery<{ draft: Draft | null }>({
+    queryKey: ["capture"],
+    queryFn: () => apiGet("/deals/capture"),
+    refetchInterval: 4000,
+  });
+  const formRef = useRef(form);
+  formRef.current = form;
+  useEffect(() => {
+    const draft = capture?.draft;
+    if (!draft) return;
+    const current = formRef.current;
+    if (!current) {
+      setForm(draftToForm(draft));
+    } else if (
+      current.externalId &&
+      current.externalId === draft.product.externalId
+    ) {
+      setForm(mergeCapture(current, draft));
+      toast.success("Atualizado com o link e o preço reais do ML.");
+    } else {
+      setCaptured(draft);
     }
-  }, 4000);
+  }, [capture]);
 
   function generateAffiliate() {
     if (!form?.sourceUrl) return;
     window.open(`${form.sourceUrl}#dealflow-auto`, "_blank", "noopener");
   }
 
-  async function importDeal() {
-    setLoading(true);
-    setError(null);
-    setPreview(null);
-    setPublicationId(null);
-    setResults(null);
-    setNotice(null);
-    try {
-      const data = await apiPost("/deals/import", { input });
-      setForm(draftToForm(data.draft));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : API_DOWN;
+  const importDeal = useMutation({
+    mutationFn: (value: string) => apiPost("/deals/import", { input: value }),
+    onMutate: () => {
+      setError(null);
+      setPreview(null);
+      setPublicationId(null);
+      setResults(null);
+    },
+    onSuccess: (data) => setForm(draftToForm(data.draft)),
+    onError: (e) => {
+      const msg = errMsg(e, API_DOWN);
       setError(
         msg === API_DOWN
           ? API_DOWN
           : "Não deu para importar. Preencha à mão abaixo.",
       );
       setForm((c) => c ?? emptyForm);
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+  });
+
+  const syncDestinations = useMutation({
+    mutationFn: () => apiPost("/destinations/sync", {}),
+    onSuccess: (data) => qc.setQueryData(["destinations"], data),
+    onError: (e) => setError(errMsg(e, API_DOWN)),
+  });
 
   function update(field: keyof Form, value: string) {
     setForm((c) => (c ? { ...c, [field]: value } : c));
@@ -122,7 +134,7 @@ export function NewOffer(props: { onQueued: () => void }) {
     try {
       return await apiPost(path, body);
     } catch (e) {
-      setError(e instanceof Error ? e.message : API_DOWN);
+      setError(errMsg(e, API_DOWN));
       return null;
     }
   }
@@ -140,11 +152,6 @@ export function NewOffer(props: { onQueued: () => void }) {
       setPreview(String(data.content));
       setPublicationId(String(data.id));
     }
-  }
-
-  async function syncDestinations() {
-    const data = await call("/destinations/sync", {});
-    if (data) setDestinations(data.destinations ?? []);
   }
 
   function toggle(id: string) {
@@ -172,12 +179,13 @@ export function NewOffer(props: { onQueued: () => void }) {
     });
     if (data) {
       const n = data.scheduled?.length ?? 0;
-      setNotice(
+      toast.success(
         n > 0
           ? `${n} envio${plural(n)} na fila, espaçados para parecer humano.`
           : "Esses grupos já estavam na fila.",
       );
-      props.onQueued();
+      qc.invalidateQueries({ queryKey: ["queue"] });
+      navigate("/queue");
     }
   }
 
@@ -186,8 +194,8 @@ export function NewOffer(props: { onQueued: () => void }) {
       <ImportPanel
         value={input}
         onChange={setInput}
-        loading={loading}
-        onImport={importDeal}
+        loading={importDeal.isPending}
+        onImport={() => importDeal.mutate(input)}
       />
 
       {error && <ErrorNote>{error}</ErrorNote>}
@@ -217,6 +225,9 @@ export function NewOffer(props: { onQueued: () => void }) {
           preview={preview}
           ready={!!publicationId}
           needsAffiliate={!form.affiliateUrl && !!form.externalId}
+          needsPrice={
+            !!form.affiliateUrl && !form.currentPrice && !!form.externalId
+          }
           onGenerate={generateAffiliate}
         />
       )}
@@ -226,12 +237,11 @@ export function NewOffer(props: { onQueued: () => void }) {
           destinations={destinations}
           selected={selected}
           onToggle={toggle}
-          onSync={syncDestinations}
+          onSync={() => syncDestinations.mutate()}
           onSendNow={sendNow}
           onSchedule={schedule}
           startAt={startAt}
           onStartAt={setStartAt}
-          notice={notice}
           results={results}
         />
       )}

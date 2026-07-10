@@ -1,4 +1,3 @@
-export { Field } from "./field";
 export { GroupToggle } from "./group-toggle";
 export { Panel, Empty, ErrorNote } from "./panel";
 export { PreviewBubble } from "./preview-bubble";

@@ -1,35 +1,20 @@
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Panel } from "@/components";
 import { Button } from "@/components/ui/button";
-import { usePolling } from "@/hooks";
-import { connectionLabel, fetchSession, gatewayPost } from "@/lib";
+import { connectionLabel, gatewayPost } from "@/lib";
+import { sessionQuery } from "@/lib/query";
 
 export function WhatsAppConfig() {
-  const [connection, setConnection] = useState("desconhecido");
-  const [qr, setQr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const { data } = useQuery(sessionQuery);
+  const connection = data?.connection ?? "desconhecido";
+  const qr = data?.qr ?? null;
 
-  async function refresh() {
-    if (busy) return;
-    const session = await fetchSession();
-    setConnection(session.connection);
-    setQr(session.qr);
-  }
-
-  usePolling(refresh, connection === "open" ? 20000 : 3000);
-
-  async function act(path: string) {
-    setBusy(true);
-    try {
-      await gatewayPost(path);
-    } catch {
-      /* gateway offline — refresh will surface it */
-    } finally {
-      setBusy(false);
-      refresh();
-    }
-  }
-
+  const act = useMutation({
+    mutationFn: (path: string) => gatewayPost(path),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["wa-session"] }),
+  });
+  const busy = act.isPending;
   const connected = connection === "open";
 
   return (
@@ -68,21 +53,21 @@ export function WhatsAppConfig() {
         <Button
           variant="outline"
           disabled={busy}
-          onClick={() => act("/session/reconnect")}
+          onClick={() => act.mutate("/session/reconnect")}
         >
           Reconectar
         </Button>
         <Button
           variant="outline"
           disabled={busy || !connected}
-          onClick={() => act("/session/end")}
+          onClick={() => act.mutate("/session/end")}
         >
           Encerrar
         </Button>
         <Button
           variant="outline"
           disabled={busy}
-          onClick={() => act("/session/logout")}
+          onClick={() => act.mutate("/session/logout")}
         >
           Deslogar
         </Button>
