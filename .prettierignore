@@ -1,7 +1,9 @@
-dist
-bun.lock
+# output
+dist/
+node_modules/
 
-# gerados / sensíveis — nunca formatar
-**/wa-auth/
-**/*.db
-**/drizzle/**
+# generated
+*.db*
+bun.lock
+drizzle/
+wa-auth/

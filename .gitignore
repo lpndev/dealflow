@@ -1,11 +1,10 @@
-node_modules/
+# output
 dist/
-*.local
-.DS_Store
+node_modules/
 
-# local sqlite (Slice 1+)
-*.db
-*.db-*
+# secrets
+*.env*
 
-# wa-gateway baileys session
+# generated
+*.db*
 wa-auth/
