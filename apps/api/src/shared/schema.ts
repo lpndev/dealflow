@@ -121,6 +121,9 @@ export const settings = sqliteTable("settings", {
   workspaceId: text("workspace_id").primaryKey(),
   delayMinSeconds: integer("delay_min_seconds").notNull().default(1200),
   delayMaxSeconds: integer("delay_max_seconds").notNull().default(2400),
+  queuePaused: integer("queue_paused", { mode: "boolean" })
+    .notNull()
+    .default(false),
   messageTemplate: text("message_template"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()

@@ -22,6 +22,7 @@ export type DeliveryResult = {
 export type Settings = {
   delayMinSeconds: number;
   delayMaxSeconds: number;
+  queuePaused: boolean;
   messageTemplate: string;
 };
 

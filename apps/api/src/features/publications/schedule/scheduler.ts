@@ -5,6 +5,7 @@ import {
   loadPublicationContent,
   refreshPublicationStatus,
 } from "@/features/publications/send/deliver";
+import { isQueuePaused } from "@/features/queue/use-case";
 import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
 import { delivery } from "@/shared/schema";
@@ -14,6 +15,8 @@ export async function dispatchDue(
   provider: MessagingProvider,
   now: Date = new Date(),
 ): Promise<DeliveryResult | null> {
+  if (isQueuePaused(db)) return null;
+
   const due = db
     .select()
     .from(delivery)

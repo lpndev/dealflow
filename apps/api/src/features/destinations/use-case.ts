@@ -12,6 +12,19 @@ export function listDestinations(db: Db) {
     .all();
 }
 
+export function setDestinationEnabled(db: Db, id: string, enabled: boolean) {
+  db.update(destination)
+    .set({ enabled })
+    .where(
+      and(
+        eq(destination.id, id),
+        eq(destination.workspaceId, DEFAULT_WORKSPACE_ID),
+      ),
+    )
+    .run();
+  return listDestinations(db);
+}
+
 export async function syncDestinations(db: Db, provider: MessagingProvider) {
   const groups = await provider.listGroups();
   const workspaceId = DEFAULT_WORKSPACE_ID;

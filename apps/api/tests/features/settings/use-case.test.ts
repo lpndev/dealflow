@@ -7,6 +7,7 @@ import { SettingsError } from "@/shared/errors";
 const base = {
   delayMinSeconds: 1200,
   delayMaxSeconds: 2400,
+  queuePaused: false,
   messageTemplate: DEFAULT_TEMPLATE,
 };
 

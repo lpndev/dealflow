@@ -9,6 +9,7 @@ import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 const DEFAULTS: Settings = {
   delayMinSeconds: 1200,
   delayMaxSeconds: 2400,
+  queuePaused: false,
   messageTemplate: DEFAULT_TEMPLATE,
 };
 
@@ -22,6 +23,7 @@ export function getSettings(db: Db): Settings {
   return {
     delayMinSeconds: row.delayMinSeconds,
     delayMaxSeconds: row.delayMaxSeconds,
+    queuePaused: row.queuePaused,
     messageTemplate: row.messageTemplate ?? DEFAULT_TEMPLATE,
   };
 }

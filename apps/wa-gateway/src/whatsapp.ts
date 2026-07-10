@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import { Boom } from "@hapi/boom";
 import makeWASocket, {
   Browsers,
@@ -15,10 +16,12 @@ const logger = pino({ level: "silent" });
 let sock: WASocket | undefined;
 let currentQr: string | undefined;
 let connection: "connecting" | "open" | "close" = "close";
+let desired: "up" | "down" = "up";
 let version:
   Awaited<ReturnType<typeof fetchLatestBaileysVersion>>["version"] | undefined;
 
 export async function connect(): Promise<void> {
+  desired = "up";
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   if (!version) ({ version } = await fetchLatestBaileysVersion());
   sock = makeWASocket({
@@ -35,9 +38,36 @@ export async function connect(): Promise<void> {
     if (update.connection === "open") currentQr = undefined;
     if (update.connection === "close") {
       const code = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
-      if (code !== DisconnectReason.loggedOut) void connect();
+      if (desired === "up" && code !== DisconnectReason.loggedOut)
+        void connect();
     }
   });
+}
+
+export async function reconnect(): Promise<void> {
+  if (connection === "open") return;
+  await connect();
+}
+
+export function endConnection(): void {
+  desired = "down";
+  sock?.end(undefined);
+  sock = undefined;
+  currentQr = undefined;
+  connection = "close";
+}
+
+export async function logout(): Promise<void> {
+  desired = "down";
+  try {
+    await sock?.logout();
+  } catch {
+    /* already gone — still clear local session */
+  }
+  sock = undefined;
+  currentQr = undefined;
+  connection = "close";
+  await rm(AUTH_DIR, { recursive: true, force: true });
 }
 
 export function getSession() {

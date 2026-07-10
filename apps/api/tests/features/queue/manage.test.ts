@@ -4,8 +4,13 @@ import { schedulePublication } from "@/features/publications/schedule/use-case";
 import { createPublication } from "@/features/publications/use-case";
 import {
   cancelScheduled,
+  clearHistory,
+  isQueuePaused,
+  listHistory,
   listQueue,
   reorderQueue,
+  rescheduleDelivery,
+  setQueuePaused,
 } from "@/features/queue/use-case";
 import { updateSettings } from "@/features/settings/use-case";
 import { createDb, type Db } from "@/shared/db";
@@ -105,4 +110,52 @@ it("rejects reordering with an id that is not scheduled", () => {
   const only = listQueue(db)[0];
 
   expect(() => reorderQueue(db, [only.id, "bogus"])).toThrow(ScheduleError);
+});
+
+it("reschedules a scheduled delivery to a new due time", () => {
+  const { db } = setup(["G1"]);
+  const only = listQueue(db)[0];
+  const when = new Date("2026-07-10T15:00:00Z");
+
+  rescheduleDelivery(db, only.id, when);
+
+  expect(listQueue(db)[0].dueAt?.getTime()).toBe(when.getTime());
+});
+
+it("refuses to reschedule a delivery that already sent", () => {
+  const { db } = setup(["G1"]);
+  const only = listQueue(db)[0];
+  db.update(delivery)
+    .set({ status: "sent" })
+    .where(eq(delivery.id, only.id))
+    .run();
+
+  expect(() =>
+    rescheduleDelivery(db, only.id, new Date("2026-07-10T15:00:00Z")),
+  ).toThrow(ScheduleError);
+});
+
+it("toggles the queue paused flag", () => {
+  const { db } = setup(["G1"]);
+  expect(isQueuePaused(db)).toBe(false);
+
+  setQueuePaused(db, true);
+  expect(isQueuePaused(db)).toBe(true);
+
+  setQueuePaused(db, false);
+  expect(isQueuePaused(db)).toBe(false);
+});
+
+it("clears only sent and failed deliveries from history", () => {
+  const { db } = setup(["G1", "G2"]);
+  const items = listQueue(db);
+  db.update(delivery)
+    .set({ status: "sent" })
+    .where(eq(delivery.id, items[0].id))
+    .run();
+
+  clearHistory(db);
+
+  expect(listHistory(db)).toHaveLength(0);
+  expect(listQueue(db).map((i) => i.id)).toEqual([items[1].id]);
 });

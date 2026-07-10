@@ -2,6 +2,7 @@ import { expect, it } from "bun:test";
 import { dispatchDue } from "@/features/publications/schedule/scheduler";
 import { schedulePublication } from "@/features/publications/schedule/use-case";
 import { createPublication } from "@/features/publications/use-case";
+import { setQueuePaused } from "@/features/queue/use-case";
 import { updateSettings } from "@/features/settings/use-case";
 import { createDb, type Db } from "@/shared/db";
 import { destination, publication } from "@/shared/schema";
@@ -82,6 +83,21 @@ it("does not dispatch a send before it is due", async () => {
   const r = await dispatchDue(db, provider, new Date(T0.getTime() + 50_000));
   expect(r).toBeNull();
   expect(provider.sent).toHaveLength(0);
+});
+
+it("dispatches nothing while the queue is paused", async () => {
+  const { db } = setup(["G1"]);
+  const provider = new FakeMessaging();
+  setQueuePaused(db, true);
+
+  const paused = await dispatchDue(db, provider, past);
+  expect(paused).toBeNull();
+  expect(provider.sent).toHaveLength(0);
+
+  setQueuePaused(db, false);
+  const resumed = await dispatchDue(db, provider, past);
+  expect(resumed).not.toBeNull();
+  expect(provider.sent).toHaveLength(1);
 });
 
 it("marks the publication sent once every due send goes out", async () => {

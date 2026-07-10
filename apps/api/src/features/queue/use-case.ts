@@ -1,6 +1,7 @@
 import type { QueueItem } from "@dealflow/shared";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { refreshPublicationStatus } from "@/features/publications/send/deliver";
+import { getSettings, updateSettings } from "@/features/settings/use-case";
 import type { Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
 import {
@@ -50,6 +51,28 @@ export function listHistory(db: Db): QueueItemRow[] {
     .where(inArray(delivery.status, ["sent", "failed"]))
     .orderBy(desc(delivery.sentAt))
     .all();
+}
+
+export function isQueuePaused(db: Db): boolean {
+  return getSettings(db).queuePaused;
+}
+
+export function setQueuePaused(db: Db, paused: boolean): void {
+  updateSettings(db, { queuePaused: paused });
+}
+
+export function clearHistory(db: Db): void {
+  db.delete(delivery)
+    .where(inArray(delivery.status, ["sent", "failed"]))
+    .run();
+}
+
+export function rescheduleDelivery(db: Db, id: string, dueAt: Date): void {
+  const row = db.select().from(delivery).where(eq(delivery.id, id)).get();
+  if (!row || row.status !== "scheduled") {
+    throw new ScheduleError("only scheduled deliveries can be rescheduled");
+  }
+  db.update(delivery).set({ dueAt }).where(eq(delivery.id, id)).run();
 }
 
 export function cancelScheduled(db: Db, id: string): void {
