@@ -11,3 +11,4 @@ links, JIDs, tokens; use placeholders).
 - [verify-in-browser-before-commit](verify-in-browser-before-commit.md) — every new feature must be browser-verified before committing (type-only refactors exempt)
 - [prefer-official-solutions](prefer-official-solutions.md) — favor first-party tools/libs over third-party
 - [never-start-dev-server](never-start-dev-server.md) — the dev keeps servers running; don't launch bun/vite/API/web/gateway
+- [finish-task-workflow](finish-task-workflow.md) — on every task: sync memory into CLAUDE.md/.claude, then remind the operator to run /simplify and /code-review before committing

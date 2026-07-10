@@ -346,6 +346,20 @@ o que sobra.
   browser, use a instância que o dev tem no ar; se estiver fora, peça pra ele
   subir. Se você subiu algum processo por engano, mate só o seu (confira PID/porta)
   e nunca reinicie.
+- **Preferir soluções oficiais/first-party** ao escolher dep, plugin ou tool.
+  Nomeie quem mantém; sinalize third-party e ofereça a alternativa oficial
+  primeiro. Ordem: oficial > third-party > poucas linhas à mão — mas dep nova de
+  qualquer tipo ainda exige problema real (casa com ponytail). Ex.: mantido só o
+  `eslint-plugin-react-hooks` (React team), rejeitado `eslint-plugin-react-refresh`
+  (terceiro).
+- **Ao finalizar uma task, sincronizar memória → diretrizes permanentes.** Tudo
+  que virou memória durante a task (fatos, feedback, decisões, referências) tem
+  que ser incorporado às diretrizes permanentes (este `CLAUDE.md` e `.claude/`)
+  antes de considerar a task concluída. Memória é rascunho; `CLAUDE.md`/`.claude/`
+  é a fonte de verdade versionada. Vale para toda task futura.
+- **Ao finalizar, lembrar o operador de rodar `/simplify` e `/code-review` antes
+  de commitar** — entrega mais precisa e eficiente antes de publicar (o repo é
+  público). É um lembrete ao humano, não algo que o Claude dispara sozinho.
 
 ## Convenções do projeto
 
