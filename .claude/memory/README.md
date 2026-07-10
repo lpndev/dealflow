@@ -10,3 +10,4 @@ links, JIDs, tokens; use placeholders).
 - [ml-affiliate-link-api](ml-affiliate-link-api.md) — reverse-engineered "Compartilhar" endpoints the extension calls to mint our meli.la
 - [verify-in-browser-before-commit](verify-in-browser-before-commit.md) — every new feature must be browser-verified before committing (type-only refactors exempt)
 - [prefer-official-solutions](prefer-official-solutions.md) — favor first-party tools/libs over third-party
+- [never-start-dev-server](never-start-dev-server.md) — the dev keeps servers running; don't launch bun/vite/API/web/gateway
