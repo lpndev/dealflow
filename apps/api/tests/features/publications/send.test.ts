@@ -33,7 +33,7 @@ function seed(db: Db, names: string[]): string[] {
 
 function setup() {
   const db = createDb(":memory:");
-  const pub = createPublication(deal, db);
+  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID);
   return { db, pub };
 }
 
@@ -44,6 +44,7 @@ it("creates one delivery per selected destination", async () => {
   const results = await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     new FakeMessaging(),
   );
 
@@ -60,6 +61,7 @@ it("sends our publication content, never the source link", async () => {
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
 
@@ -78,11 +80,13 @@ it("does not create a second delivery for the same publication and destination",
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
 
@@ -97,11 +101,13 @@ it("retry does not resend an already sent delivery", async () => {
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
 
@@ -117,6 +123,7 @@ it("marks a delivery failed on error and a retry can succeed", async () => {
   const first = await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
   expect(first[0].status).toBe("failed");
@@ -124,6 +131,7 @@ it("marks a delivery failed on error and a retry can succeed", async () => {
   const second = await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     provider,
   );
   expect(second[0].status).toBe("sent");
@@ -141,6 +149,7 @@ it("marks the publication sent when all deliveries succeed", async () => {
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     new FakeMessaging(),
   );
 
@@ -154,6 +163,7 @@ it("rejects sending an unknown publication", async () => {
     sendPublication(
       { publicationId: "missing", destinationIds: ["dest-0"] },
       db,
+      DEFAULT_WORKSPACE_ID,
       new FakeMessaging(),
     ),
   ).rejects.toBeInstanceOf(DeliveryError);

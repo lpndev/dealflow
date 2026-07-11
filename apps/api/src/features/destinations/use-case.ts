@@ -2,32 +2,36 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
 import { destination } from "@/shared/schema";
-import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 
-export function listDestinations(db: Db) {
+export function listDestinations(db: Db, workspaceId: string) {
   return db
     .select()
     .from(destination)
-    .where(eq(destination.workspaceId, DEFAULT_WORKSPACE_ID))
+    .where(eq(destination.workspaceId, workspaceId))
     .all();
 }
 
-export function setDestinationEnabled(db: Db, id: string, enabled: boolean) {
+export function setDestinationEnabled(
+  db: Db,
+  workspaceId: string,
+  id: string,
+  enabled: boolean,
+) {
   db.update(destination)
     .set({ enabled })
     .where(
-      and(
-        eq(destination.id, id),
-        eq(destination.workspaceId, DEFAULT_WORKSPACE_ID),
-      ),
+      and(eq(destination.id, id), eq(destination.workspaceId, workspaceId)),
     )
     .run();
-  return listDestinations(db);
+  return listDestinations(db, workspaceId);
 }
 
-export async function syncDestinations(db: Db, provider: MessagingProvider) {
+export async function syncDestinations(
+  db: Db,
+  workspaceId: string,
+  provider: MessagingProvider,
+) {
   const groups = await provider.listGroups();
-  const workspaceId = DEFAULT_WORKSPACE_ID;
 
   for (const group of groups) {
     const existing = db
@@ -45,7 +49,12 @@ export async function syncDestinations(db: Db, provider: MessagingProvider) {
     if (existing) {
       db.update(destination)
         .set({ name: group.name })
-        .where(eq(destination.id, existing.id))
+        .where(
+          and(
+            eq(destination.id, existing.id),
+            eq(destination.workspaceId, workspaceId),
+          ),
+        )
         .run();
     } else {
       db.insert(destination)
@@ -60,5 +69,5 @@ export async function syncDestinations(db: Db, provider: MessagingProvider) {
     }
   }
 
-  return listDestinations(db);
+  return listDestinations(db, workspaceId);
 }

@@ -1,9 +1,12 @@
 import { Hono } from "hono";
+import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
 import { schedulePublication } from "./use-case";
 
-export const schedule = new Hono();
+export const schedule = new Hono<AppEnv>();
+
+schedule.use("*", requireAuth);
 
 schedule.post("/:id/schedule", async (c) => {
   const publicationId = c.req.param("id");
@@ -30,6 +33,7 @@ schedule.post("/:id/schedule", async (c) => {
     const scheduled = schedulePublication(
       { publicationId, destinationIds: destinationIds as string[], startAt },
       getDb(),
+      c.get("workspaceId"),
     );
     return c.json({ scheduled });
   } catch (err) {

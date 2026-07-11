@@ -20,6 +20,7 @@ export type PublicationContent = {
 
 export function loadPublicationContent(
   db: Db,
+  workspaceId: string,
   publicationId: string,
 ): PublicationContent | undefined {
   return db
@@ -32,12 +33,18 @@ export function loadPublicationContent(
     .from(publication)
     .innerJoin(dealSnapshot, eq(publication.dealId, dealSnapshot.id))
     .innerJoin(product, eq(dealSnapshot.productId, product.id))
-    .where(eq(publication.id, publicationId))
+    .where(
+      and(
+        eq(publication.id, publicationId),
+        eq(publication.workspaceId, workspaceId),
+      ),
+    )
     .get();
 }
 
 export async function deliverOne(
   db: Db,
+  workspaceId: string,
   provider: MessagingProvider,
   pub: PublicationContent,
   destinationId: string,
@@ -45,7 +52,12 @@ export async function deliverOne(
   const dest = db
     .select()
     .from(destination)
-    .where(eq(destination.id, destinationId))
+    .where(
+      and(
+        eq(destination.id, destinationId),
+        eq(destination.workspaceId, workspaceId),
+      ),
+    )
     .get();
   if (!dest) throw new DeliveryError(`destination not found: ${destinationId}`);
 
@@ -56,6 +68,7 @@ export async function deliverOne(
       and(
         eq(delivery.publicationId, pub.id),
         eq(delivery.destinationId, destinationId),
+        eq(delivery.workspaceId, workspaceId),
       ),
     )
     .get();
@@ -69,7 +82,7 @@ export async function deliverOne(
     db.insert(delivery)
       .values({
         id,
-        workspaceId: pub.workspaceId,
+        workspaceId,
         publicationId: pub.id,
         destinationId,
       })
@@ -78,7 +91,7 @@ export async function deliverOne(
 
   db.update(delivery)
     .set({ status: "processing", attempts: (existing?.attempts ?? 0) + 1 })
-    .where(eq(delivery.id, id))
+    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
     .run();
 
   try {
@@ -94,28 +107,42 @@ export async function deliverOne(
         error: null,
         sentAt: new Date(),
       })
-      .where(eq(delivery.id, id))
+      .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
       .run();
     return { destinationId, status: "sent" };
   } catch (err) {
     const message = err instanceof Error ? err.message : "send failed";
     db.update(delivery)
       .set({ status: "failed", error: message })
-      .where(eq(delivery.id, id))
+      .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
       .run();
     return { destinationId, status: "failed", error: message };
   }
 }
 
-export function refreshPublicationStatus(db: Db, publicationId: string): void {
+export function refreshPublicationStatus(
+  db: Db,
+  workspaceId: string,
+  publicationId: string,
+): void {
   const rows = db
     .select({ status: delivery.status })
     .from(delivery)
-    .where(eq(delivery.publicationId, publicationId))
+    .where(
+      and(
+        eq(delivery.publicationId, publicationId),
+        eq(delivery.workspaceId, workspaceId),
+      ),
+    )
     .all();
   const allSent = rows.length > 0 && rows.every((r) => r.status === "sent");
   db.update(publication)
     .set({ status: allSent ? "sent" : "sending" })
-    .where(eq(publication.id, publicationId))
+    .where(
+      and(
+        eq(publication.id, publicationId),
+        eq(publication.workspaceId, workspaceId),
+      ),
+    )
     .run();
 }

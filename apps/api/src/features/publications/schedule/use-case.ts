@@ -23,6 +23,7 @@ type Options = {
 export function schedulePublication(
   input: ScheduleInput,
   db: Db,
+  workspaceId: string,
   opts: Options = {},
 ): ScheduledDelivery[] {
   const now = opts.now ?? new Date();
@@ -31,14 +32,19 @@ export function schedulePublication(
   const pub = db
     .select()
     .from(publication)
-    .where(eq(publication.id, input.publicationId))
+    .where(
+      and(
+        eq(publication.id, input.publicationId),
+        eq(publication.workspaceId, workspaceId),
+      ),
+    )
     .get();
   if (!pub) throw new ScheduleError("publication not found");
 
-  const { delayMinSeconds, delayMaxSeconds } = getSettings(db);
+  const { delayMinSeconds, delayMaxSeconds } = getSettings(db, workspaceId);
 
   const startMs = Math.max(now.getTime(), input.startAt?.getTime() ?? 0);
-  const tail = queueTail(db);
+  const tail = queueTail(db, workspaceId);
   let cursor: number | null = null;
   const scheduled: ScheduledDelivery[] = [];
 
@@ -46,7 +52,12 @@ export function schedulePublication(
     const dest = db
       .select()
       .from(destination)
-      .where(eq(destination.id, destinationId))
+      .where(
+        and(
+          eq(destination.id, destinationId),
+          eq(destination.workspaceId, workspaceId),
+        ),
+      )
       .get();
     if (!dest)
       throw new ScheduleError(`destination not found: ${destinationId}`);
@@ -58,6 +69,7 @@ export function schedulePublication(
         and(
           eq(delivery.publicationId, pub.id),
           eq(delivery.destinationId, destinationId),
+          eq(delivery.workspaceId, workspaceId),
         ),
       )
       .get();
@@ -93,11 +105,16 @@ export function schedulePublication(
   return scheduled;
 }
 
-function queueTail(db: Db): number | null {
+function queueTail(db: Db, workspaceId: string): number | null {
   const last = db
     .select({ dueAt: delivery.dueAt })
     .from(delivery)
-    .where(eq(delivery.status, "scheduled"))
+    .where(
+      and(
+        eq(delivery.status, "scheduled"),
+        eq(delivery.workspaceId, workspaceId),
+      ),
+    )
     .orderBy(desc(delivery.dueAt))
     .get();
   return last?.dueAt?.getTime() ?? null;

@@ -29,81 +29,134 @@ const columns = {
   error: delivery.error,
 };
 
-function query(db: Db) {
+function query(
+  db: Db,
+  workspaceId: string,
+  statuses: (typeof delivery.status.enumValues)[number][],
+) {
   return db
     .select(columns)
     .from(delivery)
     .innerJoin(publication, eq(delivery.publicationId, publication.id))
     .innerJoin(dealSnapshot, eq(publication.dealId, dealSnapshot.id))
     .innerJoin(product, eq(dealSnapshot.productId, product.id))
-    .innerJoin(destination, eq(delivery.destinationId, destination.id));
+    .innerJoin(destination, eq(delivery.destinationId, destination.id))
+    .where(
+      and(
+        eq(delivery.workspaceId, workspaceId),
+        inArray(delivery.status, statuses),
+      ),
+    );
 }
 
-export function listQueue(db: Db): QueueItemRow[] {
-  return query(db)
-    .where(inArray(delivery.status, ["scheduled", "processing"]))
+export function listQueue(db: Db, workspaceId: string): QueueItemRow[] {
+  return query(db, workspaceId, ["scheduled", "processing"])
     .orderBy(asc(delivery.dueAt))
     .all();
 }
 
-export function listHistory(db: Db): QueueItemRow[] {
-  return query(db)
-    .where(inArray(delivery.status, ["sent", "failed"]))
+export function listHistory(db: Db, workspaceId: string): QueueItemRow[] {
+  return query(db, workspaceId, ["sent", "failed"])
     .orderBy(desc(delivery.sentAt))
     .all();
 }
 
-export function isQueuePaused(db: Db): boolean {
-  return getSettings(db).queuePaused;
+export function isQueuePaused(db: Db, workspaceId: string): boolean {
+  return getSettings(db, workspaceId).queuePaused;
 }
 
-export function setQueuePaused(db: Db, paused: boolean): void {
-  updateSettings(db, { queuePaused: paused });
+export function setQueuePaused(
+  db: Db,
+  workspaceId: string,
+  paused: boolean,
+): void {
+  updateSettings(db, workspaceId, { queuePaused: paused });
 }
 
-export function clearHistory(db: Db): void {
+export function clearHistory(db: Db, workspaceId: string): void {
   db.delete(delivery)
-    .where(inArray(delivery.status, ["sent", "failed"]))
+    .where(
+      and(
+        inArray(delivery.status, ["sent", "failed"]),
+        eq(delivery.workspaceId, workspaceId),
+      ),
+    )
     .run();
 }
 
-export function rescheduleDelivery(db: Db, id: string, dueAt: Date): void {
-  const row = db.select().from(delivery).where(eq(delivery.id, id)).get();
+export function rescheduleDelivery(
+  db: Db,
+  workspaceId: string,
+  id: string,
+  dueAt: Date,
+): void {
+  const row = db
+    .select()
+    .from(delivery)
+    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
+    .get();
   if (!row || row.status !== "scheduled") {
     throw new ScheduleError("only scheduled deliveries can be rescheduled");
   }
-  db.update(delivery).set({ dueAt }).where(eq(delivery.id, id)).run();
+  db.update(delivery)
+    .set({ dueAt })
+    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
+    .run();
 }
 
-export function cancelScheduled(db: Db, id: string): void {
-  const row = db.select().from(delivery).where(eq(delivery.id, id)).get();
+export function cancelScheduled(db: Db, workspaceId: string, id: string): void {
+  const row = db
+    .select()
+    .from(delivery)
+    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
+    .get();
   if (!row || row.status !== "scheduled") {
     throw new ScheduleError("only scheduled deliveries can be cancelled");
   }
 
-  db.delete(delivery).where(eq(delivery.id, id)).run();
+  db.delete(delivery)
+    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
+    .run();
 
   const remaining = db
     .select({ id: delivery.id })
     .from(delivery)
-    .where(eq(delivery.publicationId, row.publicationId))
+    .where(
+      and(
+        eq(delivery.publicationId, row.publicationId),
+        eq(delivery.workspaceId, workspaceId),
+      ),
+    )
     .all();
   if (remaining.length === 0) {
     db.update(publication)
       .set({ status: "ready" })
-      .where(eq(publication.id, row.publicationId))
+      .where(
+        and(
+          eq(publication.id, row.publicationId),
+          eq(publication.workspaceId, workspaceId),
+        ),
+      )
       .run();
   } else {
-    refreshPublicationStatus(db, row.publicationId);
+    refreshPublicationStatus(db, workspaceId, row.publicationId);
   }
 }
 
-export function reorderQueue(db: Db, orderedIds: string[]): void {
+export function reorderQueue(
+  db: Db,
+  workspaceId: string,
+  orderedIds: string[],
+): void {
   const rows = db
     .select({ id: delivery.id, dueAt: delivery.dueAt })
     .from(delivery)
     .where(
-      and(inArray(delivery.id, orderedIds), eq(delivery.status, "scheduled")),
+      and(
+        inArray(delivery.id, orderedIds),
+        eq(delivery.status, "scheduled"),
+        eq(delivery.workspaceId, workspaceId),
+      ),
     )
     .all();
 
@@ -118,7 +171,7 @@ export function reorderQueue(db: Db, orderedIds: string[]): void {
   orderedIds.forEach((id, i) => {
     db.update(delivery)
       .set({ dueAt: slots[i] })
-      .where(eq(delivery.id, id))
+      .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
       .run();
   });
 }

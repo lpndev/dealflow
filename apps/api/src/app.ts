@@ -9,15 +9,9 @@ import { schedule } from "@/features/publications/schedule/route";
 import { send } from "@/features/publications/send/route";
 import { queue } from "@/features/queue/route";
 import { settingsRoutes } from "@/features/settings/route";
-import { auth } from "@/shared/auth";
+import { auth, type AppEnv } from "@/shared/auth";
 
-export const app = new Hono<{
-  Variables: {
-    user: typeof auth.$Infer.Session.user | null;
-    session: typeof auth.$Infer.Session.session | null;
-    workspaceId: string;
-  };
-}>();
+export const app = new Hono<AppEnv>();
 
 app.use(
   "/*",

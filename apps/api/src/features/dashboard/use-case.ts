@@ -89,6 +89,7 @@ export function buildSeries(
 
 export function getDashboard(
   db: Db,
+  workspaceId: string,
   range: DashboardRange,
   now = new Date(),
 ): DashboardData {
@@ -98,15 +99,28 @@ export function getDashboard(
   const pending = db
     .select({ id: delivery.id })
     .from(delivery)
-    .where(inArray(delivery.status, ["scheduled", "processing"]))
+    .where(
+      and(
+        inArray(delivery.status, ["scheduled", "processing"]),
+        eq(delivery.workspaceId, workspaceId),
+      ),
+    )
     .all().length;
 
-  const groups = listDestinations(db).filter((d) => d.enabled).length;
+  const groups = listDestinations(db, workspaceId).filter(
+    (d) => d.enabled,
+  ).length;
 
   const sentTs = db
     .select({ at: delivery.sentAt })
     .from(delivery)
-    .where(and(eq(delivery.status, "sent"), gte(delivery.sentAt, windowStart)))
+    .where(
+      and(
+        eq(delivery.status, "sent"),
+        eq(delivery.workspaceId, workspaceId),
+        gte(delivery.sentAt, windowStart),
+      ),
+    )
     .all()
     .map((r) => r.at!.getTime());
 
@@ -114,7 +128,11 @@ export function getDashboard(
     .select({ at: delivery.createdAt })
     .from(delivery)
     .where(
-      and(eq(delivery.status, "failed"), gte(delivery.createdAt, windowStart)),
+      and(
+        eq(delivery.status, "failed"),
+        eq(delivery.workspaceId, workspaceId),
+        gte(delivery.createdAt, windowStart),
+      ),
     )
     .all()
     .map((r) => r.at.getTime());

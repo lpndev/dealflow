@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
 import {
@@ -12,27 +13,35 @@ import {
   setQueuePaused,
 } from "./use-case";
 
-export const queue = new Hono();
+export const queue = new Hono<AppEnv>();
+
+queue.use("*", requireAuth);
 
 queue.get("/queue", (c) => {
   const db = getDb();
-  return c.json({ items: listQueue(db), paused: isQueuePaused(db) });
+  const workspaceId = c.get("workspaceId");
+  return c.json({
+    items: listQueue(db, workspaceId),
+    paused: isQueuePaused(db, workspaceId),
+  });
 });
 
-queue.get("/history", (c) => c.json({ items: listHistory(getDb()) }));
+queue.get("/history", (c) =>
+  c.json({ items: listHistory(getDb(), c.get("workspaceId")) }),
+);
 
 queue.delete("/history", (c) => {
-  clearHistory(getDb());
+  clearHistory(getDb(), c.get("workspaceId"));
   return c.json({ ok: true });
 });
 
 queue.post("/queue/pause", (c) => {
-  setQueuePaused(getDb(), true);
+  setQueuePaused(getDb(), c.get("workspaceId"), true);
   return c.json({ paused: true });
 });
 
 queue.post("/queue/resume", (c) => {
-  setQueuePaused(getDb(), false);
+  setQueuePaused(getDb(), c.get("workspaceId"), false);
   return c.json({ paused: false });
 });
 
@@ -44,9 +53,10 @@ queue.put("/queue/:id/time", async (c) => {
   if (!dueAt || Number.isNaN(dueAt.getTime())) {
     return c.json({ error: "dueAt must be a valid ISO date" }, 400);
   }
+  const workspaceId = c.get("workspaceId");
   try {
-    rescheduleDelivery(getDb(), c.req.param("id"), dueAt);
-    return c.json({ items: listQueue(getDb()) });
+    rescheduleDelivery(getDb(), workspaceId, c.req.param("id"), dueAt);
+    return c.json({ items: listQueue(getDb(), workspaceId) });
   } catch (err) {
     if (err instanceof ScheduleError)
       return c.json({ error: err.message }, 409);
@@ -56,7 +66,7 @@ queue.put("/queue/:id/time", async (c) => {
 
 queue.delete("/queue/:id", (c) => {
   try {
-    cancelScheduled(getDb(), c.req.param("id"));
+    cancelScheduled(getDb(), c.get("workspaceId"), c.req.param("id"));
     return c.json({ ok: true });
   } catch (err) {
     if (err instanceof ScheduleError)
@@ -72,9 +82,10 @@ queue.put("/queue/order", async (c) => {
   if (!Array.isArray(body?.orderedIds)) {
     return c.json({ error: "orderedIds is required" }, 400);
   }
+  const workspaceId = c.get("workspaceId");
   try {
-    reorderQueue(getDb(), body.orderedIds as string[]);
-    return c.json({ items: listQueue(getDb()) });
+    reorderQueue(getDb(), workspaceId, body.orderedIds as string[]);
+    return c.json({ items: listQueue(getDb(), workspaceId) });
   } catch (err) {
     if (err instanceof ScheduleError)
       return c.json({ error: err.message }, 409);

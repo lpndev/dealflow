@@ -11,6 +11,7 @@ import {
   product,
   publication,
 } from "@/shared/schema";
+import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 
 function db() {
   return createDb(":memory:");
@@ -29,7 +30,7 @@ const valid = {
 
 it("persists a publication and returns ready content", () => {
   const conn = db();
-  const result = createPublication(valid, conn);
+  const result = createPublication(valid, conn, DEFAULT_WORKSPACE_ID);
 
   expect(result.status).toBe("ready");
   expect(result.content).toContain("Air Fryer Mondial 5L");
@@ -43,28 +44,40 @@ it("persists a publication and returns ready content", () => {
 
 it("never publishes the source affiliate link", () => {
   const conn = db();
-  const result = createPublication(valid, conn);
+  const result = createPublication(valid, conn, DEFAULT_WORKSPACE_ID);
 
   expect(result.content).toContain("https://mercadolivre.com/sec/ours");
   expect(result.content).not.toContain(valid.sourceUrl);
 });
 
 it("rejects a publication without an affiliate link", () => {
-  expect(() => createPublication({ ...valid, affiliateUrl: "" }, db())).toThrow(
-    PublicationError,
-  );
+  expect(() =>
+    createPublication(
+      { ...valid, affiliateUrl: "" },
+      db(),
+      DEFAULT_WORKSPACE_ID,
+    ),
+  ).toThrow(PublicationError);
 });
 
 it("rejects an affiliate link equal to the source link", () => {
   expect(() =>
-    createPublication({ ...valid, affiliateUrl: valid.sourceUrl }, db()),
+    createPublication(
+      { ...valid, affiliateUrl: valid.sourceUrl },
+      db(),
+      DEFAULT_WORKSPACE_ID,
+    ),
   ).toThrow(PublicationError);
 });
 
 it("reuses the same product across snapshots", () => {
   const conn = db();
-  createPublication(valid, conn);
-  createPublication({ ...valid, currentPrice: "279,90" }, conn);
+  createPublication(valid, conn, DEFAULT_WORKSPACE_ID);
+  createPublication(
+    { ...valid, currentPrice: "279,90" },
+    conn,
+    DEFAULT_WORKSPACE_ID,
+  );
 
   expect(conn.select().from(product).all()).toHaveLength(1);
   expect(conn.select().from(dealSnapshot).all()).toHaveLength(2);
@@ -72,7 +85,7 @@ it("reuses the same product across snapshots", () => {
 
 it("previews content without persisting", () => {
   const conn = db();
-  const { content } = previewPublication(valid, conn);
+  const { content } = previewPublication(valid, conn, DEFAULT_WORKSPACE_ID);
 
   expect(content).toContain("💰 *Por R$ 299,90*");
   expect(conn.select().from(publication).all()).toHaveLength(0);

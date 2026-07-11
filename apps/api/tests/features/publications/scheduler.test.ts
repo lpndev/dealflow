@@ -38,13 +38,18 @@ function seed(db: Db, names: string[]): string[] {
 
 function setup(names: string[]) {
   const db = createDb(":memory:");
-  const pub = createPublication(deal, db);
+  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID);
   const dests = seed(db, names);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
-  schedulePublication({ publicationId: pub.id, destinationIds: dests }, db, {
-    now: T0,
-    rand: () => 0,
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 100,
   });
+  schedulePublication(
+    { publicationId: pub.id, destinationIds: dests },
+    db,
+    DEFAULT_WORKSPACE_ID,
+    { now: T0, rand: () => 0 },
+  );
   return { db, pub, dests };
 }
 
@@ -66,9 +71,12 @@ it("dispatches one due send at a time, earliest first", async () => {
 
 it("does not dispatch a send before it is due", async () => {
   const db = createDb(":memory:");
-  const pub = createPublication(deal, db);
+  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID);
   const dests = seed(db, ["G1"]);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 100,
+  });
   schedulePublication(
     {
       publicationId: pub.id,
@@ -76,6 +84,7 @@ it("does not dispatch a send before it is due", async () => {
       startAt: new Date(T0.getTime() + 100_000),
     },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: () => 0 },
   );
   const provider = new FakeMessaging();
@@ -88,13 +97,13 @@ it("does not dispatch a send before it is due", async () => {
 it("dispatches nothing while the queue is paused", async () => {
   const { db } = setup(["G1"]);
   const provider = new FakeMessaging();
-  setQueuePaused(db, true);
+  setQueuePaused(db, DEFAULT_WORKSPACE_ID, true);
 
   const paused = await dispatchDue(db, provider, past);
   expect(paused).toBeNull();
   expect(provider.sent).toHaveLength(0);
 
-  setQueuePaused(db, false);
+  setQueuePaused(db, DEFAULT_WORKSPACE_ID, false);
   const resumed = await dispatchDue(db, provider, past);
   expect(resumed).not.toBeNull();
   expect(provider.sent).toHaveLength(1);

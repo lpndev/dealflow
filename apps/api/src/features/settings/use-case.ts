@@ -4,7 +4,6 @@ import { DEFAULT_TEMPLATE } from "@/features/publications/render";
 import type { Db } from "@/shared/db";
 import { SettingsError } from "@/shared/errors";
 import { settings } from "@/shared/schema";
-import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 
 const DEFAULTS: Settings = {
   delayMinSeconds: 1200,
@@ -14,11 +13,11 @@ const DEFAULTS: Settings = {
   mlAffiliateTag: null,
 };
 
-export function getSettings(db: Db): Settings {
+export function getSettings(db: Db, workspaceId: string): Settings {
   const row = db
     .select()
     .from(settings)
-    .where(eq(settings.workspaceId, DEFAULT_WORKSPACE_ID))
+    .where(eq(settings.workspaceId, workspaceId))
     .get();
   if (!row) return { ...DEFAULTS };
   return {
@@ -30,8 +29,12 @@ export function getSettings(db: Db): Settings {
   };
 }
 
-export function updateSettings(db: Db, input: Partial<Settings>): Settings {
-  const next: Settings = { ...getSettings(db), ...input };
+export function updateSettings(
+  db: Db,
+  workspaceId: string,
+  input: Partial<Settings>,
+): Settings {
+  const next: Settings = { ...getSettings(db, workspaceId), ...input };
   next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null;
 
   if (
@@ -50,7 +53,7 @@ export function updateSettings(db: Db, input: Partial<Settings>): Settings {
 
   db.insert(settings)
     .values({
-      workspaceId: DEFAULT_WORKSPACE_ID,
+      workspaceId,
       ...next,
       updatedAt: new Date(),
     })
@@ -60,5 +63,5 @@ export function updateSettings(db: Db, input: Partial<Settings>): Settings {
     })
     .run();
 
-  return getSettings(db);
+  return getSettings(db, workspaceId);
 }

@@ -1,11 +1,16 @@
 import { Hono } from "hono";
+import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { SettingsError } from "@/shared/errors";
 import { getSettings, updateSettings } from "./use-case";
 
-export const settingsRoutes = new Hono();
+export const settingsRoutes = new Hono<AppEnv>();
 
-settingsRoutes.get("/", (c) => c.json(getSettings(getDb())));
+settingsRoutes.use("*", requireAuth);
+
+settingsRoutes.get("/", (c) =>
+  c.json(getSettings(getDb(), c.get("workspaceId"))),
+);
 
 settingsRoutes.put("/", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
@@ -31,7 +36,7 @@ settingsRoutes.put("/", async (c) => {
 
   try {
     return c.json(
-      updateSettings(getDb(), {
+      updateSettings(getDb(), c.get("workspaceId"), {
         delayMinSeconds: body.delayMinSeconds,
         delayMaxSeconds: body.delayMaxSeconds,
         messageTemplate: body.messageTemplate,

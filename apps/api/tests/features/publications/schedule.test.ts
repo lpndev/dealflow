@@ -33,7 +33,7 @@ function seed(db: Db, names: string[]): string[] {
 
 function setup() {
   const db = createDb(":memory:");
-  const pub = createPublication(deal, db);
+  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID);
   return { db, pub };
 }
 
@@ -43,11 +43,15 @@ const noJitter = () => 0;
 it("sends the first offer now and spaces the rest by the interval", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1", "G2", "G3"]);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 200 });
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 200,
+  });
 
   const scheduled = schedulePublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: noJitter },
   );
 
@@ -63,11 +67,15 @@ it("sends the first offer now and spaces the rest by the interval", () => {
 it("keeps the spacing between sends inside the configured range", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1", "G2"]);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 200 });
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 200,
+  });
 
   const scheduled = schedulePublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: () => 0.5 },
   );
 
@@ -80,12 +88,16 @@ it("keeps the spacing between sends inside the configured range", () => {
 it("starts the queue at an explicit start time", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1", "G2"]);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 100,
+  });
   const startAt = new Date(T0.getTime() + 3_600_000);
 
   const scheduled = schedulePublication(
     { publicationId: pub.id, destinationIds: dests, startAt },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: noJitter },
   );
 
@@ -101,6 +113,7 @@ it("clamps a start time in the past to now", () => {
   const scheduled = schedulePublication(
     { publicationId: pub.id, destinationIds: dests, startAt },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: noJitter },
   );
 
@@ -110,7 +123,10 @@ it("clamps a start time in the past to now", () => {
 it("queues new sends after existing pending ones (global serial)", () => {
   const { db, pub } = setup();
   const [d0, d1] = seed(db, ["G1", "G2"]);
-  updateSettings(db, { delayMinSeconds: 100, delayMaxSeconds: 100 });
+  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+    delayMinSeconds: 100,
+    delayMaxSeconds: 100,
+  });
 
   db.insert(delivery)
     .values({
@@ -126,6 +142,7 @@ it("queues new sends after existing pending ones (global serial)", () => {
   const scheduled = schedulePublication(
     { publicationId: pub.id, destinationIds: [d0] },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0, rand: noJitter },
   );
 
@@ -136,12 +153,16 @@ it("does not double-schedule the same publication and destination", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1"]);
 
-  schedulePublication({ publicationId: pub.id, destinationIds: dests }, db, {
-    now: T0,
-  });
+  schedulePublication(
+    { publicationId: pub.id, destinationIds: dests },
+    db,
+    DEFAULT_WORKSPACE_ID,
+    { now: T0 },
+  );
   const second = schedulePublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
+    DEFAULT_WORKSPACE_ID,
     { now: T0 },
   );
 
@@ -153,9 +174,12 @@ it("marks the publication as sending once scheduled", () => {
   const { db, pub } = setup();
   const dests = seed(db, ["G1"]);
 
-  schedulePublication({ publicationId: pub.id, destinationIds: dests }, db, {
-    now: T0,
-  });
+  schedulePublication(
+    { publicationId: pub.id, destinationIds: dests },
+    db,
+    DEFAULT_WORKSPACE_ID,
+    { now: T0 },
+  );
 
   const row = db.select().from(publication).all()[0];
   expect(row.status).toBe("sending");
@@ -164,6 +188,10 @@ it("marks the publication as sending once scheduled", () => {
 it("rejects scheduling an unknown publication", () => {
   const { db } = setup();
   expect(() =>
-    schedulePublication({ publicationId: "missing", destinationIds: [] }, db),
+    schedulePublication(
+      { publicationId: "missing", destinationIds: [] },
+      db,
+      DEFAULT_WORKSPACE_ID,
+    ),
   ).toThrow(ScheduleError);
 });

@@ -10,13 +10,12 @@ import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
 import { delivery } from "@/shared/schema";
 
+// ponytail: scheduler scans all workspaces; per-workspace fairness only if one operator starves others
 export async function dispatchDue(
   db: Db,
   provider: MessagingProvider,
   now: Date = new Date(),
 ): Promise<DeliveryResult | null> {
-  if (isQueuePaused(db)) return null;
-
   const due = db
     .select()
     .from(delivery)
@@ -24,12 +23,19 @@ export async function dispatchDue(
     .orderBy(asc(delivery.dueAt))
     .get();
   if (!due) return null;
+  if (isQueuePaused(db, due.workspaceId)) return null;
 
-  const pub = loadPublicationContent(db, due.publicationId);
+  const pub = loadPublicationContent(db, due.workspaceId, due.publicationId);
   if (!pub) return null;
 
-  const result = await deliverOne(db, provider, pub, due.destinationId);
-  refreshPublicationStatus(db, due.publicationId);
+  const result = await deliverOne(
+    db,
+    due.workspaceId,
+    provider,
+    pub,
+    due.destinationId,
+  );
+  refreshPublicationStatus(db, due.workspaceId, due.publicationId);
   return result;
 }
 

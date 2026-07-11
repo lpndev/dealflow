@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
+import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { DeliveryError } from "@/shared/errors";
 import { sendPublication } from "./use-case";
 
-export const send = new Hono();
+export const send = new Hono<AppEnv>();
+
+send.use("*", requireAuth);
 
 send.post("/:id/send", async (c) => {
   const publicationId = c.req.param("id");
@@ -21,6 +24,7 @@ send.post("/:id/send", async (c) => {
     const results = await sendPublication(
       { publicationId, destinationIds: destinationIds as string[] },
       getDb(),
+      c.get("workspaceId"),
       whatsappGateway,
     );
     return c.json({ results });

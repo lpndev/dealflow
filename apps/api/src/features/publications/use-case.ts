@@ -10,7 +10,6 @@ import {
   publication,
 } from "@/shared/schema";
 import { normalizeUrl } from "@/shared/urls";
-import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 import { renderPublication, type RenderInput } from "./render";
 
 const PROVIDER = "mercado-livre";
@@ -35,14 +34,16 @@ export type PublicationResult = {
 export function previewPublication(
   input: PublicationInput,
   db: Db,
+  workspaceId: string,
 ): { content: string } {
-  const { messageTemplate } = getSettings(db);
+  const { messageTemplate } = getSettings(db, workspaceId);
   return { content: renderPublication(toRenderInput(input), messageTemplate) };
 }
 
 export function createPublication(
   input: PublicationInput,
   db: Db,
+  workspaceId: string,
 ): PublicationResult {
   const title = input.title?.trim();
   const affiliateUrl = input.affiliateUrl?.trim();
@@ -58,8 +59,10 @@ export function createPublication(
   }
 
   const render = toRenderInput(input);
-  const content = renderPublication(render, getSettings(db).messageTemplate);
-  const workspaceId = DEFAULT_WORKSPACE_ID;
+  const content = renderPublication(
+    render,
+    getSettings(db, workspaceId).messageTemplate,
+  );
 
   const productId = upsertProduct(db, {
     workspaceId,
