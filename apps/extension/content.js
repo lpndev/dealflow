@@ -1,8 +1,8 @@
-const PRODUCT_RE = /\/p\/(MLB-?\d+)/;
+const PRODUCT_RE = /\/(?:p|up)\/(MLBU?-?\d+)/i;
 
 function productId() {
   const m = location.pathname.match(PRODUCT_RE);
-  return m ? m[1].replace("-", "") : null;
+  return m ? m[1].replace("-", "").toUpperCase() : null;
 }
 
 function parseBrl(text) {

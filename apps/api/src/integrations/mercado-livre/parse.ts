@@ -9,12 +9,14 @@ type LdNode = {
 };
 
 export function mlbIdFromUrl(url: string): string | undefined {
-  const match = url.match(/MLB-?(\d+)/i);
-  return match ? `MLB${match[1]}` : undefined;
+  const match = url.match(/(MLBU?)-?(\d+)/i);
+  return match ? `${match[1].toUpperCase()}${match[2]}` : undefined;
 }
 
 export function productUrlFromSocialHtml(html: string): string | undefined {
-  const match = html.match(/href=["']([^"']*\/p\/MLB\d+[^"']*)["']/i);
+  const match = html.match(
+    /href=["']([^"']*\/(?:p\/MLB|up\/MLBU)\d+[^"']*)["']/i,
+  );
   if (!match) return undefined;
   try {
     const url = new URL(match[1], "https://www.mercadolivre.com.br");

@@ -19,6 +19,14 @@ it("reads the mlb id from an old hyphenated url", () => {
   ).toBe("MLB456789");
 });
 
+it("reads the mlbu id from a /up/ unified url", () => {
+  expect(
+    mlbIdFromUrl(
+      "https://www.mercadolivre.com.br/carregador/up/MLBU3916092089",
+    ),
+  ).toBe("MLBU3916092089");
+});
+
 it("returns undefined when the url has no mlb id", () => {
   expect(
     mlbIdFromUrl("https://www.mercadolivre.com.br/ofertas"),
@@ -72,6 +80,13 @@ const socialHtml = `<html><head>
 it("extracts the real product url from an affiliate social landing", () => {
   expect(productUrlFromSocialHtml(socialHtml)).toBe(
     "https://www.mercadolivre.com.br/35pcs-jogo-soquete/p/MLB63558681",
+  );
+});
+
+it("extracts a /up/ unified product url from a social landing", () => {
+  const html = `<a href="https://www.mercadolivre.com.br/carregador/up/MLBU3916092089?pdp_filters=item_id%3AMLB4632378747&amp;source=affiliate-profile">Ir</a>`;
+  expect(productUrlFromSocialHtml(html)).toBe(
+    "https://www.mercadolivre.com.br/carregador/up/MLBU3916092089",
   );
 });
 
