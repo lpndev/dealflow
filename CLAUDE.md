@@ -355,17 +355,30 @@ raspagem na conta logada, e o handoff da API por teste + curl. Config no popup
 via poll idempotente de 1s (o ML é SPA — o content script só injeta no load; sem o
 poll o botão sumia ao navegar client-side, batia com "sumiu depois de 10 min").
 Auto-mint do afiliado (fail-closed): quando o import cai sem afiliado (mensagem de
-concorrente / URL de produto crua), o painel Revisar mostra "Abrir no ML e gerar
-meu link" → `window.open(sourceUrl + '#dealflow-auto')`; o `content.js`, ao ver o
-hash `dealflow-auto`, força um capture (mint no contexto da página logada — cookies
-provados — + raspagem) e faz o handoff normal por `/deals/capture`; o web, que já dá
-poll nesse slot, casa o produto por MLB id e faz `mergeCapture` (ver Nota reconhecer
-link próprio + re-verificar: puxa tudo do ML — sobrescreve preço/título/imagem, mantém
-o cupom digitado, cola o afiliado novo; produto diferente → banner "Carregar"). Reusa
-o pipeline de captura já testado ao vivo, em vez de fetch no service worker (cookies
-do ML no SW = incerto). Sem extensão/login o campo fica vazio com aviso. Mata o
-bate-e-volta de ir ao ML só pra pegar o link; 100% automático fica pro
-`MlApiSource`/OAuth.
+concorrente / URL de produto crua), o mint acontece **automático no paste, em
+background** — sem clique nem aba visível. Por que não cookie/servidor: verificado ao
+vivo (2026-07-11) que o preço mora só no HTML SSR anti-botado (não há endpoint JSON
+de preço; fetch server-side, mesmo do IP residencial, cai em 302 `/gz/account-
+verification`), então re-verificar preço exige um browser real logado — cookie não
+passa (o bloqueio é fingerprint de browser, não login). Logo, o browser real da
+extensão continua sendo o transporte; só matamos o bate-e-volta visível. Fluxo: um
+content script-ponte (`bridge.js`, injetado no origin do web via `content_scripts`)
+faz relay `window.postMessage('dealflow'/'mint') ↔ chrome.runtime`; o web, ao ver
+`needsAffiliate|needsPrice` **e** a extensão presente (handshake ping/pong; guarda por
+`externalId` p/ não repetir), pede o mint; o `background.js` abre a página do produto
+com `chrome.tabs.create({ active:false })` (aba em background, sem roubar foco), o
+`content.js` roda igual (vê `#dealflow-auto` → mint no contexto logado + raspagem →
+handoff por `/deals/capture`), e o background **fecha a aba** ao receber o capture
+dela (sem trocar o foco; timeout de 30s fecha se o mint falhar — ponytail: sem
+streaming de erro fino). O web, que já dá poll no slot, casa o produto por MLB id e faz
+`mergeCapture` (ver Nota reconhecer link próprio + re-verificar: puxa tudo do ML —
+sobrescreve preço/título/imagem, mantém o cupom digitado, cola o afiliado novo;
+produto diferente → banner "Carregar"). Sem extensão: `hasExt` fica falso, o auto-mint
+não dispara e o botão "Abrir no ML e gerar meu link" (`window.open` do hash) segue como
+fallback manual. Reusa o pipeline de captura já testado ao vivo, em vez de fetch no
+service worker (cookies do ML no SW = incerto). 100% sem browser fica pro
+`MlApiSource`/OAuth (quando o ML liberar; datacenter/VPS é o IP mais bloqueado, então
+cookie server-side não porta pro SaaS de qualquer forma).
 
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅ (inclui

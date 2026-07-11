@@ -44,6 +44,8 @@ export function NewOffer() {
   const [results, setResults] = useState<DeliveryResult[] | null>(null);
   const [captured, setCaptured] = useState<Draft | null>(null);
   const [startAt, setStartAt] = useState("");
+  const [hasExt, setHasExt] = useState(false);
+  const mintedFor = useRef<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(DRAFT_INPUT_KEY, input);
@@ -52,6 +54,20 @@ export function NewOffer() {
     if (form) localStorage.setItem(DRAFT_FORM_KEY, JSON.stringify(form));
     else localStorage.removeItem(DRAFT_FORM_KEY);
   }, [form]);
+
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (
+        e.source === window &&
+        e.data?.source === "dealflow-ext" &&
+        e.data.type === "pong"
+      )
+        setHasExt(true);
+    };
+    window.addEventListener("message", onMsg);
+    window.postMessage({ source: "dealflow", type: "ping" }, "*");
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
 
   const { data: destData } = useQuery<{ destinations: Destination[] }>({
     queryKey: ["destinations"],
@@ -92,10 +108,29 @@ export function NewOffer() {
     }
   }, [capture]);
 
-  function generateAffiliate() {
-    if (!form?.sourceUrl) return;
-    window.open(`${form.sourceUrl}#dealflow-auto`, "_blank", "noopener");
+  const needsAffiliate = !!form && !form.affiliateUrl && !!form.externalId;
+  const needsPrice =
+    !!form && !!form.affiliateUrl && !form.currentPrice && !!form.externalId;
+
+  function requestMint(sourceUrl: string) {
+    if (hasExt)
+      window.postMessage({ source: "dealflow", type: "mint", sourceUrl }, "*");
+    else window.open(`${sourceUrl}#dealflow-auto`, "_blank", "noopener");
   }
+
+  function generateAffiliate() {
+    if (form?.sourceUrl) requestMint(form.sourceUrl);
+  }
+
+  const sourceUrl = form?.sourceUrl;
+  const externalId = form?.externalId;
+  useEffect(() => {
+    if (!hasExt || !sourceUrl || !externalId) return;
+    if (!needsAffiliate && !needsPrice) return;
+    if (mintedFor.current === externalId) return;
+    mintedFor.current = externalId;
+    window.postMessage({ source: "dealflow", type: "mint", sourceUrl }, "*");
+  }, [hasExt, sourceUrl, externalId, needsAffiliate, needsPrice]);
 
   const importDeal = useMutation({
     mutationFn: (value: string) => apiPost("/deals/import", { input: value }),
@@ -224,10 +259,8 @@ export function NewOffer() {
           onSave={save}
           preview={preview}
           ready={!!publicationId}
-          needsAffiliate={!form.affiliateUrl && !!form.externalId}
-          needsPrice={
-            !!form.affiliateUrl && !form.currentPrice && !!form.externalId
-          }
+          needsAffiliate={needsAffiliate}
+          needsPrice={needsPrice}
           onGenerate={generateAffiliate}
         />
       )}

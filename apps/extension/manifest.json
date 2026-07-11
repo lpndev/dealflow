@@ -19,6 +19,11 @@
       "matches": ["https://*.mercadolivre.com.br/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:5173/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
     }
   ]
 }
