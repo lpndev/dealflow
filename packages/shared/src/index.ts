@@ -27,6 +27,19 @@ export type Settings = {
   mlAffiliateTag: string | null;
 };
 
+export type DashboardRange = "day" | "week" | "month" | "year";
+
+export type DashboardBucket = { bucket: string; sent: number; failed: number };
+
+export type DashboardData = {
+  range: DashboardRange;
+  sent: number;
+  pending: number;
+  groups: number;
+  failed: number;
+  series: DashboardBucket[];
+};
+
 export type QueueItem = {
   id: string;
   publicationId: string;

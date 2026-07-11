@@ -1,3 +1,4 @@
+export { DashboardChart } from "./dashboard-chart";
 export { GroupToggle } from "./group-toggle";
 export { Panel, Empty, ErrorNote } from "./panel";
 export { PreviewBubble } from "./preview-bubble";

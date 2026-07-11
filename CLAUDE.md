@@ -230,9 +230,9 @@ Adiado até o slice que usa (nada de decoração):
 
 - **Better Auth** → quando existir rota protegida.
 
-Nota fila/agendamento (S5): a UI é um dashboard de 4 telas (Nova oferta / Fila /
-Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver Nota
-SPA; antes eram abas com `useState`). A "fila" NÃO é infra nova: um
+Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
+Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
+Nota SPA; antes eram abas com `useState`). A "fila" NÃO é infra nova: um
 envio agendado é uma `delivery` com `status='scheduled'` + `dueAt` (coluna nova).
 `schedulePublication` (`features/publications/schedule/use-case.ts`) enfileira
 serial global. O intervalo aleatório[min,max] é o **espaçamento ENTRE itens**, não
@@ -255,6 +255,20 @@ exige só a API rodando. Fila é gerenciável (`features/queue/use-case.ts`):
 ocupa cada slot (preserva o espaçamento). UI: setas ↑/↓ (swap) + ✕ na aba Fila,
 otimista com pausa no auto-refresh durante a ação.
 
+Nota dashboard (Início, `/`): tela inicial com métricas derivadas do banco — NÃO é
+infra nova. `GET /dashboard?range=day|week|month|year` (`features/dashboard/`)
+devolve `{ sent, pending, groups, failed, series }`. `pending` = deliveries
+`scheduled|processing` (estado atual, ignora range); `groups` = destinations
+`enabled`; `sent` conta por `sentAt`, `failed` por `createdAt` (falha não seta
+`sentAt`) dentro da janela. `buckets(range, now)` gera os baldes em hora local do
+operador (tool local): day=24h/hora, week=7d/dia (default), month=30d/dia,
+year=12m/mês; `buildSeries` conta eventos por balde (scan O(eventos×baldes), ok pro
+volume de um operador). TDD do bucketing em `tests/features/dashboard/`. Web:
+`routes/dashboard.tsx` (`useQuery(["dashboard", range])`), `ToggleGroup` de range +
+4 `Stat` cards + `DashboardChart` (shadcn chart / **Recharts**, barras sent/failed).
+Nova oferta virou `/new`; a extensão abre `webUrl + "/new"` no handoff de captura
+(o poll de `/deals/capture` mora no `NewOffer`, não no dashboard).
+
 Nota template de mensagem: a mensagem da oferta é personalizável (aba Config).
 `render.ts` exporta `DEFAULT_TEMPLATE` (reproduz o formato clássico) e
 `renderPublication(input, template)` faz substituição de placeholders
@@ -276,8 +290,9 @@ auth/usuários):
 - **React Router (data mode, v8):** `main.tsx` monta `createBrowserRouter` +
   `RouterProvider` (de `react-router/dom`) dentro de `ThemeProvider` →
   `QueryClientProvider`. `routes/layout.tsx` = shell (header + `NavLink` +
-  `Outlet` + `<Toaster>` do Sonner); rotas filhas `/`=Nova oferta, `/queue`,
-  `/history`, `/settings`. **Paths sempre em inglês** (mesmo com a UI em pt); os
+  `Outlet` + `<Toaster>` do Sonner); rotas filhas `/`=Início (Dashboard),
+  `/new`=Nova oferta, `/queue`, `/history`, `/settings`. **Paths sempre em inglês**
+  (mesmo com a UI em pt); os
   labels do `NavLink` ficam em pt. Matou o `tab` state, o `refreshKey` e o
   `goQueue` (agendar dispara `toast` + `invalidateQueries(["queue"])` +
   `navigate("/queue")`). Data mode, NÃO framework mode (é SPA client-only local;

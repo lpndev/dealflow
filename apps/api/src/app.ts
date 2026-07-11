@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { dashboard } from "@/features/dashboard/route";
 import { capture } from "@/features/deals/capture/route";
 import { deals } from "@/features/deals/import/route";
 import { destinations } from "@/features/destinations/route";
@@ -22,5 +23,6 @@ app.route("/publications", schedule);
 app.route("/destinations", destinations);
 app.route("/settings", settingsRoutes);
 app.route("/", queue);
+app.route("/", dashboard);
 
 export default app;

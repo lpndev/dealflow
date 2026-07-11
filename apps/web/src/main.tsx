@@ -5,7 +5,14 @@ import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { queryClient } from "@/lib/query";
-import { HistoryTab, Layout, NewOffer, QueueTab, SettingsTab } from "@/routes";
+import {
+  Dashboard,
+  HistoryTab,
+  Layout,
+  NewOffer,
+  QueueTab,
+  SettingsTab,
+} from "@/routes";
 import "@/styles/globals.css";
 
 const router = createBrowserRouter([
@@ -13,7 +20,8 @@ const router = createBrowserRouter([
     path: "/",
     Component: Layout,
     children: [
-      { index: true, Component: NewOffer },
+      { index: true, Component: Dashboard },
+      { path: "new", Component: NewOffer },
       { path: "queue", Component: QueueTab },
       { path: "history", Component: HistoryTab },
       { path: "settings", Component: SettingsTab },
