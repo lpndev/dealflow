@@ -18,7 +18,7 @@ export function WhatsAppConfig() {
   const connected = connection === "open";
 
   return (
-    <Panel title="WhatsApp" hint="Conexão do número que envia as ofertas">
+    <Panel title="WhatsApp">
       <div className="flex items-center gap-2 text-xs">
         <span
           className={`h-2 w-2 ${

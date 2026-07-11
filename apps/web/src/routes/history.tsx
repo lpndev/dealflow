@@ -33,7 +33,7 @@ export function HistoryTab() {
   });
 
   return (
-    <Panel title="Histórico" hint="Ofertas já enviadas">
+    <Panel title="Histórico">
       {error && <ErrorNote>{error.message}</ErrorNote>}
       {items.length === 0 ? (
         <Empty>Nada enviado ainda.</Empty>

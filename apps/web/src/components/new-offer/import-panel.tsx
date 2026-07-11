@@ -10,11 +10,7 @@ export function ImportPanel(props: {
   onImport: () => void;
 }) {
   return (
-    <Panel
-      title="Importar"
-      eyebrow="01"
-      hint="Cole o link ou a mensagem da oferta"
-    >
+    <Panel title="Importar" eyebrow="01">
       <Textarea
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}

@@ -405,9 +405,13 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
   nunca vazam para o domínio.
 - **Web (`apps/web/src`) por responsabilidade, não por página:** `components/ui/`
   (primitives **shadcn**: `Button`, `Field`, `Input`, `InputGroup`, `Card`,
-  `sonner`…), `components/` (peças de feature, ex.:
+  `sonner`, `tooltip`…), `components/` (peças de feature, ex.:
   `new-offer/{import,review,send}-panel`, `queue-row`, `whatsapp-status`; `Panel`
-  = wrapper de `Card`), `lib/` (`env`/`api`/`format`/`offer`/`query` + barrel),
+  = wrapper de `Card`; a prop `hint` (`ReactNode`) vira um **ícone de ajuda com
+  `Tooltip` shadcn** ao lado do título — não texto inline sempre-visível. Regra
+  de UI: sem labels/descrições redundantes; só o essencial visível, o resto
+  atrás do ícone de ajuda. `TooltipProvider` mora no `layout`), `lib/`
+  (`env`/`api`/`format`/`offer`/`query` + barrel),
   `types/`, `styles/globals.css`, `routes/` (um arquivo por rota + `layout.tsx`;
   só orquestração: estado + handlers; JSX grande vira componente com props).
   **Barrel `index.ts` em cada pasta.** (`store/` só volta quando Zustand tiver

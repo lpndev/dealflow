@@ -1,7 +1,7 @@
 import { EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import { Panel, PreviewBubble } from "@/components";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -96,7 +96,6 @@ export function ReviewPanel(props: {
               value={form.affiliateUrl}
               onChange={(e) => onChange("affiliateUrl", e.target.value)}
             />
-            <FieldDescription>Nosso link — é o que monetiza</FieldDescription>
           </Field>
           {(props.needsAffiliate || props.needsPrice) && (
             <div

@@ -1,10 +1,16 @@
+import { QuestionIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Panel(props: {
   title: string;
-  hint?: string;
+  hint?: ReactNode;
   eyebrow?: string;
   children: ReactNode;
 }) {
@@ -19,9 +25,17 @@ export function Panel(props: {
           )}
           {props.title}
           {props.hint && (
-            <span className="ml-auto hidden text-xs font-normal text-muted-foreground sm:block">
-              {props.hint}
-            </span>
+            <Tooltip>
+              <TooltipTrigger
+                aria-label="Ajuda"
+                className="ml-auto self-center text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <QuestionIcon className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-pretty">
+                {props.hint}
+              </TooltipContent>
+            </Tooltip>
           )}
         </CardTitle>
       </CardHeader>

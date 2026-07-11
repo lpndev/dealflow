@@ -161,16 +161,17 @@ function SettingsForm({ settings }: { settings: Settings }) {
     >
       <Panel
         title="Sua etiqueta de afiliado (ML)"
-        hint="Pra reconhecer seus próprios links"
-      >
-        <div className="flex max-w-md flex-col gap-4">
-          <p className="text-xs text-muted-foreground">
+        hint={
+          <>
             Ao colar um <span className="font-mono">meli.la</span> seu, o
             sistema só o usa como afiliado se a etiqueta bater com a sua — assim
             seu próprio link não pede pra ser gerado de novo. É a{" "}
             <span className="font-mono">tag</span> em uso na sua conta de
             afiliado (formato <span className="font-mono">ct</span>+números).
-          </p>
+          </>
+        }
+      >
+        <div className="flex max-w-md flex-col gap-4">
           <form.Field name="tag">
             {(field) => (
               <Field>
@@ -188,12 +189,11 @@ function SettingsForm({ settings }: { settings: Settings }) {
         </div>
       </Panel>
 
-      <Panel title="Espaçamento" hint="Como a fila distribui os envios">
+      <Panel
+        title="Espaçamento"
+        hint="Intervalo aleatório entre envios da fila. Um valor entre o mínimo e o máximo é sorteado a cada envio, para não disparar em rajada."
+      >
         <div className="flex max-w-md flex-col gap-4">
-          <p className="text-xs text-muted-foreground">
-            Intervalo aleatório entre envios da fila. Um valor entre o mínimo e
-            o máximo é sorteado a cada envio, para não disparar em rajada.
-          </p>
           <div className="flex gap-4 *:flex-1">
             <form.Field
               name="min"
@@ -242,7 +242,16 @@ function SettingsForm({ settings }: { settings: Settings }) {
         </div>
       </Panel>
 
-      <Panel title="Mensagem" hint="O template de toda oferta publicada">
+      <Panel
+        title="Mensagem"
+        hint={
+          <>
+            Uma linha some sozinha quando seu único campo fica vazio (ex.: sem
+            cupom). O <span className="font-mono">{"{link}"}</span> é
+            obrigatório — é o que monetiza.
+          </>
+        }
+      >
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="flex flex-1 flex-col gap-4 lg:min-w-0">
             <form.Field
@@ -283,12 +292,6 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </>
               )}
             </form.Field>
-            <p className="text-xs text-muted-foreground">
-              Uma linha some sozinha quando seu único campo fica vazio (ex.: sem
-              cupom). O{" "}
-              <span className="font-mono text-primary">{"{link}"}</span> é
-              obrigatório — é o que monetiza.
-            </p>
           </div>
 
           <div className="lg:w-80">
