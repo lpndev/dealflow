@@ -9,10 +9,33 @@ import { schedule } from "@/features/publications/schedule/route";
 import { send } from "@/features/publications/send/route";
 import { queue } from "@/features/queue/route";
 import { settingsRoutes } from "@/features/settings/route";
+import { auth } from "@/shared/auth";
 
-export const app = new Hono();
+export const app = new Hono<{
+  Variables: {
+    user: typeof auth.$Infer.Session.user | null;
+    session: typeof auth.$Infer.Session.session | null;
+    workspaceId: string;
+  };
+}>();
 
-app.use("/*", cors({ origin: "http://localhost:5173" }));
+app.use(
+  "/*",
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    allowHeaders: ["content-type", "x-api-key"],
+  }),
+);
+
+app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
+app.use("*", async (c, next) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  c.set("user", session?.user ?? null);
+  c.set("session", session?.session ?? null);
+  await next();
+});
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/deals", deals);

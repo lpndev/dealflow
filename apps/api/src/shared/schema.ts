@@ -130,3 +130,5 @@ export const settings = sqliteTable("settings", {
     .notNull()
     .$defaultFn(now),
 });
+
+export * from "./auth-schema";
