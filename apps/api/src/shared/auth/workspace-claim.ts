@@ -1,0 +1,60 @@
+import { eq } from "drizzle-orm";
+import type { Db } from "@/shared/db";
+import {
+  destination,
+  member,
+  organization,
+  publication,
+} from "@/shared/schema";
+
+const LEGACY_WORKSPACE_ID = "default";
+
+// ponytail: single-operator local claim of the pre-existing data workspace;
+// onboarding (Task 6) handles the fresh/multi-tenant case; not
+// concurrency-safe (one machine, no transaction around the check+insert).
+export function resolveActiveWorkspace(db: Db, userId: string): string | null {
+  const existingMembership = db
+    .select()
+    .from(member)
+    .where(eq(member.userId, userId))
+    .get();
+  if (existingMembership) return existingMembership.organizationId;
+
+  const legacy = db
+    .select()
+    .from(organization)
+    .where(eq(organization.id, LEGACY_WORKSPACE_ID))
+    .get();
+  if (!legacy) return null;
+
+  const claimed = db
+    .select()
+    .from(member)
+    .where(eq(member.organizationId, LEGACY_WORKSPACE_ID))
+    .get();
+  if (claimed) return null;
+
+  const hasDestination = db
+    .select()
+    .from(destination)
+    .where(eq(destination.workspaceId, LEGACY_WORKSPACE_ID))
+    .get();
+  const hasPublication = db
+    .select()
+    .from(publication)
+    .where(eq(publication.workspaceId, LEGACY_WORKSPACE_ID))
+    .get();
+  if (!hasDestination && !hasPublication) return null;
+
+  db.insert(member)
+    .values({
+      id: crypto.randomUUID(),
+      organizationId: LEGACY_WORKSPACE_ID,
+      userId,
+      role: "owner",
+      createdAt: new Date(),
+    })
+    .run();
+
+  return LEGACY_WORKSPACE_ID;
+}
