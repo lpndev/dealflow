@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@dealflow/shared": "workspace:*",
+    "better-auth": "^1.6.23",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.6.16"
   },
