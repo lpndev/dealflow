@@ -31,3 +31,14 @@ export async function deleteWorkspaceApiKey(
   await auth.api.deleteApiKey({ headers, body: { keyId } });
   return true;
 }
+
+export async function revokeWorkspaceApiKeys(
+  headers: Headers,
+  workspaceId: string,
+) {
+  const mine = await listWorkspaceApiKeys(headers, workspaceId);
+  for (const k of mine) {
+    await auth.api.deleteApiKey({ headers, body: { keyId: k.id } });
+  }
+  return mine.length;
+}

@@ -1,0 +1,36 @@
+import { expect, it } from "bun:test";
+import { createPublication } from "@/features/publications/use-case";
+import { deleteWorkspaceData } from "@/features/workspace/danger/use-case";
+import { createDb } from "@/shared/db";
+import { product, publication } from "@/shared/schema";
+
+const deal = {
+  title: "Air Fryer",
+  imageUrl: "https://img/a.jpg",
+  currentPrice: "299,90",
+  sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
+  affiliateUrl: "https://mercadolivre.com/sec/ours",
+};
+
+it("deletes only the target workspace's domain rows", () => {
+  const db = createDb(":memory:");
+  createPublication(deal, db, "ws-a");
+  createPublication(deal, db, "ws-b");
+
+  deleteWorkspaceData(db, "ws-a");
+
+  expect(
+    db
+      .select()
+      .from(publication)
+      .all()
+      .map((p) => p.workspaceId),
+  ).toEqual(["ws-b"]);
+  expect(
+    db
+      .select()
+      .from(product)
+      .all()
+      .map((p) => p.workspaceId),
+  ).toEqual(["ws-b"]);
+});

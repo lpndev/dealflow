@@ -10,6 +10,7 @@ import { send } from "@/features/publications/send/route";
 import { queue } from "@/features/queue/route";
 import { apiKeys } from "@/features/settings/api-keys/route";
 import { settingsRoutes } from "@/features/settings/route";
+import { workspaceDanger } from "@/features/workspace/danger/route";
 import { auth, type AppEnv } from "@/shared/auth";
 
 export const app = new Hono<AppEnv>();
@@ -41,6 +42,7 @@ app.route("/publications", schedule);
 app.route("/destinations", destinations);
 app.route("/settings", settingsRoutes);
 app.route("/api-keys", apiKeys);
+app.route("/workspace", workspaceDanger);
 app.route("/", queue);
 app.route("/", dashboard);
 

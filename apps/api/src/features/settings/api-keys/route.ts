@@ -4,6 +4,7 @@ import {
   createWorkspaceApiKey,
   deleteWorkspaceApiKey,
   listWorkspaceApiKeys,
+  revokeWorkspaceApiKeys,
 } from "./use-case";
 
 export const apiKeys = new Hono<AppEnv>();
@@ -33,6 +34,14 @@ apiKeys.get("/", async (c) => {
       createdAt: k.createdAt,
     })),
   );
+});
+
+apiKeys.delete("/", async (c) => {
+  const count = await revokeWorkspaceApiKeys(
+    c.req.raw.headers,
+    c.get("workspaceId"),
+  );
+  return c.json({ revoked: count });
 });
 
 apiKeys.delete("/:id", async (c) => {
