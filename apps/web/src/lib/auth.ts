@@ -19,6 +19,28 @@ export async function unwrapAuth<T>(
   return data as T;
 }
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export async function createWorkspace(name: string) {
+  const baseSlug = slugify(name) || "workspace";
+  let res = await organization.create({ name, slug: baseSlug });
+  if (res.error?.code === "ORGANIZATION_SLUG_ALREADY_TAKEN") {
+    const suffix = Math.random().toString(36).slice(2, 7);
+    res = await organization.create({ name, slug: `${baseSlug}-${suffix}` });
+  }
+  if (res.error || !res.data) {
+    throw new Error(res.error?.message ?? "Falha ao criar workspace.");
+  }
+  await unwrapAuth(organization.setActive({ organizationId: res.data.id }));
+  return res.data;
+}
+
 export function safeRedirect(path: string | null): string {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
   return path;

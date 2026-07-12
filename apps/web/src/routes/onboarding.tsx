@@ -4,15 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { organization, useSession } from "@/lib";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+import { createWorkspace, errMsg, useSession } from "@/lib";
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -36,34 +28,14 @@ export function Onboarding() {
     e.preventDefault();
     setBusy(true);
     setError("");
-
-    const baseSlug = slugify(name) || "workspace";
-    let created = await organization.create({ name, slug: baseSlug });
-    if (
-      created.error &&
-      created.error.code === "ORGANIZATION_SLUG_ALREADY_TAKEN"
-    ) {
-      const suffix = Math.random().toString(36).slice(2, 7);
-      created = await organization.create({
-        name,
-        slug: `${baseSlug}-${suffix}`,
-      });
-    }
-    if (created.error || !created.data) {
+    try {
+      await createWorkspace(name);
+      navigate("/");
+    } catch (err) {
+      setError(errMsg(err, "Falha ao criar workspace."));
+    } finally {
       setBusy(false);
-      setError(created.error?.message ?? "Falha ao criar workspace.");
-      return;
     }
-
-    const { error: setActiveError } = await organization.setActive({
-      organizationId: created.data.id,
-    });
-    setBusy(false);
-    if (setActiveError) {
-      setError(setActiveError.message ?? "Falha ao ativar workspace.");
-      return;
-    }
-    navigate("/");
   }
 
   if (isPending || !data || data.session.activeOrganizationId) return null;

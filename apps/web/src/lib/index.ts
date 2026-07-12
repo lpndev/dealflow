@@ -11,6 +11,7 @@ export {
   redirectSearch,
   useCanManage,
   useActiveRole,
+  createWorkspace,
 } from "./auth";
 export {
   apiGet,
