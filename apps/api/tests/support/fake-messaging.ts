@@ -22,4 +22,10 @@ export class FakeMessaging implements MessagingProvider {
     this.sent.push(input);
     return { externalMessageId: `msg-${this.sent.length}` };
   }
+
+  loggedOut = false;
+
+  async logout(): Promise<void> {
+    this.loggedOut = true;
+  }
 }

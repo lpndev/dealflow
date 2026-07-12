@@ -17,4 +17,5 @@ export type SendMessageResult = {
 export interface MessagingProvider {
   listGroups(): Promise<MessagingDestination[]>;
   send(input: SendMessageInput): Promise<SendMessageResult>;
+  logout(): Promise<void>;
 }

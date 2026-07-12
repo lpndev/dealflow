@@ -42,4 +42,8 @@ export const whatsappGateway: MessagingProvider = {
       }),
     });
   },
+
+  async logout(): Promise<void> {
+    await call("/session/logout", { method: "POST" });
+  },
 };
