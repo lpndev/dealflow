@@ -60,7 +60,7 @@ export function Team() {
           <ul className="flex flex-col gap-2">
             {members.map((m) => {
               const isSelf = m.userId === session?.user.id;
-              const canManage = viewerRank > roleRank(m.role) && !isSelf;
+              const canManage = viewerRank > roleRank(m.role);
               const showRoleMenu = canAssignRoles && !isSelf;
               return (
                 <li

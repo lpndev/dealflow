@@ -11,6 +11,7 @@ export {
   redirectSearch,
   useCanManage,
   useActiveRole,
+  useOrganizations,
   createWorkspace,
 } from "./auth";
 export {

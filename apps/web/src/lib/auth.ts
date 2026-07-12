@@ -51,6 +51,15 @@ export function redirectSearch(searchParams: URLSearchParams): string {
   return redirect ? `?redirect=${encodeURIComponent(redirect)}` : "";
 }
 
+export function useOrganizations() {
+  const { data: session } = useSession();
+  return useQuery({
+    queryKey: ["organizations"],
+    queryFn: async () => (await organization.list()).data ?? [],
+    enabled: !!session,
+  });
+}
+
 export function useActiveRole(): string | null {
   const { data: session } = useSession();
   const { data: member } = useQuery({

@@ -1,4 +1,3 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Panel } from "@/components";
@@ -22,6 +21,8 @@ import {
   errMsg,
   organization,
   useActiveRole,
+  useCanManage,
+  useOrganizations,
   useSession,
 } from "@/lib";
 import { queryClient } from "@/lib/query";
@@ -89,19 +90,11 @@ function DangerAction({
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription>{description}</AlertDialogDescription>
           </AlertDialogHeader>
-          {confirmWord && (
+          {(confirmWord || password) && (
             <Input
               autoFocus
-              placeholder={confirmWord}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-            />
-          )}
-          {password && (
-            <Input
-              autoFocus
-              type="password"
-              placeholder="Sua senha"
+              type={password ? "password" : "text"}
+              placeholder={password ? "Sua senha" : confirmWord}
               value={value}
               onChange={(e) => setValue(e.target.value)}
             />
@@ -130,22 +123,15 @@ async function reloadIntoRemaining() {
   if (remaining[0]) {
     await organization.setActive({ organizationId: remaining[0].id });
   }
-  queryClient.clear();
   window.location.assign("/");
 }
 
 export function DangerZone() {
-  const qc = useQueryClient();
   const { data: session } = useSession();
-  const role = useActiveRole();
-  const isOwner = role === "owner";
-  const canManage = role === "owner" || role === "admin";
+  const isOwner = useActiveRole() === "owner";
+  const canManage = useCanManage();
 
-  const { data: orgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => (await organization.list()).data ?? [],
-    enabled: !!session,
-  });
+  const { data: orgs } = useOrganizations();
   const activeName = orgs?.find(
     (o) => o.id === session?.session.activeOrganizationId,
   )?.name;
@@ -163,7 +149,7 @@ export function DangerZone() {
             actionLabel="Revogar todas"
             onConfirm={async () => {
               await apiDelete("/api-keys");
-              qc.invalidateQueries({ queryKey: ["api-keys"] });
+              queryClient.invalidateQueries({ queryKey: ["api-keys"] });
               toast.success("Chaves revogadas.");
             }}
           />
@@ -203,7 +189,6 @@ export function DangerZone() {
             const { error } = await authClient.deleteUser({ password: pw });
             if (error)
               throw new Error(error.message ?? "falha ao excluir conta");
-            queryClient.clear();
             window.location.assign("/signup");
           }}
         />

@@ -11,7 +11,7 @@ export const ROLE_LABEL: Record<string, string> = {
 const ROLE_RANK: Record<string, number> = { owner: 3, admin: 2, member: 1 };
 
 export const roleRank = (role: string | null | undefined): number =>
-  (role ? ROLE_RANK[role] : 0) ?? 0;
+  ROLE_RANK[role ?? ""] ?? 0;
 
 export function copyWithToast(text: string, message: string) {
   navigator.clipboard.writeText(text);

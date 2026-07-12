@@ -1,5 +1,4 @@
 import { BuildingsIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,20 +19,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { createWorkspace, errMsg, organization, useSession } from "@/lib";
-import { queryClient } from "@/lib/query";
+import {
+  createWorkspace,
+  errMsg,
+  organization,
+  useOrganizations,
+  useSession,
+} from "@/lib";
 
 export function WorkspaceSwitcher() {
   const { data: session } = useSession();
   const [creating, setCreating] = useState(false);
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const { data: orgs } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => (await organization.list()).data ?? [],
-    enabled: !!session,
-  });
+  const { data: orgs } = useOrganizations();
 
   if (!orgs) return null;
 
@@ -47,16 +46,15 @@ export function WorkspaceSwitcher() {
       toast.error(error?.message ?? "falha ao trocar de workspace");
       return;
     }
-    queryClient.clear();
     window.location.assign("/");
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") ?? "");
     setBusy(true);
     try {
       await createWorkspace(name);
-      queryClient.clear();
       window.location.assign("/");
     } catch (err) {
       toast.error(errMsg(err, "falha ao criar workspace"));
@@ -83,12 +81,7 @@ export function WorkspaceSwitcher() {
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => {
-              setName("");
-              setCreating(true);
-            }}
-          >
+          <DropdownMenuItem onClick={() => setCreating(true)}>
             <PlusIcon />
             Novo workspace
           </DropdownMenuItem>
@@ -103,13 +96,7 @@ export function WorkspaceSwitcher() {
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <Field>
               <FieldLabel htmlFor="new-workspace-name">Nome</FieldLabel>
-              <Input
-                id="new-workspace-name"
-                required
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <Input id="new-workspace-name" name="name" required autoFocus />
             </Field>
             <DialogFooter>
               <DialogClose
@@ -119,7 +106,7 @@ export function WorkspaceSwitcher() {
                   </Button>
                 }
               />
-              <Button type="submit" disabled={busy || !name}>
+              <Button type="submit" disabled={busy}>
                 Criar
               </Button>
             </DialogFooter>
