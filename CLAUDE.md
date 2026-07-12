@@ -59,9 +59,11 @@ Use esse vocabulário de forma consistente.
   (`*.db`), emails, telefones, JIDs, etiquetas ou links de afiliado reais. Use
   placeholders/fakes (`meli.la/xxxxxxx`, `ct`+timestamp, `0@g.us`). Ao mexer,
   varra o diff antes de commitar. Segurança sobe de prioridade daqui pra frente
-  (ver Nota segurança): hoje o modelo é local (`127.0.0.1`, sem auth); ao expor
-  qualquer superfície a entrada não confiável, endurecer antes (validar na
-  fronteira, sem SSRF, sem vazar dados de um operador pra outro).
+  (ver Nota segurança e Nota auth/tenancy): o modelo continua local
+  (`127.0.0.1`), mas **já existe auth real** (better-auth) e todo dado é isolado
+  por workspace na fronteira (a query filtra por `workspaceId` da sessão, testado);
+  ao expor qualquer superfície a entrada não confiável, endurecer o resto antes
+  (validar na fronteira, sem SSRF, sem vazar dados de um operador pra outro).
 
 Trajetória MVP → SaaS (decisão arquitetural durável): o produto vai virar SaaS
 numa VPS e ser monetizado. Mas **scraping SÓ funciona em contexto residencial +
@@ -118,7 +120,8 @@ status `ready`). Template em `features/publications/render.ts`. Prices parseiam
 no servidor (`parsePrice`: vírgula = decimal BRL; só ponto = decimal). Web: form →
 Preview / Salvar publicação. Persistência: SQLite (`bun:sqlite`) + Drizzle,
 migrations em `apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no
-boot. Sem auth ainda: `workspaceId` fixo em `DEFAULT_WORKSPACE_ID`.
+boot. Auth real desde a fundação auth/tenancy: `workspaceId` vem do workspace
+ativo da sessão, não mais de `DEFAULT_WORKSPACE_ID` fixo (ver Nota auth/tenancy).
 
 Slice 3: `apps/wa-gateway` (porta 3002) isola o Baileys — sessão em `wa-auth/`
 (`useMultiFileAuthState`), QR/estado via `connection.update`. API do gateway:
@@ -219,16 +222,45 @@ buscando a prekey do device no namespace errado e estoura o `defaultQueryTimeout
 (60s), falhando com "Timed Out". O `7.x` reescreve o roteamento LID e resolve;
 as creds do `6.x` são aceitas sem re-parear.
 
-Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador);
-sem auth por request enquanto local (§17). Gateway valida `imageUrl` só por
-protocolo (http/https) — o `imageUrl` vem da oferta do próprio operador e o
-gateway é local, então SSRF de IP privado está fora do modelo de ameaça. Se um
-dia o gateway aceitar entrada não confiável (SaaS): resolver DNS, bloquear
-faixas privadas/loopback/link-local e fixar o IP resolvido no fetch.
+Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador).
+A **API já exige auth por request** (better-auth, ver Nota auth/tenancy): toda
+rota de domínio passa por `requireAuth` e filtra pelo `workspaceId` da sessão —
+a isolação por workspace é a fronteira que impede um operador ver dado do outro
+(testada em `workspace-isolation.test.ts`). O **gateway** (`:3002`) segue sem
+auth por request: é local, uma sessão única, confiado (multi-número WhatsApp é
+sub-projeto futuro). Gateway valida `imageUrl` só por protocolo (http/https) —
+o `imageUrl` vem da oferta do próprio operador e o gateway é local, então SSRF
+de IP privado está fora do modelo de ameaça. Se um dia o gateway aceitar entrada
+não confiável (SaaS): resolver DNS, bloquear faixas privadas/loopback/link-local
+e fixar o IP resolvido no fetch.
 
-Adiado até o slice que usa (nada de decoração):
-
-- **Better Auth** → quando existir rota protegida.
+Nota auth/tenancy (fundação, feat/auth-tenancy-foundation): **better-auth**
+montado no Hono em `/api/auth/*` (adapter Drizzle, mesmo `bun:sqlite`/migração;
+tabelas geradas em `shared/auth-schema.ts`, re-exportadas de `shared/schema.ts`).
+Plugins: `emailAndPassword` (registro público, sem verificação de email no MVP —
+custo-zero, sem envio), `organization` (**organization = workspace**) e `apiKey`
+(`@better-auth/api-key`; autentica a extensão). Roles owner/admin/publisher
+(internamente `owner`/`admin`/`member`; "Publisher" é o rótulo de `member`)
+definidos via access-control em `shared/auth/permissions.ts` e passados ao plugin.
+Matriz (server-side, fail-closed, `requireRole` após `requireAuth`): publisher
+cria/agenda/envia publicação + lê dashboard/fila/histórico + lista destinos;
+admin+ gerencia settings (template/delays/tag ML), sync/toggle de destinos,
+membros e API keys; só owner exclui workspace/billing. **`workspaceId` vem SEMPRE
+da sessão** (`session.activeOrganizationId`), nunca do body/query — é a fronteira
+de segurança. Bootstrap: o 1º signup **reivindica o workspace `default`** só se
+ele já tiver dado real (destino/publicação — o operador que já usava), senão vai
+pro onboarding criar o próprio (evita takeover num deploy fresco);
+`resolveActiveWorkspace` (`shared/auth/workspace-claim.ts`) roda no
+`session.create.before` (não num after, pra a 1ª sessão já sair com org ativa).
+Extensão: autentica `/deals/capture` por `x-api-key` (chave gerada na aba Config,
+metadata guarda o `organizationId`) → workspace vem da chave; o slot de captura
+virou `Map` por-workspace. Web: better-auth React client, rotas públicas
+`/login`/`/signup`/`/onboarding`/`/accept-invite/:id`, guard (`protectedLoader`)
+no Layout, switcher de workspace + menu de usuário no header, aba Equipe (membros
+e convite por **link copiável**, sem email) e painel de API keys na Config.
+Diferido (portas abertas, nada construído): billing/planos/trial 7 dias, envio de
+email, múltiplos números de WhatsApp, múltiplas contas ML + nichos, split da
+landing page. Segredo em env (`BETTER_AUTH_SECRET`; throw em produção sem ele).
 
 Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
 Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
@@ -325,15 +357,20 @@ input-group`, o prefixo `min`/`R$` nativo — sem hack de `pl-`). Validators
   de propósito (god component de ~15 `useState`; precisa **decompor** antes).
 - **Segurança:** essas libs são estrutura/DX de client — NÃO adicionam segurança.
   O backend continua a fonte de verdade e valida na fronteira (fail-closed); um
-  client manipulado chama a API do jeito que quiser. Better Auth (quando vier) é o
-  boundary de auth, e é server-side. Ver Nota segurança e §Restrições.
+  client manipulado chama a API do jeito que quiser. Better Auth **já é** o
+  boundary de auth, server-side (ver Nota auth/tenancy). Ver Nota segurança e
+  §Restrições.
 - Follow-ups (ponytail, adiado): code-split por rota (`lazy` do Router — bundle ~734KB
   hoje, ok p/ tool local); migrar o god component da nova-oferta p/ TanStack Form
   depois de decompô-lo.
 
-FUTURO (marcado pelo usuário, adiado — hoje `workspaceId` é fixo em
-`DEFAULT_WORKSPACE_ID`): workspace multi-tenant com nome/logo, múltiplos números
-de WhatsApp, múltiplos grupos/nichos. Só quando existir 2+ número de verdade.
+FUTURO (parcialmente entregue): a fundação **auth + workspace multi-tenant** já
+existe (users, sessão, workspaces com membros/convites/roles, `workspaceId` da
+sessão — ver Nota auth/tenancy). Sub-projetos multi-tenant que ficam pra depois,
+cada um seu próprio ciclo: **múltiplos números de WhatsApp** por workspace (hoje
+o gateway é sessão única global), **múltiplas contas ML + nichos** (hoje uma tag
+de afiliado por workspace), **billing/planos/trial** (SaaS) e **split da landing
+page**. Ordem/escopo abertos; construir sem fechar essas portas.
 
 Nota extensão de captura (Slice E, `apps/extension/`): extensão MV3 (JS puro, sem
 build — load unpacked) que roda no `mercadolivre.com.br` logado do operador.
@@ -383,7 +420,8 @@ cookie server-side não porta pro SaaS de qualquer forma).
 Roadmap: S1 importar URL ✅ → S2 criar publicação ✅ → S3 WhatsApp ✅ → S4
 importar mensagem ✅ → S5 dashboard + fila/agendamento + config ✅ (inclui
 reordenar/cancelar fila e template de mensagem personalizável) → Slice E extensão
-de captura (link de afiliado + preço automático) ✅.
+de captura (link de afiliado + preço automático) ✅ → Fundação auth + tenancy
+(better-auth, workspaces/membros/roles, isolação por workspace) ✅.
 
 Próximos passos:
 
