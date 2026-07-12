@@ -6,7 +6,14 @@ import { Empty, ErrorNote, Panel } from "@/components";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { apiDelete, apiGet, apiPost, errMsg, fmtTime } from "@/lib";
+import {
+  apiDelete,
+  apiGet,
+  apiPost,
+  copyWithToast,
+  errMsg,
+  fmtTime,
+} from "@/lib";
 import { type ApiKeyInfo } from "@/types";
 
 export function ApiKeysPanel() {
@@ -76,10 +83,7 @@ export function ApiKeysPanel() {
               size="icon"
               title="Copiar chave"
               aria-label="Copiar chave"
-              onClick={() => {
-                navigator.clipboard.writeText(newKey);
-                toast.success("Chave copiada.");
-              }}
+              onClick={() => copyWithToast(newKey, "Chave copiada.")}
             >
               <CopyIcon />
             </Button>

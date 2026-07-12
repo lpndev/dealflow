@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { safeRedirect, signUp } from "@/lib";
+import { redirectSearch, safeRedirect, signUp } from "@/lib";
 
 export function Signup() {
   const navigate = useNavigate();
@@ -83,9 +83,7 @@ export function Signup() {
               <Link
                 to={{
                   pathname: "/login",
-                  search: searchParams.get("redirect")
-                    ? `?redirect=${encodeURIComponent(searchParams.get("redirect")!)}`
-                    : "",
+                  search: redirectSearch(searchParams),
                 }}
                 className="text-primary hover:underline"
               >

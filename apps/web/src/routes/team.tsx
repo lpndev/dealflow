@@ -10,13 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { errMsg, organization, unwrapAuth, useSession } from "@/lib";
-
-const ROLE_LABEL: Record<string, string> = {
-  owner: "Dono",
-  admin: "Admin",
-  member: "Publisher",
-};
+import {
+  errMsg,
+  organization,
+  ROLE_LABEL,
+  unwrapAuth,
+  useSession,
+} from "@/lib";
 
 export function Team() {
   const qc = useQueryClient();

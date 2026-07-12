@@ -1,4 +1,17 @@
+import { toast } from "sonner";
+
 export const plural = (n: number) => (n === 1 ? "" : "s");
+
+export const ROLE_LABEL: Record<string, string> = {
+  owner: "Dono",
+  admin: "Admin",
+  member: "Publisher",
+};
+
+export function copyWithToast(text: string, message: string) {
+  navigator.clipboard.writeText(text);
+  toast.success(message);
+}
 
 export const errMsg = (e: unknown, fallback: string) =>
   e instanceof Error ? e.message : fallback;

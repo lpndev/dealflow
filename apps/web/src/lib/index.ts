@@ -8,6 +8,8 @@ export {
   organization,
   unwrapAuth,
   safeRedirect,
+  redirectSearch,
+  useCanManage,
 } from "./auth";
 export {
   apiGet,
@@ -18,5 +20,13 @@ export {
   gatewayPost,
   fetchSession,
 } from "./api";
-export { plural, fmtTime, fmtMin, connectionLabel, errMsg } from "./format";
+export {
+  plural,
+  fmtTime,
+  fmtMin,
+  connectionLabel,
+  errMsg,
+  ROLE_LABEL,
+  copyWithToast,
+} from "./format";
 export { emptyForm, draftToForm, mergeCapture } from "./offer";

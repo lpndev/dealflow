@@ -6,7 +6,6 @@ import {
   TagIcon,
   UsersIcon,
 } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, Outlet } from "react-router";
 import {
   ModeToggle,
@@ -16,7 +15,7 @@ import {
 } from "@/components";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { organization, unwrapAuth, useSession } from "@/lib";
+import { useCanManage } from "@/lib";
 
 const NAV = [
   { to: "/", label: "Início", icon: ChartBarIcon, end: true },
@@ -45,14 +44,7 @@ const NAV = [
 ];
 
 export function Layout() {
-  const { data: session } = useSession();
-  const { data: activeMember } = useQuery({
-    queryKey: ["active-member"],
-    queryFn: () => unwrapAuth(organization.getActiveMember()),
-    enabled: !!session,
-  });
-  const canManage =
-    activeMember?.role === "owner" || activeMember?.role === "admin";
+  const canManage = useCanManage();
   const nav = NAV.filter((n) => !n.adminOnly || canManage);
 
   return (

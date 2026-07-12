@@ -17,22 +17,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { errMsg, organization, unwrapAuth } from "@/lib";
+import {
+  copyWithToast,
+  errMsg,
+  organization,
+  ROLE_LABEL,
+  unwrapAuth,
+} from "@/lib";
 
 type InviteRole = "admin" | "member";
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Admin",
-  member: "Publisher",
-};
 
 function inviteLinkFor(id: string) {
   return `${window.location.origin}/accept-invite/${id}`;
 }
 
 function copyLink(link: string) {
-  navigator.clipboard.writeText(link);
-  toast.success("Link copiado.");
+  copyWithToast(link, "Link copiado.");
 }
 
 export function InviteMember() {

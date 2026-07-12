@@ -1,4 +1,5 @@
 import { apiKeyClient } from "@better-auth/api-key/client";
+import { useQuery } from "@tanstack/react-query";
 import { organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { API } from "./env";
@@ -21,4 +22,19 @@ export async function unwrapAuth<T>(
 export function safeRedirect(path: string | null): string {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
   return path;
+}
+
+export function redirectSearch(searchParams: URLSearchParams): string {
+  const redirect = searchParams.get("redirect");
+  return redirect ? `?redirect=${encodeURIComponent(redirect)}` : "";
+}
+
+export function useCanManage(): boolean {
+  const { data: session } = useSession();
+  const { data: member } = useQuery({
+    queryKey: ["active-member"],
+    queryFn: () => unwrapAuth(organization.getActiveMember()),
+    enabled: !!session,
+  });
+  return member?.role === "owner" || member?.role === "admin";
 }
