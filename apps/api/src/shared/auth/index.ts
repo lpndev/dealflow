@@ -1,5 +1,5 @@
 export { auth } from "./auth";
-export { assertHierarchy, HierarchyError } from "./hierarchy";
+export { isOwner } from "./hierarchy";
 export * from "./permissions";
 export { parseMetadata, requireApiKey } from "./require-api-key";
 export { requireAuth, type AppEnv } from "./require-auth";

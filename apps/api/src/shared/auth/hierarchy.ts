@@ -3,8 +3,8 @@ import {
   createAuthMiddleware,
   getSessionFromCtx,
 } from "better-auth/api";
-import { and, eq } from "drizzle-orm";
-import { getDb } from "@/shared/db";
+import { and, eq, type SQL } from "drizzle-orm";
+import { getDb, type Db } from "@/shared/db";
 import { member, user } from "@/shared/schema";
 
 const MANAGERIAL = ["owner", "admin"];
@@ -12,23 +12,19 @@ const MANAGERIAL = ["owner", "admin"];
 const roles = (value: string | null | undefined): string[] =>
   value ? value.split(",").map((r) => r.trim()) : [];
 
-const isOwner = (role: string | null | undefined): boolean =>
+export const isOwner = (role: string | null | undefined): boolean =>
   roles(role).includes("owner");
 
 const isManagerial = (role: string | null | undefined): boolean =>
   roles(role).some((r) => MANAGERIAL.includes(r));
 
-export class HierarchyError extends Error {}
-
-export function assertHierarchy(input: {
+export function hierarchyAllows(input: {
   actorRole: string | null;
   targetRole?: string | null;
   requestedRole?: string | null;
-}): void {
-  if (isOwner(input.actorRole)) return;
-  if (isManagerial(input.targetRole) || isManagerial(input.requestedRole)) {
-    throw new HierarchyError();
-  }
+}): boolean {
+  if (isOwner(input.actorRole)) return true;
+  return !isManagerial(input.targetRole) && !isManagerial(input.requestedRole);
 }
 
 const GUARDED = new Set([
@@ -37,15 +33,10 @@ const GUARDED = new Set([
   "/organization/invite-member",
 ]);
 
-type Db = ReturnType<typeof getDb>;
-
-function memberRole(db: Db, memberId: string): string | null {
+function memberRoleWhere(db: Db, where: SQL | undefined): string | null {
   return (
-    db
-      .select({ role: member.role })
-      .from(member)
-      .where(eq(member.id, memberId))
-      .get()?.role ?? null
+    db.select({ role: member.role }).from(member).where(where).get()?.role ??
+    null
   );
 }
 
@@ -57,7 +48,7 @@ function resolveTargetRole(
 ): string | null {
   if (path === "/organization/update-member-role") {
     return typeof body.memberId === "string"
-      ? memberRole(db, body.memberId)
+      ? memberRoleWhere(db, eq(member.id, body.memberId))
       : null;
   }
   if (path === "/organization/remove-member") {
@@ -73,7 +64,7 @@ function resolveTargetRole(
           .get()?.role ?? null
       );
     }
-    return memberRole(db, ref);
+    return memberRoleWhere(db, eq(member.id, ref));
   }
   return null;
 }
@@ -95,20 +86,13 @@ export const hierarchyGuard = createAuthMiddleware(async (ctx) => {
   if (!userId || !orgId) return;
 
   const db = getDb();
-  const actorRole =
-    db
-      .select({ role: member.role })
-      .from(member)
-      .where(and(eq(member.userId, userId), eq(member.organizationId, orgId)))
-      .get()?.role ?? null;
-
-  try {
-    assertHierarchy({
-      actorRole,
-      targetRole: resolveTargetRole(db, ctx.path, body, orgId),
-      requestedRole: requestedRole(body.role),
-    });
-  } catch {
-    throw new APIError("FORBIDDEN", { message: "forbidden" });
-  }
+  const allowed = hierarchyAllows({
+    actorRole: memberRoleWhere(
+      db,
+      and(eq(member.userId, userId), eq(member.organizationId, orgId)),
+    ),
+    targetRole: resolveTargetRole(db, ctx.path, body, orgId),
+    requestedRole: requestedRole(body.role),
+  });
+  if (!allowed) throw new APIError("FORBIDDEN", { message: "forbidden" });
 });

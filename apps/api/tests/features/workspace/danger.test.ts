@@ -1,7 +1,13 @@
 import { expect, it } from "bun:test";
+import { getTableColumns, getTableName, is } from "drizzle-orm";
+import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { createPublication } from "@/features/publications/use-case";
-import { deleteWorkspaceData } from "@/features/workspace/danger/use-case";
+import {
+  deleteWorkspaceData,
+  WORKSPACE_TABLES,
+} from "@/features/workspace/danger/use-case";
 import { createDb } from "@/shared/db";
+import * as schema from "@/shared/schema";
 import { product, publication } from "@/shared/schema";
 
 const deal = {
@@ -33,4 +39,17 @@ it("deletes only the target workspace's domain rows", () => {
       .all()
       .map((p) => p.workspaceId),
   ).toEqual(["ws-b"]);
+});
+
+it("cascade covers every workspace-scoped table in the schema", () => {
+  const scoped: string[] = (Object.values(schema) as unknown[])
+    .filter((value): value is SQLiteTable => is(value, SQLiteTable))
+    .filter((table) => "workspaceId" in getTableColumns(table))
+    .map((table) => getTableName(table))
+    .sort();
+  const covered: string[] = WORKSPACE_TABLES.map((table) =>
+    getTableName(table),
+  );
+
+  expect(covered.sort()).toEqual(scoped);
 });

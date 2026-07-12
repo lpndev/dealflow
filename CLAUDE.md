@@ -272,7 +272,7 @@ residual — **admin confinado a publisher** — vem de um `hooks.before` global
 `/organization/{update-member-role,remove-member,invite-member}`, lê o ator por
 `getSessionFromCtx` (o **org-hook `beforeUpdateMemberRole` passa o `user` ALVO, não o
 ator** — por isso guard no nível de request, não org-hook) e chama a pura
-`assertHierarchy({actorRole,targetRole?,requestedRole?})` (invariante testada: admin não
+`hierarchyAllows({actorRole,targetRole?,requestedRole?})` (invariante testada: admin não
 escala publisher nem toca admin/owner). Web: `useActiveRole`+`roleRank`; dropdown de papel
 só pra owner (com "Tornar dono"), demais veem Badge; convite oferece admin/publisher (owner)
 ou só publisher (admin). Owner é promoção-only, nunca via convite. (2) **Criar múltiplos

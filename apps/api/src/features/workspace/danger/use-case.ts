@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { revokeWorkspaceApiKeys } from "@/features/settings/api-keys/use-case";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
-import { auth } from "@/shared/auth";
-import { getDb } from "@/shared/db";
+import { auth, isOwner } from "@/shared/auth";
+import { getDb, type Db } from "@/shared/db";
 import {
   affiliateLink,
   dealSnapshot,
@@ -14,20 +14,20 @@ import {
   settings,
 } from "@/shared/schema";
 
-type Db = ReturnType<typeof getDb>;
+export const WORKSPACE_TABLES = [
+  delivery,
+  publication,
+  dealSnapshot,
+  affiliateLink,
+  destination,
+  product,
+  settings,
+];
 
 export function deleteWorkspaceData(db: Db, workspaceId: string): void {
-  db.delete(delivery).where(eq(delivery.workspaceId, workspaceId)).run();
-  db.delete(publication).where(eq(publication.workspaceId, workspaceId)).run();
-  db.delete(dealSnapshot)
-    .where(eq(dealSnapshot.workspaceId, workspaceId))
-    .run();
-  db.delete(affiliateLink)
-    .where(eq(affiliateLink.workspaceId, workspaceId))
-    .run();
-  db.delete(destination).where(eq(destination.workspaceId, workspaceId)).run();
-  db.delete(product).where(eq(product.workspaceId, workspaceId)).run();
-  db.delete(settings).where(eq(settings.workspaceId, workspaceId)).run();
+  for (const table of WORKSPACE_TABLES) {
+    db.delete(table).where(eq(table.workspaceId, workspaceId)).run();
+  }
 }
 
 export async function deleteWorkspace(
@@ -48,7 +48,7 @@ function ownedWorkspaceIds(db: Db, userId: string): string[] {
     .from(member)
     .where(eq(member.userId, userId))
     .all()
-    .filter((m) => m.role.split(",").some((r) => r.trim() === "owner"))
+    .filter((m) => isOwner(m.role))
     .map((m) => m.orgId);
 }
 
