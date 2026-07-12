@@ -1,13 +1,15 @@
 import type { ExtractedDeal } from "@dealflow/shared";
 
-let pending: ExtractedDeal | null = null;
+// ponytail: transient in-memory handoff, one machine, one slot per workspace.
+// Becomes a table only if it must survive a restart.
+const pending = new Map<string, ExtractedDeal>();
 
-export function storeCapture(draft: ExtractedDeal) {
-  pending = draft;
+export function storeCapture(workspaceId: string, draft: ExtractedDeal) {
+  pending.set(workspaceId, draft);
 }
 
-export function takeCapture(): ExtractedDeal | null {
-  const draft = pending;
-  pending = null;
+export function takeCapture(workspaceId: string): ExtractedDeal | null {
+  const draft = pending.get(workspaceId) ?? null;
+  pending.delete(workspaceId);
   return draft;
 }

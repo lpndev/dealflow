@@ -1,6 +1,7 @@
 const DEFAULTS = {
   apiUrl: "http://localhost:3001",
   webUrl: "http://localhost:5173",
+  apiKey: "",
 };
 
 const autoTabs = new Set();
@@ -23,14 +24,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg?.type !== "capture") return;
   (async () => {
-    const { apiUrl, webUrl } = {
+    const { apiUrl, webUrl, apiKey } = {
       ...DEFAULTS,
-      ...(await chrome.storage.local.get(["apiUrl", "webUrl"])),
+      ...(await chrome.storage.local.get(["apiUrl", "webUrl", "apiKey"])),
     };
+    if (!apiKey) {
+      console.warn("[Dealflow] set your API key in the extension popup");
+      sendResponse({ ok: false, error: "missing api key" });
+      return;
+    }
     try {
       const res = await fetch(apiUrl + "/deals/capture", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-api-key": apiKey },
         body: JSON.stringify({ draft: msg.draft }),
       });
       if (!res.ok) throw new Error("Dealflow respondeu " + res.status);

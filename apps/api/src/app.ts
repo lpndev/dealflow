@@ -8,6 +8,7 @@ import { publications } from "@/features/publications/route";
 import { schedule } from "@/features/publications/schedule/route";
 import { send } from "@/features/publications/send/route";
 import { queue } from "@/features/queue/route";
+import { apiKeys } from "@/features/settings/api-keys/route";
 import { settingsRoutes } from "@/features/settings/route";
 import { auth, type AppEnv } from "@/shared/auth";
 
@@ -39,6 +40,7 @@ app.route("/publications", send);
 app.route("/publications", schedule);
 app.route("/destinations", destinations);
 app.route("/settings", settingsRoutes);
+app.route("/api-keys", apiKeys);
 app.route("/", queue);
 app.route("/", dashboard);
 
