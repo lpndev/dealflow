@@ -1,11 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/shared/db";
-import {
-  destination,
-  member,
-  organization,
-  publication,
-} from "@/shared/schema";
+import { destination, member, publication } from "@/shared/schema";
 
 const LEGACY_WORKSPACE_ID = "default";
 
@@ -19,13 +14,6 @@ export function resolveActiveWorkspace(db: Db, userId: string): string | null {
     .where(eq(member.userId, userId))
     .get();
   if (existingMembership) return existingMembership.organizationId;
-
-  const legacy = db
-    .select()
-    .from(organization)
-    .where(eq(organization.id, LEGACY_WORKSPACE_ID))
-    .get();
-  if (!legacy) return null;
 
   const claimed = db
     .select()
