@@ -6,7 +6,12 @@ import {
   TagIcon,
 } from "@phosphor-icons/react";
 import { Link, NavLink, Outlet } from "react-router";
-import { ModeToggle, WhatsAppStatus } from "@/components";
+import {
+  ModeToggle,
+  UserMenu,
+  WhatsAppStatus,
+  WorkspaceSwitcher,
+} from "@/components";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -38,8 +43,10 @@ export function Layout() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <WorkspaceSwitcher />
               <WhatsAppStatus />
               <ModeToggle />
+              <UserMenu />
             </div>
           </div>
           <nav className="mx-auto flex max-w-5xl gap-2 px-6 lg:px-8">

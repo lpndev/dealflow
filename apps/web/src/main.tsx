@@ -1,24 +1,39 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, redirect } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { ThemeProvider } from "@/components/theme-provider";
+import { authClient } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import {
   Dashboard,
   HistoryTab,
   Layout,
+  Login,
   NewOffer,
+  Onboarding,
   QueueTab,
   SettingsTab,
+  Signup,
 } from "@/routes";
 import "@/styles/globals.css";
 
+async function protectedLoader() {
+  const { data } = await authClient.getSession();
+  if (!data) throw redirect("/login");
+  if (!data.session.activeOrganizationId) throw redirect("/onboarding");
+  return data;
+}
+
 const router = createBrowserRouter([
+  { path: "/login", Component: Login },
+  { path: "/signup", Component: Signup },
+  { path: "/onboarding", Component: Onboarding },
   {
     path: "/",
     Component: Layout,
+    loader: protectedLoader,
     children: [
       { index: true, Component: Dashboard },
       { path: "new", Component: NewOffer },

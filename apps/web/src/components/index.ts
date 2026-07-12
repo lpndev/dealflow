@@ -4,6 +4,8 @@ export { Panel, Empty, ErrorNote } from "./panel";
 export { PreviewBubble } from "./preview-bubble";
 export { ModeToggle } from "./mode-toggle";
 export { WhatsAppStatus } from "./whatsapp-status";
+export { WorkspaceSwitcher } from "./workspace-switcher";
+export { UserMenu } from "./user-menu";
 export { WhatsAppConfig } from "./whatsapp-config";
 export { GroupsConfig } from "./groups-config";
 export { QueueRow } from "./queue-row";

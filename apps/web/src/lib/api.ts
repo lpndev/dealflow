@@ -3,7 +3,7 @@ import { API, API_DOWN, GATEWAY } from "./env";
 async function request(path: string, init?: RequestInit) {
   let res: Response;
   try {
-    res = await fetch(`${API}${path}`, init);
+    res = await fetch(`${API}${path}`, { credentials: "include", ...init });
   } catch {
     throw new Error(API_DOWN);
   }

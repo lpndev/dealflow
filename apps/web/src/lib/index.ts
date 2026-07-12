@@ -1,5 +1,13 @@
 export { API, GATEWAY, API_DOWN } from "./env";
 export {
+  authClient,
+  useSession,
+  signIn,
+  signUp,
+  signOut,
+  organization,
+} from "./auth";
+export {
   apiGet,
   apiPost,
   apiPut,
