@@ -125,7 +125,11 @@ function DangerAction({
   );
 }
 
-function reload() {
+async function reloadIntoRemaining() {
+  const remaining = (await organization.list()).data ?? [];
+  if (remaining[0]) {
+    await organization.setActive({ organizationId: remaining[0].id });
+  }
   queryClient.clear();
   window.location.assign("/");
 }
@@ -173,7 +177,7 @@ export function DangerZone() {
             confirmWord={activeName}
             onConfirm={async () => {
               await apiDelete("/workspace");
-              reload();
+              await reloadIntoRemaining();
             }}
           />
         )}
@@ -185,7 +189,7 @@ export function DangerZone() {
           confirmWord="RESETAR"
           onConfirm={async () => {
             await apiPost("/workspace/reset", {});
-            reload();
+            await reloadIntoRemaining();
           }}
         />
 
