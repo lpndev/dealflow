@@ -1,4 +1,8 @@
-import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/shared/db";
 import { member, user } from "@/shared/schema";

@@ -93,9 +93,7 @@ export function Team() {
                                 updateRole.mutate({ memberId: m.id, role: r })
                               }
                             >
-                              {r === "owner"
-                                ? "Tornar dono"
-                                : ROLE_LABEL[r]}
+                              {r === "owner" ? "Tornar dono" : ROLE_LABEL[r]}
                             </DropdownMenuItem>
                           ),
                         )}

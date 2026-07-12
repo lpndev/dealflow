@@ -2,7 +2,7 @@
 
 Reuse-heavy extension of the existing better-auth (1.6.23) organization foundation.
 No new role model, no custom permission matrix — the three fixed roles
-(`owner`/`admin`/`member`=Publisher) stay. We tighten *who manages whom*, surface
+(`owner`/`admin`/`member`=Publisher) stay. We tighten _who manages whom_, surface
 workspace creation, and add destructive account/workspace actions.
 
 ## Part 1 — Role hierarchy
@@ -54,6 +54,7 @@ dialog. Nothing else.
    add `MessagingProvider.logout()` + a route), sign out. User lands in onboarding.
 
 ### Boundaries (stated in UI)
+
 - WhatsApp gateway is **global/single-session** — logout/reset nukes the one shared session
   (fine under one-operator-today; not per-workspace).
 - ML browser login + the extension's stored config live in the browser — the web app can't
@@ -61,6 +62,7 @@ dialog. Nothing else.
   state in the browser.
 
 ### Server surface
+
 - `hooks.before` guard + `assertHierarchy` (`shared/auth/hierarchy.ts`, tested).
 - `features/workspace/danger/` — `deleteWorkspace`, `resetAll`, `revokeAllKeys` use-cases +
   routes (owner/admin gated via `requireRole`).
