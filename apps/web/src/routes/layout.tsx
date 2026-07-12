@@ -4,7 +4,9 @@ import {
   ClockIcon,
   GearIcon,
   TagIcon,
+  UsersIcon,
 } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, Outlet } from "react-router";
 import {
   ModeToggle,
@@ -14,6 +16,7 @@ import {
 } from "@/components";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { organization, unwrapAuth, useSession } from "@/lib";
 
 const NAV = [
   { to: "/", label: "Início", icon: ChartBarIcon, end: true },
@@ -25,10 +28,33 @@ const NAV = [
     icon: ClockCounterClockwiseIcon,
     end: false,
   },
-  { to: "/settings", label: "Config", icon: GearIcon, end: false },
+  {
+    to: "/team",
+    label: "Equipe",
+    icon: UsersIcon,
+    end: false,
+    adminOnly: true,
+  },
+  {
+    to: "/settings",
+    label: "Config",
+    icon: GearIcon,
+    end: false,
+    adminOnly: true,
+  },
 ];
 
 export function Layout() {
+  const { data: session } = useSession();
+  const { data: activeMember } = useQuery({
+    queryKey: ["active-member"],
+    queryFn: () => unwrapAuth(organization.getActiveMember()),
+    enabled: !!session,
+  });
+  const canManage =
+    activeMember?.role === "owner" || activeMember?.role === "admin";
+  const nav = NAV.filter((n) => !n.adminOnly || canManage);
+
   return (
     <TooltipProvider>
       <div className="min-h-full">
@@ -50,7 +76,7 @@ export function Layout() {
             </div>
           </div>
           <nav className="mx-auto flex max-w-5xl gap-2 px-6 lg:px-8">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}

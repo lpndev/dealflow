@@ -9,3 +9,11 @@ export const authClient = createAuthClient({
 });
 
 export const { useSession, signIn, signUp, signOut, organization } = authClient;
+
+export async function unwrapAuth<T>(
+  promise: Promise<{ data: T | null; error: { message?: string } | null }>,
+): Promise<T> {
+  const { data, error } = await promise;
+  if (error || data == null) throw new Error(error?.message ?? "falha na operação");
+  return data;
+}

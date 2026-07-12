@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { authClient } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import {
+  AcceptInvite,
   Dashboard,
   HistoryTab,
   Layout,
@@ -16,6 +17,7 @@ import {
   QueueTab,
   SettingsTab,
   Signup,
+  Team,
 } from "@/routes";
 import "@/styles/globals.css";
 
@@ -30,6 +32,7 @@ const router = createBrowserRouter([
   { path: "/login", Component: Login },
   { path: "/signup", Component: Signup },
   { path: "/onboarding", Component: Onboarding },
+  { path: "/accept-invite/:id", Component: AcceptInvite },
   {
     path: "/",
     Component: Layout,
@@ -39,6 +42,7 @@ const router = createBrowserRouter([
       { path: "new", Component: NewOffer },
       { path: "queue", Component: QueueTab },
       { path: "history", Component: HistoryTab },
+      { path: "team", Component: Team },
       { path: "settings", Component: SettingsTab },
     ],
   },

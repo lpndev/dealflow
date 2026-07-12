@@ -6,6 +6,7 @@ export {
   signUp,
   signOut,
   organization,
+  unwrapAuth,
 } from "./auth";
 export {
   apiGet,

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { toast } from "sonner";
 import {
+  ApiKeysPanel,
   ErrorNote,
   GroupsConfig,
   Panel,
@@ -20,7 +21,7 @@ import {
   InputGroupText,
 } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPut, errMsg, fmtMin } from "@/lib";
+import { apiGet, apiPut, errMsg, fmtMin, organization, unwrapAuth } from "@/lib";
 import { type Settings } from "@/types";
 
 const PLACEHOLDERS = [
@@ -91,6 +92,12 @@ export function SettingsTab() {
     queryKey: ["settings"],
     queryFn: () => apiGet("/settings"),
   });
+  const { data: activeMember } = useQuery({
+    queryKey: ["active-member"],
+    queryFn: () => unwrapAuth(organization.getActiveMember()),
+  });
+  const canManage =
+    activeMember?.role === "owner" || activeMember?.role === "admin";
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,6 +105,7 @@ export function SettingsTab() {
       <GroupsConfig />
       {error && <ErrorNote>{error.message}</ErrorNote>}
       {data && <SettingsForm settings={data} />}
+      {canManage && <ApiKeysPanel />}
     </div>
   );
 }

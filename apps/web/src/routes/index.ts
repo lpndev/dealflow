@@ -7,3 +7,5 @@ export { SettingsTab } from "./settings";
 export { Login } from "./login";
 export { Signup } from "./signup";
 export { Onboarding } from "./onboarding";
+export { Team } from "./team";
+export { AcceptInvite } from "./accept-invite";

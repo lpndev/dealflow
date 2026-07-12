@@ -17,3 +17,10 @@ export type Form = {
 };
 
 export type Destination = { id: string; name: string; enabled: boolean };
+
+export type ApiKeyInfo = {
+  id: string;
+  name: string;
+  start: string | null;
+  createdAt: string;
+};
