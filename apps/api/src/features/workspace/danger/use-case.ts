@@ -60,6 +60,6 @@ export async function resetOwnedWorkspaces(
   for (const workspaceId of owned) {
     await deleteWorkspace(headers, workspaceId);
   }
-  await whatsappGateway.logout().catch(() => {});
+  if (owned.length > 0) await whatsappGateway.logout().catch(() => {});
   return owned.length;
 }
