@@ -262,6 +262,32 @@ Diferido (portas abertas, nada construído): billing/planos/trial 7 dias, envio 
 email, múltiplos números de WhatsApp, múltiplas contas ML + nichos, split da
 landing page. Segredo em env (`BETTER_AUTH_SECRET`; throw em produção sem ele).
 
+Nota hierarquia + multi-workspace + danger zone (feat/roles-workspaces-danger-zone):
+extensão reuso-pesado da fundação, **sem novo modelo de papéis nem matriz custom**
+(os 3 papéis fixos ficam). (1) **Hierarquia de papéis** (rank owner>admin>publisher):
+o better-auth 1.6.23 já barra publisher gerenciar membros e já barra qualquer não-owner
+mexer no owner / promover a owner (gate `creatorRole` em `crud-members`). A única regra
+residual — **admin confinado a publisher** — vem de um `hooks.before` global
+(`shared/auth/hierarchy.ts`, `hierarchyGuard` via `createAuthMiddleware`) que casa
+`/organization/{update-member-role,remove-member,invite-member}`, lê o ator por
+`getSessionFromCtx` (o **org-hook `beforeUpdateMemberRole` passa o `user` ALVO, não o
+ator** — por isso guard no nível de request, não org-hook) e chama a pura
+`assertHierarchy({actorRole,targetRole?,requestedRole?})` (invariante testada: admin não
+escala publisher nem toca admin/owner). Web: `useActiveRole`+`roleRank`; dropdown de papel
+só pra owner (com "Tornar dono"), demais veem Badge; convite oferece admin/publisher (owner)
+ou só publisher (admin). Owner é promoção-only, nunca via convite. (2) **Criar múltiplos
+workspaces**: helper `createWorkspace(name)` (extraído do onboarding — create+slug-collision+
+setActive) + item "Novo workspace" no `WorkspaceSwitcher` (Dialog shadcn). (3) **Zona de
+perigo** (fim da Config, `components/danger-zone.tsx`, AlertDialog shadcn): revogar todas as
+chaves (admin+, `DELETE /api-keys`), excluir workspace (owner, `DELETE /workspace` — cascata
+das tabelas de domínio por `workspaceId` + revoga chaves + `deleteOrganization`; confirma
+digitando o nome), resetar tudo (`POST /workspace/reset` — apaga todos os workspaces que o
+user é dono + logout do WhatsApp **só se dono de algum**, mantém a conta), excluir conta
+(`reset` + `authClient.deleteUser({password})`; `user.deleteUser.enabled` ligado no auth).
+`MessagingProvider.logout()` novo → gateway `POST /session/logout` (que já apaga `wa-auth/`).
+Boundary dito na UI: WhatsApp é **sessão única global** (reset desconecta a única sessão) e
+login ML + config da extensão vivem no navegador (o web não limpa — o user limpa lá).
+
 Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
 Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
 Nota SPA; antes eram abas com `useState`). A "fila" NÃO é infra nova: um
