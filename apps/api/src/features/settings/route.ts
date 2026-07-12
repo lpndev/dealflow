@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { requireAuth, type AppEnv } from "@/shared/auth";
+import { requireAuth, requireRole, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { SettingsError } from "@/shared/errors";
 import { getSettings, updateSettings } from "./use-case";
@@ -12,7 +12,7 @@ settingsRoutes.get("/", (c) =>
   c.json(getSettings(getDb(), c.get("workspaceId"))),
 );
 
-settingsRoutes.put("/", async (c) => {
+settingsRoutes.put("/", requireRole("owner", "admin"), async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     delayMinSeconds?: number;
     delayMaxSeconds?: number;

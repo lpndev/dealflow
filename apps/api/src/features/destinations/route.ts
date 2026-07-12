@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
-import { requireAuth, type AppEnv } from "@/shared/auth";
+import { requireAuth, requireRole, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import {
   listDestinations,
@@ -16,7 +16,7 @@ destinations.get("/", (c) =>
   c.json({ destinations: listDestinations(getDb(), c.get("workspaceId")) }),
 );
 
-destinations.patch("/:id", async (c) => {
+destinations.patch("/:id", requireRole("owner", "admin"), async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     enabled?: unknown;
   } | null;
@@ -33,7 +33,7 @@ destinations.patch("/:id", async (c) => {
   });
 });
 
-destinations.post("/sync", async (c) => {
+destinations.post("/sync", requireRole("owner", "admin"), async (c) => {
   try {
     const synced = await syncDestinations(
       getDb(),
