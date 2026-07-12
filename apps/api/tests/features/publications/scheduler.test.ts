@@ -5,7 +5,7 @@ import { createPublication } from "@/features/publications/use-case";
 import { setQueuePaused } from "@/features/queue/use-case";
 import { updateSettings } from "@/features/settings/use-case";
 import { createDb, type Db } from "@/shared/db";
-import { destination, publication } from "@/shared/schema";
+import { delivery, destination, publication } from "@/shared/schema";
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 import { FakeMessaging } from "../../support/fake-messaging";
 
@@ -134,4 +134,56 @@ it("marks a failed send failed and does not auto-retry it", async () => {
 
   const retry = await dispatchDue(db, provider, past);
   expect(retry).toBeNull();
+});
+
+it("does not let a paused workspace's older due item starve other workspaces", async () => {
+  const db = createDb(":memory:");
+  const provider = new FakeMessaging();
+
+  const pausedPub = createPublication(deal, db, "ws-paused");
+  db.insert(destination)
+    .values({
+      id: "dest-paused",
+      workspaceId: "ws-paused",
+      provider: "whatsapp",
+      externalId: "0@g.us",
+      name: "Paused Group",
+    })
+    .run();
+  updateSettings(db, "ws-paused", { queuePaused: true });
+  db.insert(delivery)
+    .values({
+      id: "dl-paused",
+      workspaceId: "ws-paused",
+      publicationId: pausedPub.id,
+      destinationId: "dest-paused",
+      status: "scheduled",
+      dueAt: new Date(T0.getTime() - 600_000),
+    })
+    .run();
+
+  const openPub = createPublication(deal, db, "ws-open");
+  db.insert(destination)
+    .values({
+      id: "dest-open",
+      workspaceId: "ws-open",
+      provider: "whatsapp",
+      externalId: "1@g.us",
+      name: "Open Group",
+    })
+    .run();
+  db.insert(delivery)
+    .values({
+      id: "dl-open",
+      workspaceId: "ws-open",
+      publicationId: openPub.id,
+      destinationId: "dest-open",
+      status: "scheduled",
+      dueAt: new Date(T0.getTime() - 300_000),
+    })
+    .run();
+
+  const result = await dispatchDue(db, provider, T0);
+  expect(result).not.toBeNull();
+  expect(result?.destinationId).toBe("dest-open");
 });

@@ -36,7 +36,6 @@ it("listQueue never leaks another workspace's deliveries", () => {
   const db = createDb(":memory:");
   seedDest(db, "ws-a", "a1");
   seedDest(db, "ws-b", "b1");
-  // a scheduled delivery under ws-b must not appear for ws-a
   db.insert(product)
     .values({ id: "prod-b", workspaceId: "ws-b", provider: "mercado-livre" })
     .run();

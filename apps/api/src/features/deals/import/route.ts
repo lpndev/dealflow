@@ -1,12 +1,14 @@
 import { Hono } from "hono";
 import { getSettings } from "@/features/settings/use-case";
 import { fetchMercadoLivre } from "@/integrations/mercado-livre/source";
+import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { ImportError } from "@/shared/errors";
-import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 import { importDeal } from "./use-case";
 
-export const deals = new Hono();
+export const deals = new Hono<AppEnv>();
+
+deals.use("/import", requireAuth);
 
 deals.post("/import", async (c) => {
   const body = (await c.req.json().catch(() => null)) as { input?: unknown };
@@ -16,9 +18,7 @@ deals.post("/import", async (c) => {
   }
 
   try {
-    // ponytail: not session-scoped yet — out of Task 3's route list; revisit
-    // alongside onboarding (Task 6) when a real workspaceId is available here.
-    const tag = getSettings(getDb(), DEFAULT_WORKSPACE_ID).mlAffiliateTag;
+    const tag = getSettings(getDb(), c.get("workspaceId")).mlAffiliateTag;
     const draft = await importDeal(input, fetchMercadoLivre, tag);
     return c.json({ draft });
   } catch (err) {
