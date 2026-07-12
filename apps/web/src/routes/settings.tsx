@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { toast } from "sonner";
 import {
   ApiKeysPanel,
+  DangerZone,
   ErrorNote,
   GroupsConfig,
   Panel,
@@ -101,6 +102,7 @@ export function SettingsTab() {
       {error && <ErrorNote>{error.message}</ErrorNote>}
       {data && <SettingsForm settings={data} />}
       {canManage && <ApiKeysPanel />}
+      <DangerZone />
     </div>
   );
 }
