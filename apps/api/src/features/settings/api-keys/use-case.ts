@@ -1,4 +1,4 @@
-import { auth } from "@/shared/auth";
+import { auth, parseMetadata } from "@/shared/auth";
 
 export async function createWorkspaceApiKey(
   headers: Headers,
@@ -9,16 +9,6 @@ export async function createWorkspaceApiKey(
     headers,
     body: { name, metadata: { organizationId: workspaceId } },
   });
-}
-
-function parseMetadata(metadata: unknown): { organizationId?: string } | null {
-  try {
-    return typeof metadata === "string"
-      ? JSON.parse(metadata)
-      : (metadata ?? null);
-  } catch {
-    return null;
-  }
 }
 
 export async function listWorkspaceApiKeys(
