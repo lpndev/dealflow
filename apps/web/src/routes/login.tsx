@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { signIn } from "@/lib";
+import { safeRedirect, signIn } from "@/lib";
 
 export function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +24,7 @@ export function Login() {
       setError(signInError.message ?? "Falha ao entrar.");
       return;
     }
-    navigate("/");
+    navigate(safeRedirect(searchParams.get("redirect")));
   }
 
   return (
@@ -62,7 +63,15 @@ export function Login() {
             </Button>
             <p className="text-center text-xs text-muted-foreground">
               Não tem conta?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
+              <Link
+                to={{
+                  pathname: "/signup",
+                  search: searchParams.get("redirect")
+                    ? `?redirect=${encodeURIComponent(searchParams.get("redirect")!)}`
+                    : "",
+                }}
+                className="text-primary hover:underline"
+              >
                 Criar conta
               </Link>
             </p>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,14 +38,29 @@ export function AcceptInvite() {
   if (isPending) return null;
 
   if (!session) {
+    const target = `/accept-invite/${id}`;
     return (
       <div className="flex min-h-full items-center justify-center px-6 py-8">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>Faça login para aceitar o convite</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate("/login")}>Entrar</Button>
+          <CardContent className="flex gap-2">
+            <Button
+              render={
+                <Link to={`/login?redirect=${encodeURIComponent(target)}`}>
+                  Entrar
+                </Link>
+              }
+            />
+            <Button
+              variant="outline"
+              render={
+                <Link to={`/signup?redirect=${encodeURIComponent(target)}`}>
+                  Criar conta
+                </Link>
+              }
+            />
           </CardContent>
         </Card>
       </div>

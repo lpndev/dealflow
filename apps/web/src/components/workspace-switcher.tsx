@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { errMsg, organization, useSession } from "@/lib";
+import { organization, useSession } from "@/lib";
 import { queryClient } from "@/lib/query";
 
 export function WorkspaceSwitcher() {
@@ -37,7 +37,7 @@ export function WorkspaceSwitcher() {
   async function switchTo(organizationId: string) {
     const { error } = await organization.setActive({ organizationId });
     if (error) {
-      toast.error(errMsg(error, "falha ao trocar de workspace"));
+      toast.error(error?.message ?? "falha ao trocar de workspace");
       return;
     }
     queryClient.clear();

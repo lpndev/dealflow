@@ -22,7 +22,7 @@ export const auth = betterAuth({
       ac,
       roles: { owner, admin, member },
     }),
-    apiKey({ enableSessionForAPIKeys: true, enableMetadata: true }),
+    apiKey({ enableSessionForAPIKeys: false, enableMetadata: true }),
   ],
   databaseHooks: {
     session: {

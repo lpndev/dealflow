@@ -14,7 +14,11 @@ export async function unwrapAuth<T>(
   promise: Promise<{ data: T | null; error: { message?: string } | null }>,
 ): Promise<T> {
   const { data, error } = await promise;
-  if (error || data == null)
-    throw new Error(error?.message ?? "falha na operação");
-  return data;
+  if (error) throw new Error(error.message ?? "falha na operação");
+  return data as T;
+}
+
+export function safeRedirect(path: string | null): string {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
+  return path;
 }
