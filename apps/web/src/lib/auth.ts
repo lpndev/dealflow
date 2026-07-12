@@ -29,12 +29,17 @@ export function redirectSearch(searchParams: URLSearchParams): string {
   return redirect ? `?redirect=${encodeURIComponent(redirect)}` : "";
 }
 
-export function useCanManage(): boolean {
+export function useActiveRole(): string | null {
   const { data: session } = useSession();
   const { data: member } = useQuery({
     queryKey: ["active-member"],
     queryFn: () => unwrapAuth(organization.getActiveMember()),
     enabled: !!session,
   });
-  return member?.role === "owner" || member?.role === "admin";
+  return member?.role ?? null;
+}
+
+export function useCanManage(): boolean {
+  const role = useActiveRole();
+  return role === "owner" || role === "admin";
 }

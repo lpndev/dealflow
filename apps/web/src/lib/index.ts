@@ -10,6 +10,7 @@ export {
   safeRedirect,
   redirectSearch,
   useCanManage,
+  useActiveRole,
 } from "./auth";
 export {
   apiGet,
@@ -27,6 +28,7 @@ export {
   connectionLabel,
   errMsg,
   ROLE_LABEL,
+  roleRank,
   copyWithToast,
 } from "./format";
 export { emptyForm, draftToForm, mergeCapture } from "./offer";

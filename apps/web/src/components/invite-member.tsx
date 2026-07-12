@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Empty, ErrorNote, Panel } from "@/components";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import {
   organization,
   ROLE_LABEL,
   unwrapAuth,
+  useActiveRole,
 } from "@/lib";
 
 type InviteRole = "admin" | "member";
@@ -37,6 +39,9 @@ function copyLink(link: string) {
 
 export function InviteMember() {
   const qc = useQueryClient();
+  const viewerRole = useActiveRole();
+  const inviteRoles: InviteRole[] =
+    viewerRole === "owner" ? ["admin", "member"] : ["member"];
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InviteRole>("member");
   const [lastLink, setLastLink] = useState<string | null>(null);
@@ -91,23 +96,27 @@ export function InviteMember() {
           />
         </Field>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline">
-                  {ROLE_LABEL[role]}
-                </Button>
-              }
-            />
-            <DropdownMenuContent>
-              {(["admin", "member"] as InviteRole[]).map((r) => (
-                <DropdownMenuItem key={r} onClick={() => setRole(r)}>
-                  {r === role && <CheckIcon />}
-                  {ROLE_LABEL[r]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {inviteRoles.length > 1 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline">
+                    {ROLE_LABEL[role]}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent>
+                {inviteRoles.map((r) => (
+                  <DropdownMenuItem key={r} onClick={() => setRole(r)}>
+                    {r === role && <CheckIcon />}
+                    {ROLE_LABEL[r]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Badge variant="secondary">{ROLE_LABEL[role]}</Badge>
+          )}
           <Button type="submit" disabled={invite.isPending}>
             <UserPlusIcon />
             Convidar

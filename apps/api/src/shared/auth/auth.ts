@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
 import { getDb } from "@/shared/db";
 import * as schema from "@/shared/schema";
+import { hierarchyGuard } from "./hierarchy";
 import { ac, admin, member, owner } from "./permissions";
 import { resolveActiveWorkspace } from "./workspace-claim";
 
@@ -17,6 +18,8 @@ export const auth = betterAuth({
   trustedOrigins: ["http://localhost:5173"],
   database: drizzleAdapter(getDb(), { provider: "sqlite", schema }),
   emailAndPassword: { enabled: true, requireEmailVerification: false },
+  user: { deleteUser: { enabled: true } },
+  hooks: { before: hierarchyGuard },
   plugins: [
     organization({
       ac,

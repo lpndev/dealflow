@@ -14,13 +14,20 @@ import {
   errMsg,
   organization,
   ROLE_LABEL,
+  roleRank,
   unwrapAuth,
+  useActiveRole,
   useSession,
 } from "@/lib";
+
+const ASSIGNABLE_ROLES = ["owner", "admin", "member"] as const;
 
 export function Team() {
   const qc = useQueryClient();
   const { data: session } = useSession();
+  const viewerRole = useActiveRole();
+  const viewerRank = roleRank(viewerRole);
+  const canAssignRoles = viewerRole === "owner";
 
   const { data, error } = useQuery({
     queryKey: ["members"],
@@ -30,7 +37,7 @@ export function Team() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["members"] });
 
   const updateRole = useMutation({
-    mutationFn: (v: { memberId: string; role: "admin" | "member" }) =>
+    mutationFn: (v: { memberId: string; role: string }) =>
       unwrapAuth(organization.updateMemberRole(v)),
     onSuccess: invalidate,
     onError: (e) => toast.error(errMsg(e, "falha ao mudar papel")),
@@ -53,7 +60,8 @@ export function Team() {
           <ul className="flex flex-col gap-2">
             {members.map((m) => {
               const isSelf = m.userId === session?.user.id;
-              const isOwner = m.role === "owner";
+              const canManage = viewerRank > roleRank(m.role) && !isSelf;
+              const showRoleMenu = canAssignRoles && !isSelf;
               return (
                 <li
                   key={m.id}
@@ -67,9 +75,7 @@ export function Team() {
                       {m.user.email}
                     </span>
                   </div>
-                  {isOwner ? (
-                    <Badge variant="secondary">{ROLE_LABEL[m.role]}</Badge>
-                  ) : (
+                  {showRoleMenu ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -79,28 +85,26 @@ export function Team() {
                         }
                       />
                       <DropdownMenuContent>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateRole.mutate({
-                              memberId: m.id,
-                              role: "admin",
-                            })
-                          }
-                        >
-                          Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateRole.mutate({
-                              memberId: m.id,
-                              role: "member",
-                            })
-                          }
-                        >
-                          Publisher
-                        </DropdownMenuItem>
+                        {ASSIGNABLE_ROLES.filter((r) => r !== m.role).map(
+                          (r) => (
+                            <DropdownMenuItem
+                              key={r}
+                              onClick={() =>
+                                updateRole.mutate({ memberId: m.id, role: r })
+                              }
+                            >
+                              {r === "owner"
+                                ? "Tornar dono"
+                                : ROLE_LABEL[r]}
+                            </DropdownMenuItem>
+                          ),
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  ) : (
+                    <Badge variant="secondary">
+                      {ROLE_LABEL[m.role] ?? m.role}
+                    </Badge>
                   )}
                   <Button
                     variant="outline"
@@ -108,7 +112,7 @@ export function Team() {
                     className="text-destructive hover:text-destructive"
                     title="Remover membro"
                     aria-label="Remover membro"
-                    disabled={isOwner || isSelf}
+                    disabled={!canManage}
                     onClick={() => remove.mutate(m.id)}
                   >
                     <TrashIcon />

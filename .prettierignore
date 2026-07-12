@@ -9,4 +9,4 @@ drizzle/
 wa-auth/
 
 # shadcn
-apps/web/src/components/ui/
+**/components/ui/
