@@ -20,9 +20,7 @@ export function AcceptInvite() {
         invitationId: id,
       });
       if (accepted.error || !accepted.data) {
-        setError(
-          accepted.error?.message ?? "Convite inválido ou expirado.",
-        );
+        setError(accepted.error?.message ?? "Convite inválido ou expirado.");
         return;
       }
       const { error: setActiveError } = await organization.setActive({

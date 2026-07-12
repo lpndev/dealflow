@@ -21,7 +21,10 @@ import { errMsg, organization, unwrapAuth } from "@/lib";
 
 type InviteRole = "admin" | "member";
 
-const ROLE_LABEL: Record<string, string> = { admin: "Admin", member: "Publisher" };
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Admin",
+  member: "Publisher",
+};
 
 function inviteLinkFor(id: string) {
   return `${window.location.origin}/accept-invite/${id}`;

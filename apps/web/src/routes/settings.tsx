@@ -21,7 +21,14 @@ import {
   InputGroupText,
 } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPut, errMsg, fmtMin, organization, unwrapAuth } from "@/lib";
+import {
+  apiGet,
+  apiPut,
+  errMsg,
+  fmtMin,
+  organization,
+  unwrapAuth,
+} from "@/lib";
 import { type Settings } from "@/types";
 
 const PLACEHOLDERS = [
