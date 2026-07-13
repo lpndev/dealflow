@@ -9,8 +9,10 @@ export class FakeMessaging implements MessagingProvider {
   groups: MessagingDestination[] = [];
   sent: SendMessageInput[] = [];
   failNext = false;
+  groupsRequestedBy: string[] = [];
 
-  async listGroups(): Promise<MessagingDestination[]> {
+  async listGroups(sessionId: string): Promise<MessagingDestination[]> {
+    this.groupsRequestedBy.push(sessionId);
     return this.groups;
   }
 
@@ -21,11 +23,5 @@ export class FakeMessaging implements MessagingProvider {
     }
     this.sent.push(input);
     return { externalMessageId: `msg-${this.sent.length}` };
-  }
-
-  loggedOut = false;
-
-  async logout(): Promise<void> {
-    this.loggedOut = true;
   }
 }

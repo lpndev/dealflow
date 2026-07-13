@@ -1,4 +1,4 @@
-export { API, GATEWAY, API_DOWN } from "./env";
+export { API, API_DOWN } from "./env";
 export {
   authClient,
   useSession,
@@ -14,20 +14,13 @@ export {
   useOrganizations,
   createWorkspace,
 } from "./auth";
-export {
-  apiGet,
-  apiPost,
-  apiPut,
-  apiPatch,
-  apiDelete,
-  gatewayPost,
-  fetchSession,
-} from "./api";
+export { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "./api";
 export {
   plural,
   fmtTime,
   fmtMin,
   connectionLabel,
+  connectionDot,
   errMsg,
   ROLE_LABEL,
   roleRank,

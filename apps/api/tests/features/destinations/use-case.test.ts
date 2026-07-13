@@ -19,14 +19,12 @@ function providerWith(names: string[]) {
 
 it("syncs groups from the provider", async () => {
   const db = createDb(":memory:");
-  const result = await syncDestinations(
-    db,
-    DEFAULT_WORKSPACE_ID,
-    providerWith(["Grupo 1", "Grupo 2"]),
-  );
+  const provider = providerWith(["Grupo 1", "Grupo 2"]);
+  const result = await syncDestinations(db, DEFAULT_WORKSPACE_ID, provider);
 
   expect(result).toHaveLength(2);
   expect(listDestinations(db, DEFAULT_WORKSPACE_ID)).toHaveLength(2);
+  expect(provider.groupsRequestedBy).toEqual([DEFAULT_WORKSPACE_ID]);
 });
 
 it("is idempotent and updates the name on re-sync", async () => {

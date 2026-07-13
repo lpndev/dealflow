@@ -31,7 +31,7 @@ export async function syncDestinations(
   workspaceId: string,
   provider: MessagingProvider,
 ) {
-  const groups = await provider.listGroups();
+  const groups = await provider.listGroups(workspaceId);
 
   for (const group of groups) {
     const existing = db

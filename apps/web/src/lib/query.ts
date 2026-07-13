@@ -1,5 +1,5 @@
 import { QueryClient, queryOptions } from "@tanstack/react-query";
-import { fetchSession } from "./api";
+import { apiGet } from "./api";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -9,6 +9,7 @@ export const queryClient = new QueryClient({
 
 export const sessionQuery = queryOptions({
   queryKey: ["wa-session"],
-  queryFn: fetchSession,
+  queryFn: (): Promise<{ connection: string; qr: string | null }> =>
+    apiGet("/wa/session"),
   refetchInterval: (q) => (q.state.data?.connection === "open" ? 20000 : 3000),
 });

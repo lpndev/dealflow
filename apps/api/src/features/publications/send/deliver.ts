@@ -96,6 +96,7 @@ export async function deliverOne(
 
   try {
     const { externalMessageId } = await provider.send({
+      sessionId: workspaceId,
       destinationExternalId: dest.externalId,
       content: pub.content,
       imageUrl: pub.imageUrl ?? undefined,

@@ -1,4 +1,6 @@
-import { rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, rename, rm } from "node:fs/promises";
+import path from "node:path";
 import { Boom } from "@hapi/boom";
 import makeWASocket, {
   Browsers,
@@ -10,91 +12,140 @@ import makeWASocket, {
 import pino from "pino";
 import qrcode from "qrcode";
 
-const AUTH_DIR = process.env.WA_AUTH_DIR ?? "wa-auth";
+const AUTH_ROOT = process.env.WA_AUTH_DIR ?? "wa-auth";
 const logger = pino({ level: "silent" });
 
-let sock: WASocket | undefined;
-let currentQr: string | undefined;
-let connection: "connecting" | "open" | "close" = "close";
-let desired: "up" | "down" = "up";
-let version:
-  Awaited<ReturnType<typeof fetchLatestBaileysVersion>>["version"] | undefined;
+type Session = {
+  sock?: WASocket;
+  qr?: string;
+  qrCache?: { qr: string; dataUrl: string };
+  connection: "connecting" | "open" | "close";
+  desired: "up" | "down";
+};
 
-export async function connect(): Promise<void> {
-  desired = "up";
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  if (!version) ({ version } = await fetchLatestBaileysVersion());
-  sock = makeWASocket({
+const sessions = new Map<string, Session>();
+let versionPromise: ReturnType<typeof fetchLatestBaileysVersion> | undefined;
+
+async function baileysVersion() {
+  versionPromise ??= fetchLatestBaileysVersion();
+  return (await versionPromise).version;
+}
+
+const authDir = (id: string) => path.join(AUTH_ROOT, id);
+
+function session(id: string): Session {
+  let s = sessions.get(id);
+  if (!s) {
+    s = { connection: "close", desired: "down" };
+    sessions.set(id, s);
+  }
+  return s;
+}
+
+export async function listStoredSessions(): Promise<string[]> {
+  if (!existsSync(AUTH_ROOT)) return [];
+  const entries = await readdir(AUTH_ROOT, { withFileTypes: true });
+  return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+}
+
+async function adoptLegacySession(id: string): Promise<void> {
+  if (existsSync(authDir(id))) return;
+  if (!existsSync(path.join(AUTH_ROOT, "creds.json"))) return;
+  await mkdir(authDir(id), { recursive: true });
+  const entries = await readdir(AUTH_ROOT, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    await rename(
+      path.join(AUTH_ROOT, entry.name),
+      path.join(authDir(id), entry.name),
+    );
+  }
+}
+
+export async function connect(id: string): Promise<void> {
+  const s = session(id);
+  s.desired = "up";
+  await adoptLegacySession(id);
+  const { state, saveCreds } = await useMultiFileAuthState(authDir(id));
+  const sock = makeWASocket({
     auth: state,
-    version,
+    version: await baileysVersion(),
     browser: Browsers.ubuntu("Chrome"),
     logger,
   });
+  s.sock = sock;
 
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", (update) => {
-    if (update.qr) currentQr = update.qr;
-    if (update.connection) connection = update.connection;
-    if (update.connection === "open") currentQr = undefined;
+    if (update.qr) s.qr = update.qr;
+    if (update.connection) s.connection = update.connection;
+    if (update.connection === "open") s.qr = undefined;
     if (update.connection === "close") {
       const code = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
-      if (desired === "up" && code !== DisconnectReason.loggedOut)
-        void connect();
+      if (s.desired === "up" && code !== DisconnectReason.loggedOut)
+        void connect(id);
     }
   });
 }
 
-export async function reconnect(): Promise<void> {
-  if (connection === "open") return;
-  await connect();
+export async function reconnect(id: string): Promise<void> {
+  if (session(id).connection === "open") return;
+  await connect(id);
 }
 
-export function endConnection(): void {
-  desired = "down";
-  sock?.end(undefined);
-  sock = undefined;
-  currentQr = undefined;
-  connection = "close";
+export function endConnection(id: string): void {
+  const s = session(id);
+  s.desired = "down";
+  s.sock?.end(undefined);
+  s.sock = undefined;
+  s.qr = undefined;
+  s.connection = "close";
 }
 
-export async function logout(): Promise<void> {
-  desired = "down";
+export async function logout(id: string): Promise<void> {
+  const s = session(id);
+  s.desired = "down";
   try {
-    await sock?.logout();
+    await s.sock?.logout();
   } catch {
     /* already gone — still clear local session */
   }
-  sock = undefined;
-  currentQr = undefined;
-  connection = "close";
-  await rm(AUTH_DIR, { recursive: true, force: true });
+  s.sock = undefined;
+  s.qr = undefined;
+  s.connection = "close";
+  await rm(authDir(id), { recursive: true, force: true });
 }
 
-export function getSession() {
-  return { connection, hasQr: currentQr !== undefined };
+export function getSession(id: string) {
+  const s = sessions.get(id);
+  return { connection: s?.connection ?? "close", hasQr: s?.qr !== undefined };
 }
 
-let qrCache: { qr: string; dataUrl: string } | undefined;
-
-export async function getQrDataUrl(): Promise<string | undefined> {
-  if (!currentQr) return undefined;
-  if (qrCache?.qr !== currentQr) {
-    qrCache = { qr: currentQr, dataUrl: await qrcode.toDataURL(currentQr) };
+export async function getQrDataUrl(id: string): Promise<string | undefined> {
+  const s = sessions.get(id);
+  if (!s?.qr) return undefined;
+  if (s.qrCache?.qr !== s.qr) {
+    s.qrCache = { qr: s.qr, dataUrl: await qrcode.toDataURL(s.qr) };
   }
-  return qrCache.dataUrl;
+  return s.qrCache.dataUrl;
 }
 
-export async function listGroups(): Promise<{ id: string; name: string }[]> {
+export async function listGroups(
+  id: string,
+): Promise<{ id: string; name: string }[]> {
+  const { sock } = session(id);
   if (!sock) throw new Error("not connected");
   const all = await sock.groupFetchAllParticipating();
   return Object.values(all).map((g) => ({ id: g.id, name: g.subject }));
 }
 
 export async function sendMessage(
+  id: string,
   to: string,
   content: string,
   imageUrl?: string,
 ): Promise<{ externalMessageId: string }> {
+  const { sock } = session(id);
   if (!sock) throw new Error("not connected");
   const result = await sock.sendMessage(
     to,

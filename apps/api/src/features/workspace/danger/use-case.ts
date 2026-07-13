@@ -36,6 +36,7 @@ export async function deleteWorkspace(
 ): Promise<void> {
   await revokeWorkspaceApiKeys(headers, workspaceId);
   deleteWorkspaceData(getDb(), workspaceId);
+  await whatsappGateway.logout(workspaceId).catch(() => {});
   await auth.api.deleteOrganization({
     headers,
     body: { organizationId: workspaceId },
@@ -60,6 +61,5 @@ export async function resetOwnedWorkspaces(
   for (const workspaceId of owned) {
     await deleteWorkspace(headers, workspaceId);
   }
-  if (owned.length > 0) await whatsappGateway.logout().catch(() => {});
   return owned.length;
 }

@@ -139,7 +139,7 @@ export function DangerZone() {
   return (
     <Panel
       title="Zona de perigo"
-      hint="Ações irreversíveis. A sessão do WhatsApp e o login do Mercado Livre no navegador (e a config da extensão) não são apagados aqui — remova-os no próprio navegador."
+      hint="Ações irreversíveis. O login do Mercado Livre no navegador (e a config da extensão) não são apagados aqui — remova-os no próprio navegador."
     >
       <div className="flex flex-col gap-3">
         {canManage && (
@@ -158,7 +158,7 @@ export function DangerZone() {
         {isOwner && (
           <DangerAction
             title="Excluir este workspace"
-            description="Apaga o workspace e todos os seus dados (ofertas, fila, destinos, chaves)."
+            description="Apaga o workspace e todos os seus dados (ofertas, fila, destinos, chaves) e desconecta o WhatsApp dele."
             actionLabel="Excluir workspace"
             confirmWord={activeName}
             onConfirm={async () => {
@@ -170,7 +170,7 @@ export function DangerZone() {
 
         <DangerAction
           title="Resetar tudo"
-          description="Apaga todos os seus workspaces e dados, revoga as chaves e desconecta o WhatsApp. Sua conta é mantida."
+          description="Apaga todos os workspaces que você é dono (dados, chaves e sessões de WhatsApp). Sua conta é mantida."
           actionLabel="Resetar tudo"
           confirmWord="RESETAR"
           onConfirm={async () => {

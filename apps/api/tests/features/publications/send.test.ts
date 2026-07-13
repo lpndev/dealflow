@@ -70,6 +70,7 @@ it("sends our publication content, never the source link", async () => {
   );
   expect(provider.sent[0].content).not.toContain(deal.sourceUrl);
   expect(provider.sent[0].imageUrl).toBe("https://img/a.jpg");
+  expect(provider.sent[0].sessionId).toBe(DEFAULT_WORKSPACE_ID);
 });
 
 it("does not create a second delivery for the same publication and destination", async () => {

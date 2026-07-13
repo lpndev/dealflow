@@ -43,3 +43,6 @@ const CONNECTION_LABEL: Record<string, string> = {
 
 export const connectionLabel = (connection: string) =>
   CONNECTION_LABEL[connection] ?? connection;
+
+export const connectionDot = (connected: boolean, qr: unknown): string =>
+  connected ? "bg-emerald-500" : qr ? "bg-primary" : "bg-muted-foreground";

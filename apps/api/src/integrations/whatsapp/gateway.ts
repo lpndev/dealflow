@@ -1,8 +1,9 @@
 import type {
   MessagingDestination,
-  MessagingProvider,
+  MessagingSession,
   SendMessageInput,
   SendMessageResult,
+  WhatsAppGateway,
 } from "@/shared/messaging";
 
 const GATEWAY_URL = process.env.WA_GATEWAY_URL ?? "http://localhost:3002";
@@ -20,11 +21,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const whatsappGateway: MessagingProvider = {
-  async listGroups(): Promise<MessagingDestination[]> {
+const base = (sessionId: string) =>
+  `/sessions/${encodeURIComponent(sessionId)}`;
+
+export const whatsappGateway: WhatsAppGateway = {
+  async listGroups(sessionId: string): Promise<MessagingDestination[]> {
     const { groups } = await call<{
       groups: { id: string; name: string }[];
-    }>("/groups");
+    }>(`${base(sessionId)}/groups`);
     return groups.map((g) => ({
       provider: "whatsapp",
       externalId: g.id,
@@ -33,7 +37,7 @@ export const whatsappGateway: MessagingProvider = {
   },
 
   async send(input: SendMessageInput): Promise<SendMessageResult> {
-    return call<SendMessageResult>("/messages", {
+    return call<SendMessageResult>(`${base(input.sessionId)}/messages`, {
       method: "POST",
       body: JSON.stringify({
         to: input.destinationExternalId,
@@ -43,7 +47,27 @@ export const whatsappGateway: MessagingProvider = {
     });
   },
 
-  async logout(): Promise<void> {
-    await call("/session/logout", { method: "POST" });
+  async getSession(sessionId: string): Promise<MessagingSession> {
+    const { connection, hasQr } = await call<{
+      connection: string;
+      hasQr: boolean;
+    }>(base(sessionId));
+    if (!hasQr) return { connection, qr: null };
+    const { qr } = await call<{ qr: string }>(`${base(sessionId)}/qr`).catch(
+      () => ({ qr: null as string | null }),
+    );
+    return { connection, qr };
+  },
+
+  async connect(sessionId: string): Promise<void> {
+    await call(`${base(sessionId)}/connect`, { method: "POST" });
+  },
+
+  async end(sessionId: string): Promise<void> {
+    await call(`${base(sessionId)}/end`, { method: "POST" });
+  },
+
+  async logout(sessionId: string): Promise<void> {
+    await call(`${base(sessionId)}/logout`, { method: "POST" });
   },
 };
