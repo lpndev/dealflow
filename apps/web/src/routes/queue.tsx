@@ -41,21 +41,18 @@ export function QueueTab() {
   });
 
   const reorder = useMutation({
-    mutationFn: (orderedIds: string[]) =>
-      apiPut("/queue/order", { orderedIds }),
-    onMutate: async (orderedIds) => {
+    mutationFn: (next: QueueItem[]) =>
+      apiPut("/queue/order", {
+        orderedIds: next
+          .filter((i) => i.status === "scheduled")
+          .map((i) => i.id),
+      }),
+    onMutate: async (next) => {
       await qc.cancelQueries({ queryKey: ["queue"] });
       const prev = qc.getQueryData<QueueData>(["queue"]);
-      qc.setQueryData<QueueData>(["queue"], (o) => {
-        if (!o) return o;
-        const byId = new Map(o.items.map((i) => [i.id, i]));
-        return {
-          ...o,
-          items: orderedIds
-            .map((id) => byId.get(id))
-            .filter((i): i is QueueItem => !!i),
-        };
-      });
+      qc.setQueryData<QueueData>(["queue"], (o) =>
+        o ? { ...o, items: next } : o,
+      );
       return { prev };
     },
     onError: (e, _v, ctx) => {
@@ -93,8 +90,10 @@ export function QueueTab() {
     const next = [...items];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
-    reorder.mutate(next.map((i) => i.id));
+    reorder.mutate(next);
   }
+
+  const movable = (i: number) => items[i]?.status === "scheduled";
 
   return (
     <Panel title="Fila" hint="Próximos envios, espaçados para parecer humano">
@@ -133,9 +132,8 @@ export function QueueTab() {
               controls={
                 it.status === "scheduled"
                   ? {
-                      onUp: i > 0 ? () => move(i, i - 1) : undefined,
-                      onDown:
-                        i < items.length - 1 ? () => move(i, i + 1) : undefined,
+                      onUp: movable(i - 1) ? () => move(i, i - 1) : undefined,
+                      onDown: movable(i + 1) ? () => move(i, i + 1) : undefined,
                       onCancel: () => cancel.mutate(it.id),
                     }
                   : undefined
