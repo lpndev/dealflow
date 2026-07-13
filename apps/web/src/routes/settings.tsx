@@ -1,5 +1,5 @@
 import { FloppyDiskIcon } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { toast } from "sonner";
@@ -22,7 +22,14 @@ import {
   InputGroupText,
 } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPut, errMsg, fmtMin, useCanManage } from "@/lib";
+import {
+  apiGet,
+  apiPut,
+  errMsg,
+  fmtMin,
+  useCanManage,
+  useUnsavedWarning,
+} from "@/lib";
 import { type Settings } from "@/types";
 
 const PLACEHOLDERS = [
@@ -139,9 +146,16 @@ function SettingsForm({ settings }: { settings: Settings }) {
       template: settings.messageTemplate,
     },
     onSubmit: async ({ value }) => {
-      await save.mutateAsync(value);
+      const ok = await save.mutateAsync(value).then(
+        () => true,
+        () => false,
+      );
+      if (ok) form.reset(value);
     },
   });
+
+  const isDirty = useStore(form.store, (s) => s.isDirty);
+  useUnsavedWarning(isDirty);
 
   function insertPlaceholder(current: string, placeholder: string) {
     const el = ref.current;

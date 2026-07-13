@@ -15,7 +15,9 @@ import {
   errMsg,
   mergeCapture,
   plural,
+  useUnsavedWarning,
 } from "@/lib";
+import { useDraftStore } from "@/store";
 import {
   type DeliveryResult,
   type Destination,
@@ -23,20 +25,12 @@ import {
   type Form,
 } from "@/types";
 
-const DRAFT_INPUT_KEY = "dealflow:draft:input";
-const DRAFT_FORM_KEY = "dealflow:draft:form";
-
 export function NewOffer() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [input, setInput] = useState(
-    () => localStorage.getItem(DRAFT_INPUT_KEY) ?? "",
-  );
-  const [form, setForm] = useState<Form | null>(() => {
-    const saved = localStorage.getItem(DRAFT_FORM_KEY);
-    return saved ? (JSON.parse(saved) as Form) : null;
-  });
+  const { input, setInput, form, setForm, mintedFor, setMintedFor } =
+    useDraftStore();
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [publicationId, setPublicationId] = useState<string | null>(null);
@@ -45,15 +39,8 @@ export function NewOffer() {
   const [captured, setCaptured] = useState<Draft | null>(null);
   const [startAt, setStartAt] = useState("");
   const [hasExt, setHasExt] = useState(false);
-  const mintedFor = useRef<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem(DRAFT_INPUT_KEY, input);
-  }, [input]);
-  useEffect(() => {
-    if (form) localStorage.setItem(DRAFT_FORM_KEY, JSON.stringify(form));
-    else localStorage.removeItem(DRAFT_FORM_KEY);
-  }, [form]);
+  useUnsavedWarning(!!form && !publicationId);
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -106,7 +93,7 @@ export function NewOffer() {
     } else {
       setCaptured(draft);
     }
-  }, [capture]);
+  }, [capture, setForm]);
 
   const needsAffiliate = !!form && !form.affiliateUrl && !!form.externalId;
   const needsPrice =
@@ -127,10 +114,18 @@ export function NewOffer() {
   useEffect(() => {
     if (!hasExt || !sourceUrl || !externalId) return;
     if (!needsAffiliate && !needsPrice) return;
-    if (mintedFor.current === externalId) return;
-    mintedFor.current = externalId;
+    if (mintedFor === externalId) return;
+    setMintedFor(externalId);
     window.postMessage({ source: "dealflow", type: "mint", sourceUrl }, "*");
-  }, [hasExt, sourceUrl, externalId, needsAffiliate, needsPrice]);
+  }, [
+    hasExt,
+    sourceUrl,
+    externalId,
+    needsAffiliate,
+    needsPrice,
+    mintedFor,
+    setMintedFor,
+  ]);
 
   const importDeal = useMutation({
     mutationFn: (value: string) => apiPost("/deals/import", { input: value }),
