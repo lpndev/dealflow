@@ -37,7 +37,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const res = await fetch(apiUrl + "/deals/capture", {
         method: "POST",
         headers: { "content-type": "application/json", "x-api-key": apiKey },
-        body: JSON.stringify({ draft: msg.draft }),
+        body: JSON.stringify({
+          draft: msg.draft,
+          affiliateTag: msg.affiliateTag,
+        }),
       });
       if (!res.ok) throw new Error("Dealflow respondeu " + res.status);
       const fromAuto = sender.tab?.id != null && autoTabs.delete(sender.tab.id);

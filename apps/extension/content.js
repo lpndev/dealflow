@@ -62,14 +62,14 @@ async function affiliateLink(url) {
   if (!res.ok) throw new Error("falha ao gerar o link (" + res.status + ")");
   const link = (await res.json()).short_url;
   if (!link) throw new Error("resposta sem short_url");
-  return link;
+  return { link, tag };
 }
 
 async function capture(setStatus) {
   const url = location.href.split("?")[0].split("#")[0];
   const id = productId();
   setStatus("Gerando link…");
-  const affiliateUrl = await affiliateLink(url);
+  const { link: affiliateUrl, tag: affiliateTag } = await affiliateLink(url);
   setStatus("Lendo a oferta…");
   const { name, image, current, original } = scrape();
   const draft = {
@@ -79,7 +79,11 @@ async function capture(setStatus) {
     price: { original, current },
   };
   setStatus("Enviando…");
-  const reply = await chrome.runtime.sendMessage({ type: "capture", draft });
+  const reply = await chrome.runtime.sendMessage({
+    type: "capture",
+    draft,
+    affiliateTag,
+  });
   if (!reply?.ok) throw new Error(reply?.error || "Dealflow não respondeu");
   return draft;
 }
