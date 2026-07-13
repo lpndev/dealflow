@@ -3,16 +3,24 @@ import {
   ClockCounterClockwiseIcon,
   ClockIcon,
   GearIcon,
+  ListIcon,
   TagIcon,
   UsersIcon,
 } from "@phosphor-icons/react";
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import {
   ModeToggle,
   UserMenu,
   WhatsAppStatus,
   WorkspaceSwitcher,
 } from "@/components";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCanManage } from "@/lib";
@@ -43,6 +51,38 @@ const NAV = [
   },
 ];
 
+type NavItem = (typeof NAV)[number];
+
+function MobileNav({ items }: { items: NavItem[] }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const current =
+    items.find((n) =>
+      n.end ? pathname === n.to : pathname.startsWith(n.to) && n.to !== "/",
+    ) ?? items[0];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="sm" className="w-full justify-start">
+            <ListIcon />
+            {current.label}
+          </Button>
+        }
+      />
+      <DropdownMenuContent className="w-[calc(100vw-2rem)]">
+        {items.map((n) => (
+          <DropdownMenuItem key={n.to} onClick={() => navigate(n.to)}>
+            <n.icon />
+            {n.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function Layout() {
   const canManage = useCanManage();
   const nav = NAV.filter((n) => !n.adminOnly || canManage);
@@ -51,23 +91,23 @@ export function Layout() {
     <TooltipProvider>
       <div className="min-h-full">
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 lg:px-8">
-            <div className="flex items-baseline gap-2">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2">
               <Link
                 to="/"
                 className="text-base font-bold tracking-tight text-foreground"
               >
                 Dealflow
               </Link>
-            </div>
-            <div className="flex items-center gap-2">
               <WorkspaceSwitcher />
+            </div>
+            <div className="flex min-w-0 items-center gap-1">
               <WhatsAppStatus />
               <ModeToggle />
               <UserMenu />
             </div>
           </div>
-          <nav className="mx-auto flex max-w-5xl gap-2 px-6 lg:px-8">
+          <nav className="mx-auto hidden max-w-5xl gap-2 px-6 sm:flex lg:px-8">
             {nav.map((n) => (
               <NavLink
                 key={n.to}
@@ -86,9 +126,12 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
+          <div className="px-4 pb-3 sm:hidden">
+            <MobileNav items={nav} />
+          </div>
         </header>
 
-        <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8 lg:px-8">
+        <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           <Outlet />
         </main>
 

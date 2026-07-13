@@ -67,14 +67,16 @@ export function WorkspaceSwitcher() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="min-w-0">
               <BuildingsIcon />
-              {active?.name ?? "Workspace"}
+              <span className="max-w-28 truncate sm:max-w-40">
+                {active?.name ?? "Workspace"}
+              </span>
               <CaretDownIcon />
             </Button>
           }
         />
-        <DropdownMenuContent>
+        <DropdownMenuContent className="w-auto">
           {orgs.map((o) => (
             <DropdownMenuItem key={o.id} onClick={() => switchTo(o.id)}>
               {o.name}

@@ -33,7 +33,7 @@ export function UserMenu() {
           </Button>
         }
       />
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-auto">
         <DropdownMenuGroup>
           <DropdownMenuLabel>{session.user.email}</DropdownMenuLabel>
         </DropdownMenuGroup>
