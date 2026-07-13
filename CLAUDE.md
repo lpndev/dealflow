@@ -123,15 +123,30 @@ migrations em `apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas
 boot. Auth real desde a fundação auth/tenancy: `workspaceId` vem do workspace
 ativo da sessão, não mais de `DEFAULT_WORKSPACE_ID` fixo (ver Nota auth/tenancy).
 
-Slice 3: `apps/wa-gateway` (porta 3002) isola o Baileys — sessão em `wa-auth/`
-(`useMultiFileAuthState`), QR/estado via `connection.update`. API do gateway:
-`GET /health|/session|/session/qr|/groups`, `POST /messages`. A API fala com ele
-por HTTP atrás do `MessagingProvider` (`shared/messaging.ts`); o domínio só vê
-`externalId` opaco (o JID `@g.us` nunca vaza). `POST /destinations/sync` importa
-grupos; `POST /publications/:id/send { destinationIds }` cria `delivery` por
-destino, envia sequencial (sem fila), marca `sent`/`failed`, e a publicação vira
-`sent` quando todas passam. Web: painel WhatsApp (status + QR), sincronizar
-grupos, selecionar destinos, Enviar, status por destino.
+Slice 3 (+ WhatsApp por workspace, 2026-07-12): `apps/wa-gateway` (porta 3002)
+isola o Baileys — **multi-sessão por workspace**: cada sessão em
+`wa-auth/<workspaceId>/` (`useMultiFileAuthState`), estado num
+`Map<sessionId, Session>`. API do gateway: `GET /health`,
+`GET /sessions/:id[/qr|/groups]`, `POST /sessions/:id/{connect,end,logout,messages}`
+(`:id` validado `^[A-Za-z0-9_-]+$` — nunca vira path traversal). No boot
+reconecta toda sessão com dir salvo. **Adoção da sessão legada**: no primeiro
+`connect` de um workspace, se existir `wa-auth/creds.json` flat (layout antigo)
+e o workspace não tiver dir, os arquivos são movidos pra dentro — o número já
+pareado migra sem QR novo (verificado ao vivo 2026-07-12). O **web NÃO fala
+mais com o gateway** — tudo mediado pela API em `/wa/*`
+(`features/whatsapp/route.ts`, `requireAuth`, sessão = `workspaceId` da sessão
+de auth): `GET /wa/session` (status+QR, qualquer membro — um publisher
+convidado usa o WhatsApp do workspace sem parear nada), `POST
+/wa/{connect,end,logout}` (admin+ via `requireRole`). A API fala com o gateway
+atrás do `MessagingProvider` (`shared/messaging.ts` — métodos recebem
+`sessionId` = workspaceId; invariante testada: a delivery usa o workspace dela
+como sessão); o domínio só vê `externalId` opaco (o JID `@g.us` nunca vaza).
+`POST /destinations/sync` importa grupos; `POST /publications/:id/send
+{ destinationIds }` cria `delivery` por destino, envia sequencial (sem fila),
+marca `sent`/`failed`, e a publicação vira `sent` quando todas passam. Web:
+status compacto no header (ícone WhatsApp + bolinha, Popover com QR/detalhes),
+seção WhatsApp na Config (dot + 3 botões com ícone, explicação no hint),
+sincronizar grupos, selecionar destinos, Enviar, status por destino.
 
 Invariantes cobertas por teste: publicação usa nosso `affiliateUrl` (nunca a
 `sourceUrl`); rejeita afiliado ausente/inválido ou igual à origem; produto é
@@ -226,9 +241,12 @@ Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador).
 A **API já exige auth por request** (better-auth, ver Nota auth/tenancy): toda
 rota de domínio passa por `requireAuth` e filtra pelo `workspaceId` da sessão —
 a isolação por workspace é a fronteira que impede um operador ver dado do outro
-(testada em `workspace-isolation.test.ts`). O **gateway** (`:3002`) segue sem
-auth por request: é local, uma sessão única, confiado (multi-número WhatsApp é
-sub-projeto futuro). Gateway valida `imageUrl` só por protocolo (http/https) —
+(testada em `workspace-isolation.test.ts`). A sessão de WhatsApp também é
+por-workspace (ver Slice 3): o web só a acessa via `/wa/*` autenticado; status
+pra qualquer membro, gerenciar (connect/end/logout) é admin+. O **gateway**
+(`:3002`) segue sem auth por request: é local, só a API fala com ele, confiado;
+o `:id` de sessão é validado (`^[A-Za-z0-9_-]+$`) antes de virar path de fs.
+Gateway valida `imageUrl` só por protocolo (http/https) —
 o `imageUrl` vem da oferta do próprio operador e o gateway é local, então SSRF
 de IP privado está fora do modelo de ameaça. Se um dia o gateway aceitar entrada
 não confiável (SaaS): resolver DNS, bloquear faixas privadas/loopback/link-local
@@ -245,7 +263,8 @@ definidos via access-control em `shared/auth/permissions.ts` e passados ao plugi
 Matriz (server-side, fail-closed, `requireRole` após `requireAuth`): publisher
 cria/agenda/envia publicação + lê dashboard/fila/histórico + lista destinos;
 admin+ gerencia settings (template/delays/tag ML), sync/toggle de destinos,
-membros e API keys; só owner exclui workspace/billing. **`workspaceId` vem SEMPRE
+membros, API keys e a sessão de WhatsApp (`/wa/connect|end|logout`); só owner
+exclui workspace/billing. **`workspaceId` vem SEMPRE
 da sessão** (`session.activeOrganizationId`), nunca do body/query — é a fronteira
 de segurança. Bootstrap: o 1º signup **reivindica o workspace `default`** só se
 ele já tiver dado real (destino/publicação — o operador que já usava), senão vai
@@ -280,13 +299,14 @@ workspaces**: helper `createWorkspace(name)` (extraído do onboarding — create
 setActive) + item "Novo workspace" no `WorkspaceSwitcher` (Dialog shadcn). (3) **Zona de
 perigo** (fim da Config, `components/danger-zone.tsx`, AlertDialog shadcn): revogar todas as
 chaves (admin+, `DELETE /api-keys`), excluir workspace (owner, `DELETE /workspace` — cascata
-das tabelas de domínio por `workspaceId` + revoga chaves + `deleteOrganization`; confirma
-digitando o nome), resetar tudo (`POST /workspace/reset` — apaga todos os workspaces que o
-user é dono + logout do WhatsApp **só se dono de algum**, mantém a conta), excluir conta
-(`reset` + `authClient.deleteUser({password})`; `user.deleteUser.enabled` ligado no auth).
-`MessagingProvider.logout()` novo → gateway `POST /session/logout` (que já apaga `wa-auth/`).
-Boundary dito na UI: WhatsApp é **sessão única global** (reset desconecta a única sessão) e
-login ML + config da extensão vivem no navegador (o web não limpa — o user limpa lá).
+das tabelas de domínio por `workspaceId` + revoga chaves + **logout da sessão de WhatsApp do
+workspace** + `deleteOrganization`; confirma digitando o nome), resetar tudo
+(`POST /workspace/reset` — apaga todos os workspaces que o user é dono, cada um deslogando a
+própria sessão de WhatsApp; mantém a conta), excluir conta (`reset` +
+`authClient.deleteUser({password})`; `user.deleteUser.enabled` ligado no auth).
+`MessagingProvider.logout(sessionId)` → gateway `POST /sessions/:id/logout` (apaga
+`wa-auth/<id>/`). Boundary dito na UI: login ML + config da extensão vivem no navegador
+(o web não limpa — o user limpa lá).
 
 Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
 Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
@@ -310,8 +330,11 @@ caminho, mesma idempotência/dedupe). Falha vira `failed` e NÃO re-tenta sozinh
 exige só a API rodando. Fila é gerenciável (`features/queue/use-case.ts`):
 `cancelScheduled` deleta um `scheduled` (volta a pub p/ `ready` se era o último);
 `reorderQueue(orderedIds)` mantém os slots de `dueAt` fixos e só troca qual item
-ocupa cada slot (preserva o espaçamento). UI: setas ↑/↓ (swap) + ✕ na aba Fila,
-otimista com pausa no auto-refresh durante a ação.
+ocupa cada slot (preserva o espaçamento); o server rejeita a lista se qualquer id
+não for `scheduled` (fail-closed), então o **web manda só os ids `scheduled`** e
+não oferece seta pra cruzar com item `processing` (bug real 2026-07-12: com um
+item "enviando…" na fila, reordenar os demais 409-ava sempre). UI: setas ↑/↓
+(swap) + ✕ na aba Fila, otimista com pausa no auto-refresh durante a ação.
 
 Nota dashboard (Início, `/`): tela inicial com métricas derivadas do banco — NÃO é
 infra nova. `GET /dashboard?range=day|week|month|year` (`features/dashboard/`)
@@ -369,10 +392,15 @@ auth/usuários):
   `next-themes`). Toasts via `import { toast } from "sonner"` →
   `toast.success/error`. Substituiu o toaster à mão + o `useUiStore` (removidos).
   Qualquer rota levanta toast (settings salvo, erros de mutation da fila/import).
-- **Zustand:** instalado mas **ocioso** — o toast migrou pro Sonner e não há
-  estado global cross-rota hoje. Mantido de propósito (decisão do operador),
-  staged pro futuro (sessão/UI global quando auth/usuários chegarem); sem `store/`
-  até existir consumidor real.
+- **Zustand:** ganhou consumidor real (2026-07-12): `store/draft.ts`
+  (`useDraftStore`) guarda o rascunho da nova oferta (`input`, `form`,
+  `mintedFor`) **em memória** — navegar entre rotas preserva o digitado e não
+  re-dispara o auto-mint; refresh limpa tudo (era `localStorage` antes: persistia
+  além da conta e re-abria a aba do ML a cada visita ao `/new`). Complemento:
+  `useUnsavedWarning(dirty)` (`lib/hooks.ts`, `beforeunload` nativo) avisa antes
+  de sair com form sujo — no `/new` (form sem publicação salva) e na Config
+  (`isDirty` do TanStack Form; o submit faz `form.reset(value)` pra zerar o
+  dirty após salvar).
 - **TanStack Form + shadcn `Field`:** o form de **Config** (`SettingsForm`,
   montado após o `useQuery(["settings"])` resolver p/ ter `defaultValues`) usa a
   integração shadcn↔TanStack Form: `form.Field` ligado às primitives `Field`/
@@ -393,8 +421,9 @@ input-group`, o prefixo `min`/`R$` nativo — sem hack de `pl-`). Validators
 FUTURO (parcialmente entregue): a fundação **auth + workspace multi-tenant** já
 existe (users, sessão, workspaces com membros/convites/roles, `workspaceId` da
 sessão — ver Nota auth/tenancy). Sub-projetos multi-tenant que ficam pra depois,
-cada um seu próprio ciclo: **múltiplos números de WhatsApp** por workspace (hoje
-o gateway é sessão única global), **múltiplas contas ML + nichos** (hoje uma tag
+cada um seu próprio ciclo: **múltiplos números de WhatsApp POR workspace** (o
+gateway já é multi-sessão — um número por workspace; vários números no MESMO
+workspace é que fica pra depois), **múltiplas contas ML + nichos** (hoje uma tag
 de afiliado por workspace), **billing/planos/trial** (SaaS) e **split da landing
 page**. Ordem/escopo abertos; construir sem fechar essas portas.
 
@@ -405,7 +434,11 @@ build — load unpacked) que roda no `mercadolivre.com.br` logado do operador.
 `meli.la` (ver Nota geração do link de afiliado), raspa título/imagem/De/Por do
 DOM+JSON-LD (a página logada não é anti-botada, o preço vem completo), monta um
 `ExtractedDeal` e manda pro `background.js`, que faz `POST /deals/capture` na API
-(fora do content script pra escapar do CORS). A API guarda o draft num slot único
+(fora do content script pra escapar do CORS). A captura também envia a
+`affiliateTag` lida no mint (`{ draft, affiliateTag }` no body) e a API a adota
+em `settings.mlAffiliateTag` **só quando está vazio** (`adoptAffiliateTag`,
+testado: nunca sobrescreve tag configurada) — o operador não digita a etiqueta;
+a primeira captura preenche. A API guarda o draft num slot único
 em memória (`features/deals/capture/route.ts`, ponytail: handoff transiente numa
 máquina; virar tabela se precisar sobreviver a restart) e o `background` foca/abre
 a aba do Dealflow. O web "Nova oferta" faz poll de `GET /deals/capture` (consome e
@@ -488,11 +521,17 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
   `Tooltip` shadcn** ao lado do título — não texto inline sempre-visível. Regra
   de UI: sem labels/descrições redundantes; só o essencial visível, o resto
   atrás do ícone de ajuda. `TooltipProvider` mora no `layout`), `lib/`
-  (`env`/`api`/`format`/`offer`/`query` + barrel),
+  (`env`/`api`/`format`/`offer`/`query`/`hooks` + barrel),
   `types/`, `styles/globals.css`, `routes/` (um arquivo por rota + `layout.tsx`;
-  só orquestração: estado + handlers; JSX grande vira componente com props).
-  **Barrel `index.ts` em cada pasta.** (`store/` só volta quando Zustand tiver
-  consumidor real.)
+  só orquestração: estado + handlers; JSX grande vira componente com props),
+  `store/` (Zustand — hoje só `draft.ts`, rascunho da nova oferta).
+  **Barrel `index.ts` em cada pasta.** Header: duas linhas — logo + direita
+  enxuta (workspace truncado, WhatsApp ícone+bolinha com Popover, tema, avatar);
+  em mobile (`sm:` pra baixo) as tabs colapsam num `DropdownMenu` ☰
+  (`MobileNav` no `layout.tsx`). Gotcha do base-lyra: `DropdownMenuContent` tem
+  `w-(--anchor-width)` — menu ancorado em botão-ícone clipa o conteúdo
+  (`overflow-x-hidden`); passe `className="w-auto"` nesses casos (user-menu,
+  workspace-switcher).
 - **Contratos-fio em `@dealflow/shared`** (`ExtractedDeal`, `DeliveryResult`,
   `QueueItem`, `Settings`): o que atravessa o HTTP mora aí e é importado de
   `@dealflow/shared` — **sem shim/barrel local de re-export**. No fio datas são
