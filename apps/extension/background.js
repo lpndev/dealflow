@@ -1,3 +1,5 @@
+globalThis.importScripts("shared.js");
+
 const DEFAULTS = {
   apiUrl: "http://localhost:3001",
   webUrl: "http://localhost:5173",
@@ -7,7 +9,10 @@ const DEFAULTS = {
 const autoTabs = new Set();
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg?.type === "mint" && msg.sourceUrl) {
+  if (
+    msg?.type === "mint" &&
+    globalThis.dealflow.isMercadoLivreProduct(msg.sourceUrl)
+  ) {
     chrome.tabs.create(
       { url: msg.sourceUrl + "#dealflow-auto", active: false },
       (tab) => {

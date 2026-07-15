@@ -22,7 +22,7 @@
     },
     {
       "matches": ["http://localhost:5173/*"],
-      "js": ["bridge.js"],
+      "js": ["shared.js", "bridge.js"],
       "run_at": "document_idle"
     }
   ]

@@ -1,0 +1,14 @@
+globalThis.dealflow = {
+  isMercadoLivreProduct(value) {
+    try {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        /(?:^|\.)mercadolivre\.com\.br$/i.test(url.hostname) &&
+        /\/(?:p\/MLB|up\/MLBU)\d+/i.test(url.pathname)
+      );
+    } catch {
+      return false;
+    }
+  },
+};
