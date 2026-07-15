@@ -1,4 +1,5 @@
 import {
+  index,
   integer,
   real,
   sqliteTable,
@@ -114,7 +115,15 @@ export const delivery = sqliteTable(
       .notNull()
       .$defaultFn(now),
   },
-  (t) => [unique().on(t.publicationId, t.destinationId)],
+  (t) => [
+    unique().on(t.publicationId, t.destinationId),
+    index("delivery_workspace_status_due_idx").on(
+      t.workspaceId,
+      t.status,
+      t.dueAt,
+    ),
+    index("delivery_status_due_idx").on(t.status, t.dueAt),
+  ],
 );
 
 export const settings = sqliteTable("settings", {
