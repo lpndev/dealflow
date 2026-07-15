@@ -1,7 +1,7 @@
+import { Button } from "@dealflow/ui/button";
+import { Textarea } from "@dealflow/ui/textarea";
 import { ClipboardTextIcon } from "@phosphor-icons/react";
 import { Panel } from "@/components";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 
 export function ImportPanel(props: {
   value: string;

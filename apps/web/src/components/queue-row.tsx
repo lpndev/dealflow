@@ -1,3 +1,5 @@
+import { Button } from "@dealflow/ui/button";
+import { Input } from "@dealflow/ui/input";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -5,8 +7,6 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { fmtTime } from "@/lib";
 import { type QueueItem } from "@/types";
 

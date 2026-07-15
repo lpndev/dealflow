@@ -1,12 +1,9 @@
+import { Button } from "@dealflow/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@dealflow/ui/popover";
 import { WhatsappLogoIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { WhatsAppQr } from "@/components/whatsapp-qr";
 import { connectionDot, connectionLabel } from "@/lib";
 import { sessionQuery } from "@/lib/query";
 
@@ -46,22 +43,7 @@ export function WhatsAppStatus() {
           <span className={`size-2 ${connectionDot(connected, qr)}`} />
           <span className="text-foreground">WhatsApp: {label}</span>
         </div>
-        {qr && !connected && (
-          <>
-            <p className="text-xs text-muted-foreground">
-              No WhatsApp:{" "}
-              <span className="text-foreground">
-                Aparelhos conectados → Conectar um aparelho
-              </span>
-              , e aponte para o código.
-            </p>
-            <img
-              src={qr}
-              alt="QR de conexão do WhatsApp"
-              className="w-full bg-white p-2"
-            />
-          </>
-        )}
+        {qr && !connected && <WhatsAppQr qr={qr} />}
       </PopoverContent>
     </Popover>
   );

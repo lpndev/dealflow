@@ -86,6 +86,8 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 - **API:** Hono + Bun (porta 3001) — `apps/api`
 - **Shared:** `@dealflow/shared` (`packages/shared`) — contratos-fio cross-app,
   só tipos, consumido como source `.ts` (sem build)
+- **UI:** `@dealflow/ui` (`packages/ui`) — design system reutilizável, consumido
+  como source `.tsx` (sem build, igual ao shared) (ver Nota packages/ui)
 - **Qualidade:** TypeScript strict, ESLint (flat, + `eslint-plugin-react-hooks`
   oficial no web — nada de plugins de terceiro), Prettier (+
   `@ianvs/prettier-plugin-sort-imports` e `prettier-plugin-tailwindcss`),
@@ -500,6 +502,33 @@ humano decide só o que publica ("a automação assiste, o humano decide" levado
 limite). Toda a estrutura (Signal → Product → DealSnapshot → …, fronteiras,
 fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
 
+Nota packages/ui (`@dealflow/ui`): o design system reutilizável foi extraído de
+`apps/web` pra um package próprio, consumido como **source `.tsx` sem build**
+(igual ao `@dealflow/shared`). Contém SÓ o global/reutilizável: os primitives
+**shadcn** (`src/ui/*.tsx`), `theme-provider` + `mode-toggle` (o `sonner.tsx`
+depende do theme-provider, por isso vai junto), o `cn` (`src/lib/utils.ts`) e o
+tema (`src/styles/globals.css`) — **nada** de peça de feature (essas ficam em
+`apps/web/src/components/`). As deps do design mudaram pra cá (`@base-ui/react`,
+`class-variance-authority`, `clsx`, `tailwind-merge`, `recharts`, `shadcn`,
+`tw-animate-css`, `@fontsource-variable/*`; `@phosphor-icons/react` e `sonner`
+ficam também no web porque o feature-code os importa direto; `react`/`react-dom`
+são `peerDependencies`). Motivo: uma futura **landing page** reusa tudo sem
+reinstalar o design system. Consumo (exports map em `package.json`):
+`@dealflow/ui/<primitive>` (wildcard `./*` → `src/ui/*.tsx`),
+`@dealflow/ui/{theme-provider,mode-toggle}`, `@dealflow/ui/lib/utils` (o `cn`),
+`@dealflow/ui/styles.css`. O `@/` NÃO existe no BUILD do package (o alias `@`→`src` do web resolveria pra
+`apps/web/src`) — os arquivos consumidos usam **import relativo**. **`components.json`
+(shadcn) vive no package** (aliases apontam pros dirs reais: `ui`→`@/ui`,
+`utils`→`@/lib/utils`; `paths @/*→./src/*` no `tsconfig` só pro CLI resolver):
+`bunx shadcn add` daqui em diante escreve os primitives em `packages/ui/src/ui/`,
+mas os imports `@/…` que ele gera precisam virar **relativos** à mão (o web é
+quem dona o `@`) — mesmo passo manual do estilo base-lyra. **Gotcha Tailwind v4**: v4 varre o module graph mas
+**ignora `node_modules`**, e um workspace package é symlinkado lá — sem ajuste os
+primitives saem sem estilo. Fix: `@source ".."` no `globals.css` (varre
+`packages/ui/src`, relativo ao arquivo CSS). O `src` do próprio web continua
+auto-detectado pelo plugin do web; cada app futuro (landing) tem seu próprio
+`@tailwindcss/vite` + importa `@dealflow/ui/styles.css` (padrão v4 monorepo).
+
 ## Arquitetura
 
 - **Vertical Slice Architecture.** Organize por feature/caso de uso, não por
@@ -513,16 +542,18 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
   `insertDealSnapshot`, `createDeliveries`, `markDeliverySent`.
 - Adapters isolados; detalhes externos (JID, `@g.us`, Baileys, seletores DOM)
   nunca vazam para o domínio.
-- **Web (`apps/web/src`) por responsabilidade, não por página:** `components/ui/`
-  (primitives **shadcn**: `Button`, `Field`, `Input`, `InputGroup`, `Card`,
-  `sonner`, `tooltip`…), `components/` (peças de feature, ex.:
+- **Web (`apps/web/src`) por responsabilidade, não por página:** primitives
+  **shadcn** (`Button`, `Field`, `Input`, `Card`, `sonner`, `tooltip`…) vêm de
+  `@dealflow/ui` (ver Nota packages/ui), não mais de `components/ui/`;
+  `components/` (peças de feature, ex.:
   `new-offer/{import,review,send}-panel`, `queue-row`, `whatsapp-status`; `Panel`
   = wrapper de `Card`; a prop `hint` (`ReactNode`) vira um **ícone de ajuda com
   `Tooltip` shadcn** ao lado do título — não texto inline sempre-visível. Regra
   de UI: sem labels/descrições redundantes; só o essencial visível, o resto
   atrás do ícone de ajuda. `TooltipProvider` mora no `layout`), `lib/`
-  (`env`/`api`/`format`/`offer`/`query`/`hooks` + barrel),
-  `types/`, `styles/globals.css`, `routes/` (um arquivo por rota + `layout.tsx`;
+  (`env`/`api`/`format`/`offer`/`query`/`hooks` + barrel; o `cn`/`utils` mudou
+  pra `@dealflow/ui/lib/utils`),
+  `types/`, `routes/` (um arquivo por rota + `layout.tsx`;
   só orquestração: estado + handlers; JSX grande vira componente com props),
   `store/` (Zustand — hoje só `draft.ts`, rascunho da nova oferta).
   **Barrel `index.ts` em cada pasta.** Header: duas linhas — logo + direita

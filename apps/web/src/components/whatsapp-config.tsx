@@ -1,3 +1,4 @@
+import { Button } from "@dealflow/ui/button";
 import {
   ArrowsClockwiseIcon,
   PowerIcon,
@@ -5,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Panel } from "@/components";
-import { Button } from "@/components/ui/button";
+import { WhatsAppQr } from "@/components/whatsapp-qr";
 import { apiPost, connectionDot, connectionLabel } from "@/lib";
 import { sessionQuery } from "@/lib/query";
 
@@ -73,18 +74,7 @@ export function WhatsAppConfig() {
 
       {qr && !connected && (
         <div className="flex w-64 flex-col gap-2 border bg-card p-4">
-          <p className="text-xs text-muted-foreground">
-            No WhatsApp:{" "}
-            <span className="text-foreground">
-              Aparelhos conectados → Conectar um aparelho
-            </span>
-            , e aponte para o código.
-          </p>
-          <img
-            src={qr}
-            alt="QR de conexão do WhatsApp"
-            className="w-full bg-white p-2"
-          />
+          <WhatsAppQr qr={qr} />
         </div>
       )}
     </Panel>

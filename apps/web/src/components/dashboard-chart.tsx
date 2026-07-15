@@ -1,5 +1,4 @@
 import { type DashboardBucket } from "@dealflow/shared";
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import {
   ChartContainer,
   ChartLegend,
@@ -7,7 +6,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
-} from "@/components/ui/chart";
+} from "@dealflow/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 const config = {
   sent: { label: "Enviados", color: "var(--chart-1)" },

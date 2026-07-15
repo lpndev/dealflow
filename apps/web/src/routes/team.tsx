@@ -1,15 +1,15 @@
-import { TrashIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Empty, ErrorNote, InviteMember, Panel } from "@/components";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@dealflow/ui/badge";
+import { Button } from "@dealflow/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@dealflow/ui/dropdown-menu";
+import { TrashIcon } from "@phosphor-icons/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Empty, ErrorNote, InviteMember, Panel } from "@/components";
 import {
   errMsg,
   organization,

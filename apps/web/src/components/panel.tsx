@@ -1,12 +1,8 @@
+import { Alert, AlertDescription } from "@dealflow/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@dealflow/ui/tooltip";
 import { QuestionIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function Panel(props: {
   title: string;

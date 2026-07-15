@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "tw-animate-css";
 
+@source "..";
+
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 

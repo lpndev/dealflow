@@ -1,3 +1,13 @@
+import { Button } from "@dealflow/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@dealflow/ui/dropdown-menu";
+import { ModeToggle } from "@dealflow/ui/mode-toggle";
+import { Toaster } from "@dealflow/ui/sonner";
+import { TooltipProvider } from "@dealflow/ui/tooltip";
 import {
   ChartBarIcon,
   ClockCounterClockwiseIcon,
@@ -8,21 +18,7 @@ import {
   UsersIcon,
 } from "@phosphor-icons/react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import {
-  ModeToggle,
-  UserMenu,
-  WhatsAppStatus,
-  WorkspaceSwitcher,
-} from "@/components";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { UserMenu, WhatsAppStatus, WorkspaceSwitcher } from "@/components";
 import { useCanManage } from "@/lib";
 
 const NAV = [

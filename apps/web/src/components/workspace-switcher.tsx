@@ -1,7 +1,4 @@
-import { BuildingsIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@dealflow/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -9,16 +6,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@dealflow/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@dealflow/ui/dropdown-menu";
+import { Field, FieldLabel } from "@dealflow/ui/field";
+import { Input } from "@dealflow/ui/input";
+import { BuildingsIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   createWorkspace,
   errMsg,

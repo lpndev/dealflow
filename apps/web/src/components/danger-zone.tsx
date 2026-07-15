@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { Panel } from "@/components";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +8,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@dealflow/ui/alert-dialog";
+import { Button } from "@dealflow/ui/button";
+import { Input } from "@dealflow/ui/input";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Panel } from "@/components";
 import {
   apiDelete,
   apiPost,

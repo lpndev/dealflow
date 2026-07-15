@@ -1,6 +1,4 @@
-import { SignOutIcon, UserCircleIcon } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
-import { Button } from "@/components/ui/button";
+import { Button } from "@dealflow/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +7,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@dealflow/ui/dropdown-menu";
+import { SignOutIcon, UserCircleIcon } from "@phosphor-icons/react";
+import { useNavigate } from "react-router";
 import { signOut, useSession } from "@/lib";
 
 export function UserMenu() {

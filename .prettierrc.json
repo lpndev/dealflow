@@ -15,5 +15,5 @@
     "^[.]"
   ],
   "importOrderParserPlugins": ["typescript", "jsx"],
-  "tailwindStylesheet": "./apps/web/src/styles/globals.css"
+  "tailwindStylesheet": "./packages/ui/src/styles/globals.css"
 }

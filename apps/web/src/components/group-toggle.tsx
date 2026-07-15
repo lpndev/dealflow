@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@dealflow/ui/checkbox";
 
 export function GroupToggle(props: {
   name: string;

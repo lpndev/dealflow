@@ -1,11 +1,11 @@
+import { Button } from "@dealflow/ui/button";
+import { Field, FieldLabel } from "@dealflow/ui/field";
+import { Input } from "@dealflow/ui/input";
 import { CopyIcon, KeyIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Empty, ErrorNote, Panel } from "@/components";
-import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   apiDelete,
   apiGet,

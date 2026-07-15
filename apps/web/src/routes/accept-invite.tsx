@@ -1,8 +1,8 @@
+import { Button } from "@dealflow/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { organization, useSession } from "@/lib";
 
 export function AcceptInvite() {

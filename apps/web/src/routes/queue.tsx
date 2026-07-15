@@ -1,8 +1,8 @@
+import { Button } from "@dealflow/ui/button";
 import { PauseIcon, PlayIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Empty, ErrorNote, Panel, QueueRow } from "@/components";
-import { Button } from "@/components/ui/button";
 import { apiDelete, apiGet, apiPost, apiPut, errMsg } from "@/lib";
 import { type QueueItem } from "@/types";
 

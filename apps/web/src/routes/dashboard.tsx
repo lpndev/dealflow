@@ -1,9 +1,9 @@
 import { type DashboardData, type DashboardRange } from "@dealflow/shared";
+import { Card, CardContent } from "@dealflow/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@dealflow/ui/toggle-group";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { DashboardChart, ErrorNote, Panel } from "@/components";
-import { Card, CardContent } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { apiGet } from "@/lib";
 
 const RANGES: { value: DashboardRange; label: string }[] = [

@@ -1,9 +1,9 @@
+import { ThemeProvider } from "@dealflow/ui/theme-provider";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, redirect } from "react-router";
 import { RouterProvider } from "react-router/dom";
-import { ThemeProvider } from "@/components/theme-provider";
 import { authClient } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import {
@@ -19,7 +19,7 @@ import {
   Signup,
   Team,
 } from "@/routes";
-import "@/styles/globals.css";
+import "@dealflow/ui/styles.css";
 
 async function protectedLoader() {
   const { data } = await authClient.getSession();

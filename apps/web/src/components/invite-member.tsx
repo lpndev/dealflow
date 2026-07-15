@@ -1,3 +1,13 @@
+import { Badge } from "@dealflow/ui/badge";
+import { Button } from "@dealflow/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@dealflow/ui/dropdown-menu";
+import { Field, FieldLabel } from "@dealflow/ui/field";
+import { Input } from "@dealflow/ui/input";
 import {
   CheckIcon,
   CopyIcon,
@@ -8,16 +18,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Empty, ErrorNote, Panel } from "@/components";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   copyWithToast,
   errMsg,

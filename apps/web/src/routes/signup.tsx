@@ -1,9 +1,9 @@
+import { Button } from "@dealflow/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
+import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
+import { Input } from "@dealflow/ui/input";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { redirectSearch, safeRedirect, signUp } from "@/lib";
 
 export function Signup() {

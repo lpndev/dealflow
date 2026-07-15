@@ -1,15 +1,15 @@
-import { EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
-import { Panel, PreviewBubble } from "@/components";
-import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Button } from "@dealflow/ui/button";
+import { Field, FieldLabel } from "@dealflow/ui/field";
+import { Input } from "@dealflow/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
-import { cn } from "@/lib/utils";
+} from "@dealflow/ui/input-group";
+import { cn } from "@dealflow/ui/lib/utils";
+import { EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { Panel, PreviewBubble } from "@/components";
 import { type Form } from "@/types";
 
 export function ReviewPanel(props: {
