@@ -6,6 +6,7 @@ import { getDb } from "@/shared/db";
 import * as schema from "@/shared/schema";
 import { hierarchyGuard } from "./hierarchy";
 import { ac, admin, member, owner } from "./permissions";
+import { trustedOrigins } from "./trusted-origins";
 import { resolveActiveWorkspace } from "./workspace-claim";
 
 if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
@@ -15,7 +16,8 @@ if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3001",
   secret: process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me",
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins,
+  rateLimit: { enabled: true, window: 60, max: 10 },
   database: drizzleAdapter(getDb(), { provider: "sqlite", schema }),
   emailAndPassword: { enabled: true, requireEmailVerification: false },
   user: { deleteUser: { enabled: true } },

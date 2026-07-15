@@ -37,10 +37,34 @@ function query(
   return db
     .select(columns)
     .from(delivery)
-    .innerJoin(publication, eq(delivery.publicationId, publication.id))
-    .innerJoin(dealSnapshot, eq(publication.dealId, dealSnapshot.id))
-    .innerJoin(product, eq(dealSnapshot.productId, product.id))
-    .innerJoin(destination, eq(delivery.destinationId, destination.id))
+    .innerJoin(
+      publication,
+      and(
+        eq(delivery.publicationId, publication.id),
+        eq(delivery.workspaceId, publication.workspaceId),
+      ),
+    )
+    .innerJoin(
+      dealSnapshot,
+      and(
+        eq(publication.dealId, dealSnapshot.id),
+        eq(publication.workspaceId, dealSnapshot.workspaceId),
+      ),
+    )
+    .innerJoin(
+      product,
+      and(
+        eq(dealSnapshot.productId, product.id),
+        eq(dealSnapshot.workspaceId, product.workspaceId),
+      ),
+    )
+    .innerJoin(
+      destination,
+      and(
+        eq(delivery.destinationId, destination.id),
+        eq(delivery.workspaceId, destination.workspaceId),
+      ),
+    )
     .where(
       and(
         eq(delivery.workspaceId, workspaceId),

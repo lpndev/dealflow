@@ -31,8 +31,20 @@ export function loadPublicationContent(
       imageUrl: product.imageUrl,
     })
     .from(publication)
-    .innerJoin(dealSnapshot, eq(publication.dealId, dealSnapshot.id))
-    .innerJoin(product, eq(dealSnapshot.productId, product.id))
+    .innerJoin(
+      dealSnapshot,
+      and(
+        eq(publication.dealId, dealSnapshot.id),
+        eq(publication.workspaceId, dealSnapshot.workspaceId),
+      ),
+    )
+    .innerJoin(
+      product,
+      and(
+        eq(dealSnapshot.productId, product.id),
+        eq(dealSnapshot.workspaceId, product.workspaceId),
+      ),
+    )
     .where(
       and(
         eq(publication.id, publicationId),
@@ -48,17 +60,20 @@ export async function deliverOne(
   provider: MessagingProvider,
   pub: PublicationContent,
   destinationId: string,
+  loadedDestination?: typeof destination.$inferSelect,
 ): Promise<DeliveryResult> {
-  const dest = db
-    .select()
-    .from(destination)
-    .where(
-      and(
-        eq(destination.id, destinationId),
-        eq(destination.workspaceId, workspaceId),
-      ),
-    )
-    .get();
+  const dest =
+    loadedDestination ??
+    db
+      .select()
+      .from(destination)
+      .where(
+        and(
+          eq(destination.id, destinationId),
+          eq(destination.workspaceId, workspaceId),
+        ),
+      )
+      .get();
   if (!dest) throw new DeliveryError(`destination not found: ${destinationId}`);
 
   const existing = db

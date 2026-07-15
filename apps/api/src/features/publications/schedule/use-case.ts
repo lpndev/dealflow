@@ -1,8 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { listDestinationsByIds } from "@/features/destinations/use-case";
 import { getSettings } from "@/features/settings/use-case";
 import type { Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
-import { delivery, destination, publication } from "@/shared/schema";
+import { delivery, publication } from "@/shared/schema";
 
 export type ScheduleInput = {
   publicationId: string;
@@ -41,6 +42,29 @@ export function schedulePublication(
     .get();
   if (!pub) throw new ScheduleError("publication not found");
 
+  const destinationIds = [...new Set(input.destinationIds)];
+  const destinations = listDestinationsByIds(db, workspaceId, destinationIds);
+  const foundIds = new Set(destinations.map((item) => item.id));
+  const missing = destinationIds.find((id) => !foundIds.has(id));
+  if (missing) throw new ScheduleError(`destination not found: ${missing}`);
+
+  const existingIds = new Set(
+    destinationIds.length === 0
+      ? []
+      : db
+          .select({ destinationId: delivery.destinationId })
+          .from(delivery)
+          .where(
+            and(
+              eq(delivery.publicationId, pub.id),
+              eq(delivery.workspaceId, workspaceId),
+              inArray(delivery.destinationId, destinationIds),
+            ),
+          )
+          .all()
+          .map((item) => item.destinationId),
+  );
+
   const { delayMinSeconds, delayMaxSeconds } = getSettings(db, workspaceId);
 
   const startMs = Math.max(now.getTime(), input.startAt?.getTime() ?? 0);
@@ -48,32 +72,8 @@ export function schedulePublication(
   let cursor: number | null = null;
   const scheduled: ScheduledDelivery[] = [];
 
-  for (const destinationId of input.destinationIds) {
-    const dest = db
-      .select()
-      .from(destination)
-      .where(
-        and(
-          eq(destination.id, destinationId),
-          eq(destination.workspaceId, workspaceId),
-        ),
-      )
-      .get();
-    if (!dest)
-      throw new ScheduleError(`destination not found: ${destinationId}`);
-
-    const existing = db
-      .select()
-      .from(delivery)
-      .where(
-        and(
-          eq(delivery.publicationId, pub.id),
-          eq(delivery.destinationId, destinationId),
-          eq(delivery.workspaceId, workspaceId),
-        ),
-      )
-      .get();
-    if (existing) continue;
+  for (const destinationId of destinationIds) {
+    if (existingIds.has(destinationId)) continue;
 
     const gap = randomDelay(delayMinSeconds, delayMaxSeconds, rand) * 1000;
     if (cursor === null) {

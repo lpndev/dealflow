@@ -12,7 +12,7 @@ import { product, publication } from "@/shared/schema";
 
 const deal = {
   title: "Air Fryer",
-  imageUrl: "https://img/a.jpg",
+  imageUrl: "https://http2.mlstatic.com/a.jpg",
   currentPrice: "299,90",
   sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
   affiliateUrl: "https://mercadolivre.com/sec/ours",

@@ -1,6 +1,8 @@
 import { createMiddleware } from "hono/factory";
+import { getDb } from "@/shared/db";
 import { auth } from "./auth";
 import type { AppEnv } from "./require-auth";
+import { isWorkspaceMember } from "./workspace-access";
 
 export function parseMetadata(
   metadata: unknown,
@@ -23,7 +25,14 @@ export const requireApiKey = createMiddleware<AppEnv>(async (c, next) => {
     .catch(() => null);
   const metadata = verified?.valid ? (verified.key?.metadata ?? null) : null;
   const workspaceId = parseMetadata(metadata)?.organizationId;
-  if (!workspaceId) return c.json({ error: "unauthorized" }, 401);
+  const ownerId = verified?.key?.referenceId;
+  if (
+    !workspaceId ||
+    !ownerId ||
+    !isWorkspaceMember(getDb(), ownerId, workspaceId)
+  ) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
 
   c.set("workspaceId", workspaceId);
   await next();

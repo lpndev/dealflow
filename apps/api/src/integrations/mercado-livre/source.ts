@@ -12,13 +12,27 @@ export function supportsMercadoLivre(url: string): boolean {
 }
 
 export async function fetchMercadoLivre(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: { "user-agent": USER_AGENT, "accept-language": "pt-BR,pt;q=0.9" },
-    redirect: "follow",
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) {
-    throw new Error(`mercado livre responded ${res.status}`);
+  let current = url;
+  for (let redirects = 0; redirects <= 5; redirects += 1) {
+    if (!supportsMercadoLivre(current)) {
+      throw new Error("unsupported marketplace redirect");
+    }
+    const res = await fetch(current, {
+      headers: {
+        "user-agent": USER_AGENT,
+        "accept-language": "pt-BR,pt;q=0.9",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) throw new Error("marketplace redirect without location");
+      current = new URL(location, current).toString();
+      continue;
+    }
+    if (!res.ok) throw new Error(`mercado livre responded ${res.status}`);
+    return res.text();
   }
-  return res.text();
+  throw new Error("too many marketplace redirects");
 }

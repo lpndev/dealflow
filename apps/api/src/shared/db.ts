@@ -1,3 +1,4 @@
+import { chmodSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Database } from "bun:sqlite";
 import { eq } from "drizzle-orm";
@@ -11,6 +12,16 @@ export type Db = BunSQLiteDatabase<typeof schema>;
 const migrationsFolder = fileURLToPath(
   new URL("../../drizzle", import.meta.url),
 );
+const defaultDatabaseUrl = fileURLToPath(
+  new URL("../../dealflow.db", import.meta.url),
+);
+
+export function resolveDatabaseUrl(
+  env: { DATABASE_URL?: string; NODE_ENV?: string } = process.env,
+): string {
+  if (env.DATABASE_URL) return env.DATABASE_URL;
+  return env.NODE_ENV === "test" ? ":memory:" : defaultDatabaseUrl;
+}
 
 function seedLegacyWorkspace(db: Db) {
   const existing = db
@@ -30,7 +41,9 @@ function seedLegacyWorkspace(db: Db) {
 }
 
 export function createDb(url: string): Db {
+  process.umask(0o077);
   const sqlite = new Database(url);
+  if (url !== ":memory:") chmodSync(url, 0o600);
   sqlite.exec("PRAGMA foreign_keys = ON;");
   const db = drizzle(sqlite, { schema });
   runMigrations(db, { migrationsFolder });
@@ -41,6 +54,6 @@ export function createDb(url: string): Db {
 let appDb: Db | undefined;
 
 export function getDb(): Db {
-  appDb ??= createDb(process.env.DATABASE_URL ?? "dealflow.db");
+  appDb ??= createDb(resolveDatabaseUrl());
   return appDb;
 }

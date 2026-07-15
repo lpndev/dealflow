@@ -67,3 +67,43 @@ it("listQueue never leaks another workspace's deliveries", () => {
     .run();
   expect(listQueue(db, "ws-a")).toEqual([]);
 });
+
+it("listQueue rejects cross-workspace relations even if the database is inconsistent", () => {
+  const db = createDb(":memory:");
+  seedDest(db, "ws-a", "a1");
+  db.insert(product)
+    .values({ id: "prod-b", workspaceId: "ws-b", provider: "mercado-livre" })
+    .run();
+  db.insert(dealSnapshot)
+    .values({ id: "deal-b", workspaceId: "ws-b", productId: "prod-b" })
+    .run();
+  db.insert(affiliateLink)
+    .values({
+      id: "link-b",
+      workspaceId: "ws-b",
+      productId: "prod-b",
+      url: "x",
+    })
+    .run();
+  db.insert(publication)
+    .values({
+      id: "pub-a",
+      workspaceId: "ws-a",
+      dealId: "deal-b",
+      affiliateLinkId: "link-b",
+      content: "secret title from ws-b",
+    })
+    .run();
+  db.insert(delivery)
+    .values({
+      id: "delivery-a",
+      workspaceId: "ws-a",
+      publicationId: "pub-a",
+      destinationId: "a1",
+      status: "scheduled",
+      dueAt: new Date(),
+    })
+    .run();
+
+  expect(listQueue(db, "ws-a")).toEqual([]);
+});

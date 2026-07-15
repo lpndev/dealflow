@@ -9,7 +9,7 @@ import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace";
 
 const deal = {
   title: "Air Fryer",
-  imageUrl: "https://img/a.jpg",
+  imageUrl: "https://http2.mlstatic.com/a.jpg",
   currentPrice: "299,90",
   sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
   affiliateUrl: "https://mercadolivre.com/sec/ours",
@@ -194,4 +194,31 @@ it("rejects scheduling an unknown publication", () => {
       DEFAULT_WORKSPACE_ID,
     ),
   ).toThrow(ScheduleError);
+});
+
+it("validates every destination before creating queue entries", () => {
+  const { db, pub } = setup();
+  const [valid] = seed(db, ["G1"]);
+
+  expect(() =>
+    schedulePublication(
+      { publicationId: pub.id, destinationIds: [valid, "missing"] },
+      db,
+      DEFAULT_WORKSPACE_ID,
+    ),
+  ).toThrow(ScheduleError);
+  expect(db.select().from(delivery).all()).toHaveLength(0);
+});
+
+it("deduplicates destinations before scheduling", () => {
+  const { db, pub } = setup();
+  const [valid] = seed(db, ["G1"]);
+
+  const result = schedulePublication(
+    { publicationId: pub.id, destinationIds: [valid, valid] },
+    db,
+    DEFAULT_WORKSPACE_ID,
+  );
+
+  expect(result).toHaveLength(1);
 });

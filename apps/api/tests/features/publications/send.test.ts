@@ -9,7 +9,7 @@ import { FakeMessaging } from "../../support/fake-messaging";
 
 const deal = {
   title: "Air Fryer",
-  imageUrl: "https://img/a.jpg",
+  imageUrl: "https://http2.mlstatic.com/a.jpg",
   currentPrice: "299,90",
   sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
   affiliateUrl: "https://mercadolivre.com/sec/ours",
@@ -69,7 +69,7 @@ it("sends our publication content, never the source link", async () => {
     "https://mercadolivre.com/sec/ours",
   );
   expect(provider.sent[0].content).not.toContain(deal.sourceUrl);
-  expect(provider.sent[0].imageUrl).toBe("https://img/a.jpg");
+  expect(provider.sent[0].imageUrl).toBe("https://http2.mlstatic.com/a.jpg");
   expect(provider.sent[0].sessionId).toBe(DEFAULT_WORKSPACE_ID);
 });
 
@@ -168,4 +168,21 @@ it("rejects sending an unknown publication", async () => {
       new FakeMessaging(),
     ),
   ).rejects.toBeInstanceOf(DeliveryError);
+});
+
+it("validates every destination before sending anything", async () => {
+  const { db, pub } = setup();
+  const [valid] = seed(db, ["Grupo 1"]);
+  const provider = new FakeMessaging();
+
+  await expect(
+    sendPublication(
+      { publicationId: pub.id, destinationIds: [valid, "missing"] },
+      db,
+      DEFAULT_WORKSPACE_ID,
+      provider,
+    ),
+  ).rejects.toBeInstanceOf(DeliveryError);
+  expect(provider.sent).toHaveLength(0);
+  expect(db.select().from(delivery).all()).toHaveLength(0);
 });

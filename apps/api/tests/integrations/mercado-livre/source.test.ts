@@ -1,5 +1,8 @@
 import { expect, it } from "bun:test";
-import { supportsMercadoLivre } from "@/integrations/mercado-livre/source";
+import {
+  fetchMercadoLivre,
+  supportsMercadoLivre,
+} from "@/integrations/mercado-livre/source";
 
 it("supports a real mercado livre host", () => {
   expect(supportsMercadoLivre("https://www.mercadolivre.com.br/p/MLB123")).toBe(
@@ -29,4 +32,20 @@ it("rejects other marketplaces", () => {
 
 it("rejects malformed urls", () => {
   expect(supportsMercadoLivre("not a url")).toBe(false);
+});
+
+it("does not follow a marketplace redirect to an internal service", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(null, {
+      status: 302,
+      headers: { location: "http://127.0.0.1:3002/sessions/secret" },
+    })) as unknown as typeof fetch;
+  try {
+    await expect(fetchMercadoLivre("https://meli.la/xxxxxxx")).rejects.toThrow(
+      "unsupported marketplace redirect",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

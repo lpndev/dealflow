@@ -1,6 +1,7 @@
 import { expect, it } from "bun:test";
 import {
   listDestinations,
+  publicDestinations,
   syncDestinations,
 } from "@/features/destinations/use-case";
 import { createDb } from "@/shared/db";
@@ -44,4 +45,17 @@ it("lists destinations with a stable id", async () => {
   const rows = listDestinations(db, DEFAULT_WORKSPACE_ID);
   expect(rows[0].id).toBeString();
   expect(rows[0].externalId).toBe("0@g.us");
+});
+
+it("does not expose provider ids in the public response", async () => {
+  const db = createDb(":memory:");
+  await syncDestinations(db, DEFAULT_WORKSPACE_ID, providerWith(["Grupo 1"]));
+
+  const rows = publicDestinations(listDestinations(db, DEFAULT_WORKSPACE_ID));
+  expect(rows[0]).toEqual({
+    id: expect.any(String),
+    name: "Grupo 1",
+    enabled: true,
+  });
+  expect("externalId" in rows[0]).toBe(false);
 });

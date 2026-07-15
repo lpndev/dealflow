@@ -1,3 +1,4 @@
+import type { PublicationDraft } from "@dealflow/shared";
 import { and, eq } from "drizzle-orm";
 import { getSettings } from "@/features/settings/use-case";
 import type { Db } from "@/shared/db";
@@ -14,16 +15,7 @@ import { renderPublication, type RenderInput } from "./render";
 
 const PROVIDER = "mercado-livre";
 
-export type PublicationInput = {
-  title?: string;
-  imageUrl?: string;
-  originalPrice?: string;
-  currentPrice?: string;
-  coupon?: string;
-  sourceUrl?: string;
-  affiliateUrl?: string;
-  externalId?: string;
-};
+export type PublicationInput = Partial<PublicationDraft>;
 
 export type PublicationResult = {
   id: string;
@@ -56,6 +48,9 @@ export function createPublication(
   }
   if (sourceUrl && sameUrl(affiliateUrl, sourceUrl)) {
     throw new PublicationError("affiliate link must not be the source link");
+  }
+  if (input.imageUrl && !isTrustedImageUrl(input.imageUrl)) {
+    throw new PublicationError("image must use the Mercado Livre image CDN");
   }
 
   const render = toRenderInput(input);
@@ -161,6 +156,20 @@ function isHttpUrl(value: string): boolean {
   try {
     const { protocol } = new URL(value);
     return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function isTrustedImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      /(?:^|\.)mlstatic\.com$/i.test(url.hostname)
+    );
   } catch {
     return false;
   }

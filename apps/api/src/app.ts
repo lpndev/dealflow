@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { dashboard } from "@/features/dashboard/route";
 import { capture } from "@/features/deals/capture/route";
@@ -13,13 +14,31 @@ import { settingsRoutes } from "@/features/settings/route";
 import { whatsapp } from "@/features/whatsapp/route";
 import { workspaceDanger } from "@/features/workspace/danger/route";
 import { auth, type AppEnv } from "@/shared/auth";
+import { trustedOriginSet } from "@/shared/auth/trusted-origins";
 
 export const app = new Hono<AppEnv>();
 
 app.use(
+  "*",
+  bodyLimit({
+    maxSize: 256 * 1024,
+    onError: (c) => c.json({ error: "request body too large" }, 413),
+  }),
+);
+
+app.use("*", async (c, next) => {
+  const origin = c.req.header("origin");
+  const apiKeyRequest = c.req.path === "/deals/capture";
+  if (origin && !trustedOriginSet.has(origin) && !apiKeyRequest) {
+    return c.json({ error: "forbidden origin" }, 403);
+  }
+  await next();
+});
+
+app.use(
   "/*",
   cors({
-    origin: "http://localhost:5173",
+    origin: (origin) => (trustedOriginSet.has(origin) ? origin : null),
     credentials: true,
     allowHeaders: ["content-type", "x-api-key"],
   }),

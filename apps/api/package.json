@@ -15,7 +15,6 @@
     "hono": "^4.6.16"
   },
   "devDependencies": {
-    "@better-auth/cli": "^1.4.21",
     "@types/bun": "^1.1.16",
     "drizzle-kit": "^0.31.10"
   }

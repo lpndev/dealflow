@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
 import { destination } from "@/shared/schema";
@@ -8,6 +8,28 @@ export function listDestinations(db: Db, workspaceId: string) {
     .select()
     .from(destination)
     .where(eq(destination.workspaceId, workspaceId))
+    .all();
+}
+
+export function publicDestinations(rows: ReturnType<typeof listDestinations>) {
+  return rows.map(({ id, name, enabled }) => ({ id, name, enabled }));
+}
+
+export function listDestinationsByIds(
+  db: Db,
+  workspaceId: string,
+  ids: string[],
+) {
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(destination)
+    .where(
+      and(
+        eq(destination.workspaceId, workspaceId),
+        inArray(destination.id, ids),
+      ),
+    )
     .all();
 }
 

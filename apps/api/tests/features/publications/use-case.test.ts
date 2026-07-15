@@ -19,7 +19,7 @@ function db() {
 
 const valid = {
   title: "Air Fryer Mondial 5L",
-  imageUrl: "https://img/a.jpg",
+  imageUrl: "https://http2.mlstatic.com/a.jpg",
   originalPrice: "499,90",
   currentPrice: "299,90",
   coupon: "CASA20",
@@ -64,6 +64,16 @@ it("rejects an affiliate link equal to the source link", () => {
   expect(() =>
     createPublication(
       { ...valid, affiliateUrl: valid.sourceUrl },
+      db(),
+      DEFAULT_WORKSPACE_ID,
+    ),
+  ).toThrow(PublicationError);
+});
+
+it("rejects image urls that could make the gateway fetch an internal host", () => {
+  expect(() =>
+    createPublication(
+      { ...valid, imageUrl: "http://127.0.0.1:3002/health" },
       db(),
       DEFAULT_WORKSPACE_ID,
     ),

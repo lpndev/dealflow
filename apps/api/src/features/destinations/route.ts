@@ -4,6 +4,7 @@ import { requireAuth, requireRole, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import {
   listDestinations,
+  publicDestinations,
   setDestinationEnabled,
   syncDestinations,
 } from "./use-case";
@@ -13,7 +14,11 @@ export const destinations = new Hono<AppEnv>();
 destinations.use("*", requireAuth);
 
 destinations.get("/", (c) =>
-  c.json({ destinations: listDestinations(getDb(), c.get("workspaceId")) }),
+  c.json({
+    destinations: publicDestinations(
+      listDestinations(getDb(), c.get("workspaceId")),
+    ),
+  }),
 );
 
 destinations.patch("/:id", requireRole("owner", "admin"), async (c) => {
@@ -24,11 +29,13 @@ destinations.patch("/:id", requireRole("owner", "admin"), async (c) => {
     return c.json({ error: "enabled must be a boolean" }, 400);
   }
   return c.json({
-    destinations: setDestinationEnabled(
-      getDb(),
-      c.get("workspaceId"),
-      c.req.param("id"),
-      body.enabled,
+    destinations: publicDestinations(
+      setDestinationEnabled(
+        getDb(),
+        c.get("workspaceId"),
+        c.req.param("id"),
+        body.enabled,
+      ),
     ),
   });
 });
@@ -40,7 +47,7 @@ destinations.post("/sync", requireRole("owner", "admin"), async (c) => {
       c.get("workspaceId"),
       whatsappGateway,
     );
-    return c.json({ destinations: synced });
+    return c.json({ destinations: publicDestinations(synced) });
   } catch {
     return c.json({ error: "wa-gateway unavailable" }, 502);
   }
