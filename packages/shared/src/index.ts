@@ -13,11 +13,57 @@ export type ExtractedDeal = {
   coupon?: string;
 };
 
+export type PublicationDraft = {
+  title: string;
+  imageUrl: string;
+  originalPrice: string;
+  currentPrice: string;
+  coupon: string;
+  sourceUrl: string;
+  affiliateUrl: string;
+  externalId: string;
+};
+
+export type Destination = {
+  id: string;
+  name: string;
+  enabled: boolean;
+};
+
 export type DeliveryResult = {
   destinationId: string;
   status: "sent" | "failed";
   error?: string;
 };
+
+export type MessagingDestination = {
+  provider: string;
+  externalId: string;
+  name: string;
+};
+
+export type SendMessageInput = {
+  sessionId: string;
+  destinationExternalId: string;
+  content: string;
+  imageUrl?: string;
+};
+
+export type SendMessageResult = { externalMessageId: string };
+
+export type MessagingSession = {
+  connection: string;
+  qr: string | null;
+};
+
+export type GatewaySession = {
+  connection: string;
+  hasQr: boolean;
+};
+
+export type GatewayGroup = { id: string; name: string };
+
+export type GatewayMessage = Omit<SendMessageInput, "sessionId">;
 
 export type Settings = {
   delayMinSeconds: number;

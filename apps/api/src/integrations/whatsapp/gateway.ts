@@ -1,4 +1,9 @@
 import type {
+  GatewayGroup,
+  GatewayMessage,
+  GatewaySession,
+} from "@dealflow/shared";
+import type {
   MessagingDestination,
   MessagingSession,
   SendMessageInput,
@@ -26,9 +31,9 @@ const base = (sessionId: string) =>
 
 export const whatsappGateway: WhatsAppGateway = {
   async listGroups(sessionId: string): Promise<MessagingDestination[]> {
-    const { groups } = await call<{
-      groups: { id: string; name: string }[];
-    }>(`${base(sessionId)}/groups`);
+    const { groups } = await call<{ groups: GatewayGroup[] }>(
+      `${base(sessionId)}/groups`,
+    );
     return groups.map((g) => ({
       provider: "whatsapp",
       externalId: g.id,
@@ -40,18 +45,15 @@ export const whatsappGateway: WhatsAppGateway = {
     return call<SendMessageResult>(`${base(input.sessionId)}/messages`, {
       method: "POST",
       body: JSON.stringify({
-        to: input.destinationExternalId,
+        destinationExternalId: input.destinationExternalId,
         content: input.content,
         imageUrl: input.imageUrl,
-      }),
+      } satisfies GatewayMessage),
     });
   },
 
   async getSession(sessionId: string): Promise<MessagingSession> {
-    const { connection, hasQr } = await call<{
-      connection: string;
-      hasQr: boolean;
-    }>(base(sessionId));
+    const { connection, hasQr } = await call<GatewaySession>(base(sessionId));
     if (!hasQr) return { connection, qr: null };
     const { qr } = await call<{ qr: string }>(`${base(sessionId)}/qr`).catch(
       () => ({ qr: null as string | null }),

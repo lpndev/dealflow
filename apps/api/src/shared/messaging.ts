@@ -1,24 +1,16 @@
-export type MessagingDestination = {
-  provider: string;
-  externalId: string;
-  name: string;
-};
+import type {
+  MessagingDestination,
+  MessagingSession,
+  SendMessageInput,
+  SendMessageResult,
+} from "@dealflow/shared";
 
-export type SendMessageInput = {
-  sessionId: string;
-  destinationExternalId: string;
-  content: string;
-  imageUrl?: string;
-};
-
-export type SendMessageResult = {
-  externalMessageId: string;
-};
-
-export type MessagingSession = {
-  connection: string;
-  qr: string | null;
-};
+export type {
+  MessagingDestination,
+  MessagingSession,
+  SendMessageInput,
+  SendMessageResult,
+} from "@dealflow/shared";
 
 export interface MessagingProvider {
   listGroups(sessionId: string): Promise<MessagingDestination[]>;

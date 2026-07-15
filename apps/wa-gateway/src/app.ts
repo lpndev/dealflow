@@ -1,3 +1,8 @@
+import type {
+  GatewayMessage,
+  GatewaySession,
+  SendMessageResult,
+} from "@dealflow/shared";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import {
@@ -21,12 +26,21 @@ const requireValidId = createMiddleware(async (c, next) => {
 
 export const app = new Hono();
 
+app.use("*", async (c, next) => {
+  if (c.req.header("origin")) {
+    return c.json({ error: "browser requests are not allowed" }, 403);
+  }
+  await next();
+});
+
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 app.use("/sessions/:id", requireValidId);
 app.use("/sessions/:id/*", requireValidId);
 
-app.get("/sessions/:id", (c) => c.json(getSession(c.req.param("id"))));
+app.get("/sessions/:id", (c) =>
+  c.json<GatewaySession>(getSession(c.req.param("id"))),
+);
 
 app.post("/sessions/:id/connect", async (c) => {
   await reconnect(c.req.param("id"));
@@ -58,24 +72,25 @@ app.get("/sessions/:id/groups", async (c) => {
 });
 
 app.post("/sessions/:id/messages", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as {
-    to?: string;
-    content?: string;
-    imageUrl?: string;
-  } | null;
+  const body = (await c.req
+    .json()
+    .catch(() => null)) as Partial<GatewayMessage> | null;
 
-  if (!body?.to || !body.content) {
-    return c.json({ error: "to and content are required" }, 400);
+  if (!body?.destinationExternalId || !body.content) {
+    return c.json(
+      { error: "destinationExternalId and content are required" },
+      400,
+    );
   }
   if (body.imageUrl && !isHttpUrl(body.imageUrl)) {
     return c.json({ error: "imageUrl must be an http(s) url" }, 400);
   }
 
   try {
-    return c.json(
+    return c.json<SendMessageResult>(
       await sendMessage(
         c.req.param("id"),
-        body.to,
+        body.destinationExternalId,
         body.content,
         body.imageUrl,
       ),

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readdir, rename, rm } from "node:fs/promises";
+import { chmod, mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { Boom } from "@hapi/boom";
 import makeWASocket, {
@@ -44,8 +44,26 @@ function session(id: string): Session {
 
 export async function listStoredSessions(): Promise<string[]> {
   if (!existsSync(AUTH_ROOT)) return [];
+  await hardenAuthStorage();
   const entries = await readdir(AUTH_ROOT, { withFileTypes: true });
   return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+}
+
+async function hardenAuthStorage(): Promise<void> {
+  await chmod(AUTH_ROOT, 0o700);
+  const entries = await readdir(AUTH_ROOT, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(AUTH_ROOT, entry.name);
+    if (entry.isDirectory()) {
+      await chmod(entryPath, 0o700);
+      const files = await readdir(entryPath, { withFileTypes: true });
+      for (const file of files) {
+        if (file.isFile()) await chmod(path.join(entryPath, file.name), 0o600);
+      }
+    } else if (entry.isFile()) {
+      await chmod(entryPath, 0o600);
+    }
+  }
 }
 
 async function adoptLegacySession(id: string): Promise<void> {
@@ -63,10 +81,14 @@ async function adoptLegacySession(id: string): Promise<void> {
 }
 
 export async function connect(id: string): Promise<void> {
+  process.umask(0o077);
+  await mkdir(AUTH_ROOT, { recursive: true, mode: 0o700 });
+  await hardenAuthStorage();
   const s = session(id);
   s.desired = "up";
   await adoptLegacySession(id);
   const { state, saveCreds } = await useMultiFileAuthState(authDir(id));
+  await chmod(authDir(id), 0o700);
   const sock = makeWASocket({
     auth: state,
     version: await baileysVersion(),
