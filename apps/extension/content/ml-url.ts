@@ -4,7 +4,7 @@ export function isMercadoLivreProduct(value: string): boolean {
     return (
       url.protocol === "https:" &&
       /(?:^|\.)mercadolivre\.com\.br$/i.test(url.hostname) &&
-      /\/(?:p\/MLB|up\/MLBU)\d+/i.test(url.pathname)
+      /\/(?:p\/MLB|up\/MLBU)\d+|\/MLB-\d+-/i.test(url.pathname)
     );
   } catch {
     return false;

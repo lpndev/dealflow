@@ -8,6 +8,11 @@ test("accepts https mercadolivre product urls", () => {
   expect(
     isMercadoLivreProduct("https://produto.mercadolivre.com.br/up/MLBU999"),
   ).toBe(true);
+  expect(
+    isMercadoLivreProduct(
+      "https://produto.mercadolivre.com.br/MLB-4287326474-serra-meia-esquadria-_JM",
+    ),
+  ).toBe(true);
 });
 
 test("rejects non-product, wrong host, or insecure urls", () => {
