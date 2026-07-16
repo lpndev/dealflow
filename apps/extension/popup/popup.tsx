@@ -1,17 +1,15 @@
-import { Checkbox } from "@dealflow/ui/checkbox";
 import { Field, FieldLabel } from "@dealflow/ui/field";
 import { Input } from "@dealflow/ui/input";
 import { useEffect, useState } from "react";
 
 const DEFAULTS = {
-  auto: false,
   apiUrl: "http://localhost:3001",
   webUrl: "http://localhost:5173",
   apiKey: "",
 };
 
 type Config = typeof DEFAULTS;
-type UrlKey = "apiUrl" | "webUrl" | "apiKey";
+type Key = keyof Config;
 
 export function Popup() {
   const [config, setConfig] = useState<Config>(DEFAULTS);
@@ -20,35 +18,26 @@ export function Popup() {
     chrome.storage.local.get(DEFAULTS, (v) => setConfig(v as Config));
   }, []);
 
-  function save(patch: Partial<Config>) {
-    setConfig((prev) => ({ ...prev, ...patch }));
-    chrome.storage.local.set(patch);
+  function save(key: Key, value: string) {
+    setConfig((prev) => ({ ...prev, [key]: value }));
+    chrome.storage.local.set({ [key]: value });
   }
 
-  function commit(key: UrlKey) {
-    save({ [key]: config[key].trim() || DEFAULTS[key] });
+  function normalize(key: "apiUrl" | "webUrl") {
+    save(key, config[key].trim() || DEFAULTS[key]);
   }
 
   return (
     <div className="flex w-72 flex-col gap-4 bg-background p-4 text-foreground">
       <h1 className="text-sm font-semibold">Dealflow Capture</h1>
 
-      <Field orientation="horizontal">
-        <Checkbox
-          id="auto"
-          checked={config.auto}
-          onCheckedChange={(checked) => save({ auto: checked })}
-        />
-        <FieldLabel htmlFor="auto">Captura automática</FieldLabel>
-      </Field>
-
       <Field>
         <FieldLabel htmlFor="apiUrl">API</FieldLabel>
         <Input
           id="apiUrl"
           value={config.apiUrl}
-          onChange={(e) => setConfig((p) => ({ ...p, apiUrl: e.target.value }))}
-          onBlur={() => commit("apiUrl")}
+          onChange={(e) => save("apiUrl", e.target.value)}
+          onBlur={() => normalize("apiUrl")}
         />
       </Field>
 
@@ -57,8 +46,8 @@ export function Popup() {
         <Input
           id="webUrl"
           value={config.webUrl}
-          onChange={(e) => setConfig((p) => ({ ...p, webUrl: e.target.value }))}
-          onBlur={() => commit("webUrl")}
+          onChange={(e) => save("webUrl", e.target.value)}
+          onBlur={() => normalize("webUrl")}
         />
       </Field>
 
@@ -70,8 +59,7 @@ export function Popup() {
           autoComplete="off"
           placeholder="cola sua chave aqui"
           value={config.apiKey}
-          onChange={(e) => setConfig((p) => ({ ...p, apiKey: e.target.value }))}
-          onBlur={() => commit("apiKey")}
+          onChange={(e) => save("apiKey", e.target.value)}
         />
       </Field>
 
