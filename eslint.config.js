@@ -11,12 +11,16 @@ export default [
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}", "packages/ui/**/*.{ts,tsx}"],
+    files: [
+      "apps/web/**/*.{ts,tsx}",
+      "apps/extension/**/*.{ts,tsx}",
+      "packages/ui/**/*.{ts,tsx}",
+    ],
     plugins: { "react-hooks": reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },
   },
   {
-    files: ["apps/extension/**/*.js"],
+    files: ["apps/extension/**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.webextensions } },
   },
 ];

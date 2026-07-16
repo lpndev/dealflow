@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "popup",
+    "content",
+    "background.ts",
+    "env.d.ts",
+    "extension-env.d.ts"
+  ]
+}

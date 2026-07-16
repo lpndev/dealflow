@@ -1,23 +1,27 @@
+import type { ExtractedDeal } from "@dealflow/shared";
+
 const PRODUCT_RE = /\/(?:p|up)\/(MLBU?-?\d+)/i;
 
-function productId() {
+function productId(): string | null {
   const m = location.pathname.match(PRODUCT_RE);
   return m ? m[1].replace("-", "").toUpperCase() : null;
 }
 
-function parseBrl(text) {
+function parseBrl(text: string | undefined): number | undefined {
   if (!text) return undefined;
   const n = Number(text.replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : undefined;
 }
 
 function scrape() {
-  let name, image, current;
+  let name: string | undefined;
+  let image: string | undefined;
+  let current: number | undefined;
   for (const s of document.querySelectorAll(
     'script[type="application/ld+json"]',
   )) {
     try {
-      const j = JSON.parse(s.textContent);
+      const j = JSON.parse(s.textContent ?? "");
       const node = Array.isArray(j) ? j.find((x) => x.offers) : j;
       if (node && node.offers) {
         name = node.name;
@@ -30,7 +34,7 @@ function scrape() {
       /* ignore */
     }
   }
-  name = name || document.querySelector("h1.ui-pdp-title")?.textContent?.trim();
+  name ||= document.querySelector("h1.ui-pdp-title")?.textContent?.trim();
   const origEl = document.querySelector(
     ".ui-pdp-price__original-value .andes-money-amount__fraction, s .andes-money-amount__fraction",
   );
@@ -45,13 +49,13 @@ function scrape() {
   return { name, image, current, original };
 }
 
-async function affiliateLink(url) {
+async function affiliateLink(url: string) {
   const tagsRes = await fetch("/affiliate-program/api/v2/stripe/user/tags", {
     credentials: "include",
   });
   if (!tagsRes.ok) throw new Error("não autenticado como afiliado");
   const tags = (await tagsRes.json()).tags || [];
-  const tag = (tags.find((t) => t.in_use) || tags[0])?.tag;
+  const tag = (tags.find((t: { in_use: boolean }) => t.in_use) || tags[0])?.tag;
   if (!tag) throw new Error("sem etiqueta de afiliado nessa conta");
   const res = await fetch("/affiliate-program/api/v2/stripe/user/links", {
     method: "POST",
@@ -62,17 +66,17 @@ async function affiliateLink(url) {
   if (!res.ok) throw new Error("falha ao gerar o link (" + res.status + ")");
   const link = (await res.json()).short_url;
   if (!link) throw new Error("resposta sem short_url");
-  return { link, tag };
+  return { link: link as string, tag: tag as string };
 }
 
-async function capture(setStatus) {
+async function capture(setStatus: (t: string) => void) {
   const url = location.href.split("?")[0].split("#")[0];
-  const id = productId();
+  const id = productId() ?? undefined;
   setStatus("Gerando link…");
   const { link: affiliateUrl, tag: affiliateTag } = await affiliateLink(url);
   setStatus("Lendo a oferta…");
   const { name, image, current, original } = scrape();
-  const draft = {
+  const draft: ExtractedDeal = {
     sourceUrl: url,
     affiliateUrl,
     product: { externalId: id, title: name, imageUrl: image },
@@ -88,7 +92,7 @@ async function capture(setStatus) {
   return draft;
 }
 
-function mountButton(runAuto) {
+function mountButton(runAuto: boolean) {
   const btn = document.createElement("button");
   btn.id = "dealflow-capture";
   btn.textContent = "Capturar oferta";
@@ -106,7 +110,7 @@ function mountButton(runAuto) {
     boxShadow: "0 6px 20px rgba(0,0,0,.35)",
     cursor: "pointer",
   });
-  const setStatus = (t, ok) => {
+  const setStatus = (t: string, ok?: boolean) => {
     btn.textContent = t;
     btn.style.background =
       ok === false ? "#f2555c" : ok ? "#35d08a" : "#f5b841";
@@ -118,7 +122,7 @@ function mountButton(runAuto) {
       await capture((t) => setStatus(t));
       setStatus("✓ Capturada", true);
     } catch (e) {
-      setStatus("✗ " + (e.message || e), false);
+      setStatus("✗ " + ((e as Error).message || e), false);
     } finally {
       setTimeout(() => {
         setStatus("Capturar oferta");
@@ -137,7 +141,7 @@ function mountButton(runAuto) {
   }
 }
 
-let mountedFor = null;
+let mountedFor: string | null = null;
 function sync() {
   const id = productId();
   const existing = document.getElementById("dealflow-capture");

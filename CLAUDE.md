@@ -84,6 +84,9 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
   forms com **TanStack Form** ligado às primitives `Field` do shadcn; **Zustand**
   instalado e ocioso (staged p/ estado global futuro) (ver Nota SPA)
 - **API:** Hono + Bun (porta 3001) — `apps/api`
+- **Extensão:** `@dealflow/extension` (`apps/extension`) — MV3 via **Extension.js**
+  (extension.js.org, Rspack) + React + TS; popup reúsa `@dealflow/ui` (ver Nota
+  extensão de captura)
 - **Shared:** `@dealflow/shared` (`packages/shared`) — contratos-fio cross-app,
   só tipos, consumido como source `.ts` (sem build)
 - **UI:** `@dealflow/ui` (`packages/ui`) — design system reutilizável, consumido
@@ -432,13 +435,31 @@ workspace é que fica pra depois), **múltiplas contas ML + nichos** (hoje uma t
 de afiliado por workspace), **billing/planos/trial** (SaaS) e **split da landing
 page**. Ordem/escopo abertos; construir sem fechar essas portas.
 
-Nota extensão de captura (Slice E, `apps/extension/`): extensão MV3 (JS puro, sem
-build — load unpacked) que roda no `mercadolivre.com.br` logado do operador.
-`content.js` mostra um botão flutuante "Capturar oferta" na página de produto
+Nota extensão de captura (Slice E, `apps/extension/`): extensão MV3 que roda no
+`mercadolivre.com.br` logado do operador. **Refatorada de JS puro pra Extension.js
+(extension.js.org, MIT — build via Rspack) + React + TS** (2026-07-15), integrada ao
+monorepo como `@dealflow/extension`. Reúsa o design system: o **popup**
+(`popup/popup.tsx`) é React com os primitives `@dealflow/ui` (`Field`/`Input`/
+`Checkbox`) + `@dealflow/ui/styles.css` (Tailwind v4 via `@tailwindcss/postcss`, não
+o plugin Vite do web — mesma `globals.css`/`@source`, verificado no build: tokens e
+utilitários compilam), consistente com o app. O **content script** da página ML
+(`content/mercadolivre.ts`) continua um **botão injetado plano** (uma peça na página
+de terceiro; sem shadow-DOM/Tailwind — escolha deliberada de escopo). O tipo
+`ExtractedDeal` vem de `@dealflow/shared` (não mais copiado à mão); o validador de
+URL `isMercadoLivreProduct` (antes `shared.js` global) virou `content/ml-url.ts`
+(importado por `background.ts` e `content/bridge.ts`; TDD em `tests/ml-url.test.ts` —
+o `@dealflow/shared` segue **só tipos**, o validador é interno da extensão pois só
+ela o usa). `manifest.json` é a fonte de entrypoints (referencia `.ts/.tsx`); build
+`bun run --filter '@dealflow/extension' build` → `dist/` (gitignored) load unpacked;
+`start` (= `extension dev`, HMR) fica **fora** do `bun run dev` raiz (abre browser
+próprio, briga com a regra "nunca subir dev server"). `extension-env.d.ts` é
+auto-gerado (traz `chrome`/`*.css`); `env.d.ts` reforça o `declare module "*.css"`
+(o subpath do package resolve pro arquivo real e sombreia o wildcard do
+extension/types). O botão flutuante "Capturar oferta" na página de produto
 (`/p/MLB…`); ao clicar (ou automático, via toggle no popup) ele: gera O NOSSO
 `meli.la` (ver Nota geração do link de afiliado), raspa título/imagem/De/Por do
 DOM+JSON-LD (a página logada não é anti-botada, o preço vem completo), monta um
-`ExtractedDeal` e manda pro `background.js`, que faz `POST /deals/capture` na API
+`ExtractedDeal` e manda pro `background.ts`, que faz `POST /deals/capture` na API
 (fora do content script pra escapar do CORS). A captura também envia a
 `affiliateTag` lida no mint (`{ draft, affiliateTag }` no body) e a API a adota
 em `settings.mlAffiliateTag` **só quando está vazio** (`adoptAffiliateTag`,
@@ -452,7 +473,8 @@ limpa); com o form vazio já preenche, com edição em andamento mostra um banne
 S6 PlaywrightSource** como aquisição de preço (sem browser pesado, sem guerra
 anti-bot, roda na sessão real do usuário). Verificado ao vivo: geração do link e
 raspagem na conta logada, e o handoff da API por teste + curl. Config no popup
-(auto, apiUrl, webUrl) em `chrome.storage.local`. O `content.js` re-monta o botão
+(auto, apiUrl, webUrl, apiKey em `type=password`) em `chrome.storage.local`. O
+`content/mercadolivre.ts` re-monta o botão
 via poll idempotente de 1s (o ML é SPA — o content script só injeta no load; sem o
 poll o botão sumia ao navegar client-side, batia com "sumiu depois de 10 min").
 Auto-mint do afiliado (fail-closed): quando o import cai sem afiliado (mensagem de
@@ -463,12 +485,12 @@ de preço; fetch server-side, mesmo do IP residencial, cai em 302 `/gz/account-
 verification`), então re-verificar preço exige um browser real logado — cookie não
 passa (o bloqueio é fingerprint de browser, não login). Logo, o browser real da
 extensão continua sendo o transporte; só matamos o bate-e-volta visível. Fluxo: um
-content script-ponte (`bridge.js`, injetado no origin do web via `content_scripts`)
+content script-ponte (`content/bridge.ts`, injetado no origin do web via `content_scripts`)
 faz relay `window.postMessage('dealflow'/'mint') ↔ chrome.runtime`; o web, ao ver
 `needsAffiliate|needsPrice` **e** a extensão presente (handshake ping/pong; guarda por
-`externalId` p/ não repetir), pede o mint; o `background.js` abre a página do produto
+`externalId` p/ não repetir), pede o mint; o `background.ts` abre a página do produto
 com `chrome.tabs.create({ active:false })` (aba em background, sem roubar foco), o
-`content.js` roda igual (vê `#dealflow-auto` → mint no contexto logado + raspagem →
+`content/mercadolivre.ts` roda igual (vê `#dealflow-auto` → mint no contexto logado + raspagem →
 handoff por `/deals/capture`), e o background **fecha a aba** ao receber o capture
 dela (sem trocar o foco; timeout de 30s fecha se o mint falhar — ponytail: sem
 streaming de erro fino). O web, que já dá poll no slot, casa o produto por MLB id e faz
@@ -572,8 +594,9 @@ auto-detectado pelo plugin do web; cada app futuro (landing) tem seu próprio
   `string`; o servidor deriva a variante com `Date` via
   `Omit<QueueItem,"dueAt"|"sentAt"> & { dueAt: Date | null }`. NÃO confundir com
   `apps/api/src/shared/` (infra server-only cross-feature: `db`, `schema`,
-  `messaging`, `money` — não cruza fronteira app↔app). A extensão é JS puro sem
-  build: segue o contrato à mão.
+  `messaging`, `money` — não cruza fronteira app↔app). A extensão (Extension.js +
+  TS) importa os tipos de `@dealflow/shared` direto (ex.: `ExtractedDeal`), não mais
+  copiados à mão (ver Nota extensão de captura).
 
 ## Filosofia (ponytail)
 

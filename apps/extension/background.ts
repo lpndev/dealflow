@@ -1,4 +1,4 @@
-globalThis.importScripts("shared.js");
+import { isMercadoLivreProduct } from "./content/ml-url";
 
 const DEFAULTS = {
   apiUrl: "http://localhost:3001",
@@ -6,21 +6,18 @@ const DEFAULTS = {
   apiKey: "",
 };
 
-const autoTabs = new Set();
+const autoTabs = new Set<number>();
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (
-    msg?.type === "mint" &&
-    globalThis.dealflow.isMercadoLivreProduct(msg.sourceUrl)
-  ) {
+  if (msg?.type === "mint" && isMercadoLivreProduct(msg.sourceUrl)) {
     chrome.tabs.create(
       { url: msg.sourceUrl + "#dealflow-auto", active: false },
       (tab) => {
-        if (tab?.id == null) return;
-        autoTabs.add(tab.id);
+        const id = tab?.id;
+        if (id == null) return;
+        autoTabs.add(id);
         setTimeout(() => {
-          if (autoTabs.delete(tab.id))
-            chrome.tabs.remove(tab.id).catch(() => {});
+          if (autoTabs.delete(id)) chrome.tabs.remove(id).catch(() => {});
         }, 30000);
       },
     );
@@ -48,10 +45,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }),
       });
       if (!res.ok) throw new Error("Dealflow respondeu " + res.status);
-      const fromAuto = sender.tab?.id != null && autoTabs.delete(sender.tab.id);
+      const senderId = sender.tab?.id;
+      const fromAuto = senderId != null && autoTabs.delete(senderId);
       sendResponse({ ok: true });
       if (fromAuto) {
-        chrome.tabs.remove(sender.tab.id).catch(() => {});
+        chrome.tabs.remove(senderId).catch(() => {});
       } else {
         const tabs = await chrome.tabs.query({ url: webUrl + "/*" });
         if (tabs[0]?.id != null)
@@ -62,7 +60,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         else chrome.tabs.create({ url: webUrl + "/new" });
       }
     } catch (e) {
-      sendResponse({ ok: false, error: String(e.message || e) });
+      sendResponse({ ok: false, error: String((e as Error).message || e) });
     }
   })();
   return true;

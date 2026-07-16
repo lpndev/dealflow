@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
+    "extension": "bun run --filter '@dealflow/extension' build",
     "test": "NODE_ENV=test bun test",
     "lint": "eslint .",
     "typecheck": "bun run --filter '*' typecheck",
