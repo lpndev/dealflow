@@ -6,7 +6,7 @@ void listStoredSessions().then((ids) => {
 });
 
 export default {
-  port: 3002,
-  hostname: "127.0.0.1",
+  port: Number(process.env.WA_GATEWAY_PORT) || 3002,
+  hostname: process.env.WA_GATEWAY_HOST ?? "127.0.0.1",
   fetch: app.fetch,
 };

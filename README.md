@@ -37,6 +37,21 @@ bun run dev        # sobe web (5173) + api (3001) + wa-gateway (3002)
 Abra <http://localhost:5173>. Tudo roda 100% local; nenhum serviço pago é
 necessário.
 
+### Variáveis de ambiente
+
+Rodando local, **nada é obrigatório** — o código cai em defaults de `localhost`.
+Toda configuração (URLs, portas, `BETTER_AUTH_SECRET`, origens, caminho do banco)
+mora em variáveis de ambiente, então **hospedar é só ajustar um `.env`, sem caçar
+valor no código**:
+
+```sh
+cp .env.example .env   # edite ao hospedar
+```
+
+O `.env` fica na raiz; `bun run dev` (rodado da raiz) o carrega e os apps herdam.
+O web lê as variáveis `VITE_*` desse mesmo `.env` no build. Veja `.env.example`
+para a lista completa. Em produção, `BETTER_AUTH_SECRET` é obrigatório.
+
 ### Banco de dados
 
 SQLite em `dealflow.db` na raiz da API (ignorado no git), criado e migrado
@@ -60,12 +75,23 @@ Override do caminho via `DATABASE_URL`.
 Gera o **seu** link de afiliado e captura preço/título/imagem direto da página
 do produto, na sua sessão logada.
 
-1. `chrome://extensions` → ligue **Modo de desenvolvedor**.
-2. **Carregar sem compactação** → selecione `apps/extension/`.
-3. Abra um produto no Mercado Livre logado na conta de afiliado e clique em
+1. Gere a extensão (uma vez, e a cada atualização do código):
+
+   ```sh
+   bun run extension
+   ```
+
+   Isso cria a pasta `apps/extension/dist/chromium/`.
+
+2. `chrome://extensions` → ligue **Modo de desenvolvedor**.
+3. **Carregar sem compactação** → selecione `apps/extension/dist/chromium/`.
+4. Cole sua **API key** no popup da extensão (gere na aba **Config** → API keys).
+5. Abra um produto no Mercado Livre logado na conta de afiliado e clique em
    **Capturar oferta**. O app abre com o formulário preenchido.
 
-Portas/URLs configuráveis no popup da extensão.
+Portas/URLs configuráveis no popup da extensão. Depois de um `git pull` que mexa
+na extensão, rode o `extension:build` de novo e clique em **Atualizar** no card
+da extensão em `chrome://extensions`.
 
 ## Qualidade
 

@@ -239,7 +239,10 @@ buscando a prekey do device no namespace errado e estoura o `defaultQueryTimeout
 (60s), falhando com "Timed Out". O `7.x` reescreve o roteamento LID e resolve;
 as creds do `6.x` são aceitas sem re-parear.
 
-Nota segurança: API e gateway ligam em `127.0.0.1` (uma máquina, um operador).
+Nota segurança: API e gateway ligam em `127.0.0.1` por default (uma máquina, um
+operador), agora via env `HOST`/`PORT` e `WA_GATEWAY_HOST`/`WA_GATEWAY_PORT` (ver
+Nota config/env — ao hospedar exposto direto, `HOST=0.0.0.0`; atrás de proxy,
+mantém 127.0.0.1).
 A **API já exige auth por request** (better-auth, ver Nota auth/tenancy): toda
 rota de domínio passa por `requireAuth` e filtra pelo `workspaceId` da sessão —
 a isolação por workspace é a fronteira que impede um operador ver dado do outro

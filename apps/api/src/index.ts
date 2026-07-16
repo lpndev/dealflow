@@ -6,7 +6,7 @@ import app from "./app";
 startScheduler(getDb(), whatsappGateway);
 
 export default {
-  port: 3001,
-  hostname: "127.0.0.1",
+  port: Number(process.env.PORT) || 3001,
+  hostname: process.env.HOST ?? "127.0.0.1",
   fetch: app.fetch,
 };
