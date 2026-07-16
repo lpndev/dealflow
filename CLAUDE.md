@@ -229,6 +229,13 @@ replica a geração (status 200, mesmo `meli.la`). É exatamente o que a
 `ExtensionSource` faz: a extensão roda no `mercadolivre.com.br` do usuário
 (content script), lê a `tag` em uso e chama `/links` com a URL do produto pra
 gerar O NOSSO link — sem OAuth, sem dev center (contorna o `USER_BLOCKER` do
+operador). **Gotcha (host):** a API de afiliado só existe em
+`www.mercadolivre.com.br`, mas o content script roda em QUALQUER subdomínio de
+produto (`produto.mercadolivre.com.br`, `www.`…); então o fetch usa URL
+**absoluta** pra `www.` (`AFFILIATE_API` em `ml-page.ts`) — fetch relativo caía em
+404 no subdomínio `produto.` ("não autenticado como afiliado"). Cross-origin
+`produto.`→`www.` passa porque as `host_permissions` cobrem `*.mercadolivre.com.br`
+e o cookie de sessão é do domínio inteiro (verificado ao vivo 2026-07-16).
 operador). API oficial (`MlApiSource`) fica como caminho paralelo quando o
 suporte do ML liberar a conta; a extensão é o fallback permanente pra quem tiver
 a mesma restrição.
@@ -444,20 +451,38 @@ monorepo como `@dealflow/extension`. Reúsa o design system: o **popup**
 `Checkbox`) + `@dealflow/ui/styles.css` (Tailwind v4 via `@tailwindcss/postcss`, não
 o plugin Vite do web — mesma `globals.css`/`@source`, verificado no build: tokens e
 utilitários compilam), consistente com o app. O **content script** da página ML
-(`content/mercadolivre.ts`) continua um **botão injetado plano** (uma peça na página
-de terceiro; sem shadow-DOM/Tailwind — escolha deliberada de escopo). O tipo
+(`content/mercadolivre.tsx`) também reúsa o design system: o botão flutuante é o
+shadcn **`Button`** (`@dealflow/ui/button`) montado por React num **shadow root**
+(`attachShadow`), dimensionado como FAB via className (`size={null}` desliga o size
+compacto do app; tamanho vem só de padding — `px-6 py-4 text-xl`, sem `h-` — pois
+flutua numa página cheia) — o shadow isola o reset do
+Tailwind da página de terceiro e vice-
+versa, e como o `styles.css` compilado escopa os tokens em `:root, :host` o `:host`
+do shadow os recebe (verificado no build). O CSS é o mesmo `action/index.css`
+compilado do popup, exposto em `web_accessible_resources` p/ o ML e injetado no
+shadow via `fetch(chrome.runtime.getURL(...))` (o content script **não** injeta CSS
+na página — `content_scripts[].css` fica `[]`); dark mode = wrapper `.dark` no shadow
+seguindo `prefers-color-scheme` (antes era um botão plano com hex hardcoded — trocado
+p/ consistência visual). O tipo
 `ExtractedDeal` vem de `@dealflow/shared` (não mais copiado à mão); o validador de
 URL `isMercadoLivreProduct` (antes `shared.js` global) virou `content/ml-url.ts`
 (importado por `background.ts` e `content/bridge.ts`; TDD em `tests/ml-url.test.ts` —
 o `@dealflow/shared` segue **só tipos**, o validador é interno da extensão pois só
-ela o usa). `manifest.json` é a fonte de entrypoints (referencia `.ts/.tsx`); build
+ela o usa). Reconhece três formatos de produto: `/p/MLB…`, `/up/MLBU…` e o antigo
+`produto.mercadolivre.com.br/MLB-<id>-slug` (esse último faltava e o botão não
+aparecia nele — o `productId` do content script casa os três e normaliza pro mesmo
+`externalId` que o `mlbIdFromUrl` do server, pra o `mergeCapture` bater). O content
+script é dividido por responsabilidade: `content/ml-page.ts` = adapter da página ML
+(`productId`, `scrape`, `affiliateLink`, `capture` — leitura do DOM + API de afiliado);
+`content/mercadolivre.tsx` = o widget (o `Button` React + mount no shadow root + poll
+`sync` de 1s). `manifest.json` é a fonte de entrypoints (referencia `.ts/.tsx`); build
 `bun run --filter '@dealflow/extension' build` → `dist/` (gitignored) load unpacked;
 `start` (= `extension dev`, HMR) fica **fora** do `bun run dev` raiz (abre browser
 próprio, briga com a regra "nunca subir dev server"). `extension-env.d.ts` é
 auto-gerado (traz `chrome`/`*.css`); `env.d.ts` reforça o `declare module "*.css"`
 (o subpath do package resolve pro arquivo real e sombreia o wildcard do
 extension/types). O botão flutuante "Capturar oferta" na página de produto
-(`/p/MLB…`); ao clicar (ou automático, via toggle no popup) ele: gera O NOSSO
+(`/p/MLB…`); ao clicar ele: gera O NOSSO
 `meli.la` (ver Nota geração do link de afiliado), raspa título/imagem/De/Por do
 DOM+JSON-LD (a página logada não é anti-botada, o preço vem completo), monta um
 `ExtractedDeal` e manda pro `background.ts`, que faz `POST /deals/capture` na API
@@ -474,8 +499,10 @@ limpa); com o form vazio já preenche, com edição em andamento mostra um banne
 S6 PlaywrightSource** como aquisição de preço (sem browser pesado, sem guerra
 anti-bot, roda na sessão real do usuário). Verificado ao vivo: geração do link e
 raspagem na conta logada, e o handoff da API por teste + curl. Config no popup
-(auto, apiUrl, webUrl, apiKey em `type=password`) em `chrome.storage.local`. O
-`content/mercadolivre.ts` re-monta o botão
+(apiUrl, webUrl, apiKey em `type=password`) em `chrome.storage.local`, salvos no
+`onChange` (não no blur — o popup fecha ao clicar fora e o blur se perdia). Popup
+segue o `prefers-color-scheme` (`.dark` no `<html>`, senão renderiza claro). O
+`content/mercadolivre.tsx` re-monta o botão
 via poll idempotente de 1s (o ML é SPA — o content script só injeta no load; sem o
 poll o botão sumia ao navegar client-side, batia com "sumiu depois de 10 min").
 Auto-mint do afiliado (fail-closed): quando o import cai sem afiliado (mensagem de
@@ -491,7 +518,7 @@ faz relay `window.postMessage('dealflow'/'mint') ↔ chrome.runtime`; o web, ao 
 `needsAffiliate|needsPrice` **e** a extensão presente (handshake ping/pong; guarda por
 `externalId` p/ não repetir), pede o mint; o `background.ts` abre a página do produto
 com `chrome.tabs.create({ active:false })` (aba em background, sem roubar foco), o
-`content/mercadolivre.ts` roda igual (vê `#dealflow-auto` → mint no contexto logado + raspagem →
+`content/mercadolivre.tsx` roda igual (vê `#dealflow-auto` → mint no contexto logado + raspagem →
 handoff por `/deals/capture`), e o background **fecha a aba** ao receber o capture
 dela (sem trocar o foco; timeout de 30s fecha se o mint falhar — ponytail: sem
 streaming de erro fino). O web, que já dá poll no slot, casa o produto por MLB id e faz
