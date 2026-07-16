@@ -17,13 +17,19 @@
   "content_scripts": [
     {
       "matches": ["https://*.mercadolivre.com.br/*"],
-      "js": ["content/mercadolivre.ts"],
+      "js": ["content/mercadolivre.tsx"],
       "run_at": "document_idle"
     },
     {
       "matches": ["http://localhost:5173/*"],
       "js": ["content/bridge.ts"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["action/index.css"],
+      "matches": ["https://*.mercadolivre.com.br/*"]
     }
   ]
 }
