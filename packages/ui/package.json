@@ -8,7 +8,7 @@
     "./lib/utils": "./src/lib/utils.ts",
     "./theme-provider": "./src/theme-provider.tsx",
     "./mode-toggle": "./src/mode-toggle.tsx",
-    "./*": "./src/ui/*.tsx"
+    "./*": "./src/components/ui/*.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

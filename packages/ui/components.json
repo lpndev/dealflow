@@ -1,10 +1,10 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "aliases": {
-    "components": "@/",
+    "components": "@/components",
     "hooks": "@/hooks",
     "lib": "@/lib",
-    "ui": "@/ui",
+    "ui": "@/components/ui",
     "utils": "@/lib/utils"
   },
   "iconLibrary": "phosphor",
