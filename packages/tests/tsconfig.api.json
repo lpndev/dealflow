@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["bun"],
+    "paths": {
+      "@/*": ["../../apps/api/src/*"],
+      "@support/*": ["./support/*"]
+    }
+  },
+  "include": ["api", "support"]
+}

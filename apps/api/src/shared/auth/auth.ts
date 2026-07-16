@@ -17,7 +17,9 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3001",
   secret: process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me",
   trustedOrigins,
-  rateLimit: { enabled: true, window: 60, max: 10 },
+  // ponytail: rate limit off only for the e2e harness (its session polling
+  // would trip the 10/60s limit); dedicated flag so NODE_ENV can't disable it.
+  rateLimit: { enabled: !process.env.DEALFLOW_E2E, window: 60, max: 10 },
   database: drizzleAdapter(getDb(), { provider: "sqlite", schema }),
   emailAndPassword: { enabled: true, requireEmailVerification: false },
   user: { deleteUser: { enabled: true } },

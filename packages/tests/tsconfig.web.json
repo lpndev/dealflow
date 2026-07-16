@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "paths": {
+      "@/*": ["../../apps/web/src/*"],
+      "@support/*": ["./support/*"]
+    }
+  },
+  "include": ["web"]
+}

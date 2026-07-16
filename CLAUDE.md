@@ -94,7 +94,8 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 - **Qualidade:** TypeScript strict, ESLint (flat, + `eslint-plugin-react-hooks`
   oficial no web — nada de plugins de terceiro), Prettier (+
   `@ianvs/prettier-plugin-sort-imports` e `prettier-plugin-tailwindcss`),
-  `bun test`
+  **Vitest** (unit, roda sob o runtime do Bun) + **Playwright** (e2e),
+  centralizados em `@dealflow/tests` (ver Nota testes)
 
 Fronteiras previstas (interface só quando separa dependência externa real):
 `ProductSource`, `AffiliateLinkProvider`, `MessagingProvider`.
@@ -554,6 +555,66 @@ primitives saem sem estilo. Fix: `@source ".."` no `globals.css` (varre
 auto-detectado pelo plugin do web; cada app futuro (landing) tem seu próprio
 `@tailwindcss/vite` + importa `@dealflow/ui/styles.css` (padrão v4 monorepo).
 
+Nota config/env (2026-07-15): local não exige `.env` — tudo cai em defaults de
+`localhost` no código (URL/porta hardcodada local é OK, decisão do operador). A
+config toda vive em env pra hospedar sem caçar valor: `HOST`/`PORT` (api),
+`WA_GATEWAY_HOST`/`WA_GATEWAY_PORT` (gateway), `BETTER_AUTH_URL`/
+`BETTER_AUTH_SECRET`/`TRUSTED_ORIGINS`/`WA_GATEWAY_URL`/`DATABASE_URL` (api),
+`VITE_API_URL` (web, injetada no build). **Um `.env` na raiz**: `bun run dev`
+rodado da raiz carrega o `.env` (auto-load do Bun) e os apps herdam `process.env`;
+o web lê os `VITE_*` do MESMO arquivo via `envDir: "../.."` no `vite.config.ts`
+(senão o Vite só olharia `apps/web`). Portas: api e gateway herdam o mesmo
+`process.env`, então NÃO podem compartilhar `PORT` — o gateway usa
+`WA_GATEWAY_PORT` (nome distinto, senão colidiriam em 3001). `.env.example`
+(commitado — `!.env.example` no `.gitignore`, que ignora `*.env*`) lista tudo com
+os defaults; hospedar = `cp .env.example .env` e ajustar. A extensão é artefato de
+browser: seus defaults (`apiUrl`/`webUrl`) ficam hardcoded e são sobrescritos no
+popup (chrome.storage), não por env.
+
+Nota testes (2026-07-15): a suíte deixou o `bun test` colocado por app e virou um
+package próprio, `@dealflow/tests` (`packages/tests`), com **Vitest** (unit) +
+**Playwright** (e2e). Decisão do operador (sobrepõe a antiga regra "tests
+espelham src"): centralizar tudo num lugar. Layout por alvo:
+`packages/tests/{api,web,wa-gateway,extension}` (unit, migrados 1:1 do
+`bun:test` → `vitest` — só troca de import, zero mudança de lógica),
+`packages/tests/support` (o `FakeMessaging` e helpers), `packages/tests/e2e`
+(Playwright).
+
+- **Vitest roda SOB o runtime do Bun** (`bun run --bun`, ver script `test`) —
+  obrigatório porque `apps/api/src/shared/db.ts` importa `bun:sqlite`, builtin
+  que só existe no Bun; workers de Node quebram. Config: `vitest.config.ts` com
+  `test.projects` (um por app), cada um com seu **próprio** alias `@` (o `@` de
+  cada app aponta pra src diferente — api e wa-gateway têm ambos `@/app`, então
+  NÃO dá pra compartilhar um alias só). `@support` → `packages/tests/support`.
+  DB de teste é `:memory:` (via `NODE_ENV=test`). Deps que os testes importam
+  direto (só `drizzle-orm`) e os tipos (`@types/bun`, `@types/node`) moram no
+  `package.json` do `@dealflow/tests`; imports do src dos apps se resolvem
+  sozinhos (relativos ao arquivo, caem no `node_modules` do app).
+- **Typecheck**: um `tsconfig.<escopo>.json` por projeto (api/wa-gateway/
+  extension/web/e2e), cada um com o `@` certo — um tsconfig único não resolveria
+  o `@` ambíguo. O script `typecheck` encadeia os cinco `tsc -p`.
+- **Playwright e2e** (`playwright.config.ts`): sobe **API real + SQLite real +
+  web real buildado** (não o dev server — `vite build && vite preview` em porta
+  própria 4321; api em 3011), e só **fakeia os dois boundaries externos** que
+  não rodam em sandbox (ver §Restrições e Notas ML/Baileys): `ProductSource`
+  (ML) e `MessagingProvider` (WhatsApp). Os fakes são **env-gated dentro dos
+  próprios módulos reais** (`integrations/mercado-livre/source.ts` →
+  `DEALFLOW_FAKE_ML`; `integrations/whatsapp/gateway.ts` → `DEALFLOW_FAKE_WA`;
+  ambos exigem também `NODE_ENV !== "production"` — fail-closed: um fake nunca
+  ativa em produção mesmo com a flag ligada), sem tocar nas rotas — o caminho
+  rota→use-case→DB é 100% exercitado. O fake do ML devolve HTML com JSON-LD que
+  o parser real parseia de verdade; o fake do WhatsApp é um gateway in-memory
+  (connect/listGroups/send). `DEALFLOW_E2E=1` (no `apiEnv` do harness) desliga o
+  rate-limit do better-auth (o polling de sessão do e2e estouraria o 10/60s) —
+  flag dedicada de propósito, pra `NODE_ENV` sozinho nunca desabilitar proteção;
+  `DATABASE_URL=:memory:` fica explícito no mesmo `apiEnv`. Cobertura atual: auth (guard, signup+
+  onboarding, logout/re-login), jornada de receita (importar → **invariante
+  fail-closed: produto colado nunca traz afiliado** → operador cola o nosso →
+  salvar → sincronizar grupos → enviar → `sent`), e agendar → fila. Browser:
+  `bunx playwright install chromium` (headless-shell, ~114MB, cacheado).
+- Essas libs são first-party (Vitest = time do Vite; Playwright = Microsoft);
+  substituem o `bun test` como runner único do projeto.
+
 ## Arquitetura
 
 - **Vertical Slice Architecture.** Organize por feature/caso de uso, não por
@@ -635,8 +696,10 @@ o que sobra.
 
 ## Convenções do projeto
 
-- **Testes** ficam em `tests/` espelhando `src/`, não colocados. Ex.:
-  `apps/api/tests/app.test.ts`.
+- **Testes** vivem **centralizados** em `packages/tests` (`@dealflow/tests`),
+  espelhando o alvo por subpasta (`api/`, `web/`, `wa-gateway/`, `extension/`,
+  `e2e/`), **não** colocados por app. Ex.: `packages/tests/api/app.test.ts`. Ver
+  Nota testes.
 - **Path alias** `@/*` → `src/*` (tsconfig + Vite; api e web). Use `@/` para
   traversal de pai; mantenha `./irmão` na mesma pasta (mais legível que
   `@/features/.../use-case`). Contrato cross-app vem de `@dealflow/shared`.
@@ -669,9 +732,12 @@ bun install
 bun run dev        # web (vite) + api (:3001) + wa-gateway (:3002)
 bun run lint
 bun run typecheck
-bun test
+bun run test        # vitest (unit), sob o runtime do Bun (bun:sqlite)
+bun run test:watch  # vitest em watch
+bun run test:e2e    # playwright (e2e); sobe api+web de teste em portas próprias
 bun run format
 bun run --filter '@dealflow/api' db:generate   # após mudar o schema
+bun run extension                         # gera apps/extension/dist/chromium (load unpacked)
 ```
 
 DB local em `dealflow.db` (raiz da api, ignorado no git); override via

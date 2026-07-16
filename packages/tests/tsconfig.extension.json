@@ -2,8 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ESNext"],
-    "types": ["bun"],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@extension/*": ["../../apps/extension/*"] }
   },
-  "include": ["src"]
+  "include": ["extension"]
 }

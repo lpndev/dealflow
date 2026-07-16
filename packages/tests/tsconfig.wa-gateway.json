@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["ESNext"],
     "types": ["bun"],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@/*": ["../../apps/wa-gateway/src/*"] }
   },
-  "include": ["src"]
+  "include": ["wa-gateway"]
 }

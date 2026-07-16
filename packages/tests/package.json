@@ -1,0 +1,19 @@
+{
+  "name": "@dealflow/tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.api.json && tsc -p tsconfig.wa-gateway.json && tsc -p tsconfig.extension.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/bun": "^1.1.16",
+    "@types/node": "^26.1.1",
+    "drizzle-orm": "0.45.2",
+    "vitest": "^4.1.10"
+  }
+}
