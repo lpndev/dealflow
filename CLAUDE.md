@@ -755,16 +755,22 @@ o que sobra.
 ## Comandos
 
 ```sh
-bun install
-bun run dev        # web (vite) + api (:3001) + wa-gateway (:3002)
+bun run setup      # install + db:migrate + build (single-command onboarding)
+bun run dev        # web (vite) + api (:3001) + wa-gateway (:3002); extension fica fora (abre browser próprio)
+bun run build      # tudo que builda: web + extensão
+bun run preview    # preview do buildado: web
+bun run web:dev / web:build / web:preview   # só o web
+bun run api:dev                             # só a api
+bun run gateway:dev                         # só o gateway
+bun run extension:dev / extension:build     # extension:dev (HMR) fica fora do dev raiz
 bun run lint
 bun run typecheck
 bun run test        # vitest (unit), sob o runtime do Bun (bun:sqlite)
 bun run test:watch  # vitest em watch
 bun run test:e2e    # playwright (e2e); sobe api+web de teste em portas próprias
 bun run format
-bun run --filter '@dealflow/api' db:generate   # após mudar o schema
-bun run extension                         # gera apps/extension/dist/chromium (load unpacked)
+bun run db:generate   # gera migrations após mudar o schema
+bun run db:migrate    # cria/migra o dealflow.db sem subir a api
 ```
 
 DB local em `dealflow.db` (raiz da api, ignorado no git); override via
