@@ -558,7 +558,7 @@ fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
 Nota packages/ui (`@dealflow/ui`): o design system reutilizável foi extraído de
 `apps/web` pra um package próprio, consumido como **source `.tsx` sem build**
 (igual ao `@dealflow/shared`). Contém SÓ o global/reutilizável: os primitives
-**shadcn** (`src/ui/*.tsx`), `theme-provider` + `mode-toggle` (o `sonner.tsx`
+**shadcn** (`src/components/ui/*.tsx`), `theme-provider` + `mode-toggle` (o `sonner.tsx`
 depende do theme-provider, por isso vai junto), o `cn` (`src/lib/utils.ts`) e o
 tema (`src/styles/globals.css`) — **nada** de peça de feature (essas ficam em
 `apps/web/src/components/`). As deps do design mudaram pra cá (`@base-ui/react`,
@@ -567,15 +567,21 @@ tema (`src/styles/globals.css`) — **nada** de peça de feature (essas ficam em
 ficam também no web porque o feature-code os importa direto; `react`/`react-dom`
 são `peerDependencies`). Motivo: uma futura **landing page** reusa tudo sem
 reinstalar o design system. Consumo (exports map em `package.json`):
-`@dealflow/ui/<primitive>` (wildcard `./*` → `src/ui/*.tsx`),
+`@dealflow/ui/<primitive>` (wildcard `./*` → `src/components/ui/*.tsx`),
 `@dealflow/ui/{theme-provider,mode-toggle}`, `@dealflow/ui/lib/utils` (o `cn`),
 `@dealflow/ui/styles.css`. O `@/` NÃO existe no BUILD do package (o alias `@`→`src` do web resolveria pra
 `apps/web/src`) — os arquivos consumidos usam **import relativo**. **`components.json`
-(shadcn) vive no package** (aliases apontam pros dirs reais: `ui`→`@/ui`,
+(shadcn) vive no package** (aliases apontam pros dirs reais: `ui`→`@/components/ui`,
 `utils`→`@/lib/utils`; `paths @/*→./src/*` no `tsconfig` só pro CLI resolver):
-`bunx shadcn add` daqui em diante escreve os primitives em `packages/ui/src/ui/`,
-mas os imports `@/…` que ele gera precisam virar **relativos** à mão (o web é
-quem dona o `@`) — mesmo passo manual do estilo base-lyra. **Gotcha Tailwind v4**: v4 varre o module graph mas
+`bunx shadcn add` daqui em diante escreve os primitives em
+`packages/ui/src/components/ui/`, mas os imports `@/…` que ele gera precisam virar
+**relativos** à mão (o web é quem dona o `@`) — mesmo passo manual do estilo
+base-lyra. **Os primitives MORAM em `components/ui/` de propósito**: o
+`.prettierignore` (`**/components/ui/`) só casa esse caminho, e base-lyra é
+**sem ponto-e-vírgula** — fora de `components/ui/` o `prettier --write .` os
+reformata (semicolons/trailing commas), fugindo do registry. Restaurados do estado
+pristine pré-extração (`apps/web/src/components/ui`, que era prettier-ignored) só
+com o fix de import relativo, nunca via prettier. **Gotcha Tailwind v4**: v4 varre o module graph mas
 **ignora `node_modules`**, e um workspace package é symlinkado lá — sem ajuste os
 primitives saem sem estilo. Fix: `@source ".."` no `globals.css` (varre
 `packages/ui/src`, relativo ao arquivo CSS). O `src` do próprio web continua
