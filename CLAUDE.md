@@ -293,9 +293,11 @@ virou `Map` por-workspace. Web: better-auth React client, rotas públicas
 `/login`/`/signup`/`/onboarding`/`/accept-invite/:id`, guard (`protectedLoader`)
 no Layout, switcher de workspace + menu de usuário no header, aba Equipe (membros
 e convite por **link copiável**, sem email) e painel de API keys na Config.
-Diferido (portas abertas, nada construído): billing/planos/trial 7 dias, envio de
-email, múltiplos números de WhatsApp, múltiplas contas ML + nichos, split da
-landing page. Segredo em env (`BETTER_AUTH_SECRET`; throw em produção sem ele).
+Diferido (portas abertas): planos/tiers/trial 7 dias JÁ construído (ver Nota
+planos/tiers) — falta só o **pagamento** (`@better-auth/stripe`, checkout, webhooks,
+upgrade/downgrade/cancelamento); e envio de email, múltiplos números de WhatsApp,
+múltiplas contas ML + nichos, split da landing page. Segredo em env
+(`BETTER_AUTH_SECRET`; throw em produção sem ele).
 
 Nota hierarquia + multi-workspace + danger zone (feat/roles-workspaces-danger-zone):
 extensão reuso-pesado da fundação, **sem novo modelo de papéis nem matriz custom**
@@ -323,6 +325,56 @@ própria sessão de WhatsApp; mantém a conta), excluir conta (`reset` +
 `MessagingProvider.logout(sessionId)` → gateway `POST /sessions/:id/logout` (apaga
 `wa-auth/<id>/`). Boundary dito na UI: login ML + config da extensão vivem no navegador
 (o web não limpa — o user limpa lá).
+
+Nota planos/tiers (MVP, feat/plans-tiers): fundação de planos SEM pagamento (Stripe,
+checkout, upgrade/downgrade fica pra depois — ver FUTURO). Tudo em
+`apps/api/src/shared/plans.ts`; os TIPOS (`PlanId`/`PlanLimits`/`Plan`/`WorkspaceUsage`/
+`PlanStatus`) em `@dealflow/shared` (só-tipos preservado — VALORES na api, cruzam o fio via
+`GET /plan`). **O backend é a ÚNICA fonte da verdade**; o frontend (PlanPanel, esconder botão)
+é só reflexo e é assumido comprometível — toda mutação passa por check server-side.
+
+**PLANO É POR DONO (conta), NÃO por workspace** — decisão de anti-burla (1ª versão era
+per-workspace e um user criava N workspaces pra multiplicar limites; furo real). O plano vive
+em **`account_plan(userId pk, plan default 'free')`** (migration `0008`, sem FK — órfão é
+inócuo); **NÃO** há coluna de plano em `settings` (não editável por ninguém — fail-closed: um
+free não se auto-promove; o webhook do Stripe escreverá em `account_plan`). Um workspace é
+governado pelo plano do **seu dono** (`ownerOf` = membro com role `owner`); `resolvePlanForUser`
+e `resolvePlanForWorkspace`. **Todo limite é GLOBAL, somado em TODOS os workspaces que o dono
+possui** (`scopeIds` = `ownedWorkspaceIds(owner)`) — trocar de workspace NÃO reseta contagem
+(verificado ao vivo: Grupos 1/3 igual em dois workspaces). Órfão sem dono → escopo = só ele
+mesmo com limites free (fail-closed, nunca bypass ilimitado).
+
+Dois mecanismos: (1) **self-host = ilimitado** via env `SELF_HOST=true` (`isSelfHost()`) —
+licença PolyForm permite; bypassa tudo E **o PlanPanel some inteiro** (`GET /plan`
+`selfHost:true` → `PlanPanel` retorna null). `.env.example` traz `SELF_HOST=true` (template do
+self-hoster e default local — pra rodar local SEM plano, o operador seta no `.env` e reinicia a
+api); nossa cloud NÃO seta. (2) **4 tiers cloud** (`free`/`starter`/`pro`/`business`) em `PLANS`;
+preços TBD (só `free.priceBrl=0`). Dimensões (todas por-dono agregadas): **envios/mês**
+(free 100/starter 1000/pro 5000/business ∞), **grupos** (destinos habilitados: 3/10/30/∞),
+**membros** (userIds distintos + convites pendentes: 1/2/5/∞), **workspaces** (1/1/3/∞) e
+nºWhatsApp/contas ML (**definidos mas sem enforcement — estruturalmente 1 hoje; check nasce com
+a feature multi**). **`free` = trial 7 dias**: `trialEndsAt = user.createdAt + 7d` (por conta,
+não por workspace); trial expirado + ainda `free` → bloqueia envio/grupo/convite/criar-workspace.
+
+Enforcement na fronteira (server-side): `assertCanSend` em `sendPublication`+`schedulePublication`
+(adding=nº deliveries novas — no send imediato exclui destinos já `sent`, via `newSendCount`, pra
+retry não recontar). **O "usado" do mês conta enviadas (`sent` no mês) MAIS a fila (`scheduled`/
+`processing`), via `usedSends`** — senão vários `schedule` em sequência furavam o cap antes de
+qualquer dispatch (o `dispatchDue`/`deliverOne` NÃO re-checa plano). Atribuição de mês da fila é
+aproximada (conta toda pendente, fail-closed). `assertCanEnableDestination`+`destinationSlotsLeft` em
+`setDestinationEnabled`+`syncDestinations` (sync insere grupos além do cap como `enabled:false`);
+`canAddMember` no convite via `hierarchyGuard` (`hooks.before`, path `/organization/invite-member`,
+throw `APIError`); **cap de workspace via a opção oficial do better-auth
+`allowUserToCreateOrganization: (u) => canCreateWorkspace(db, u.id)`** (barra o `/organization/create`
+server-side; o web mapeia o code `YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION` pra msg
+amigável). Plano desconhecido → `free` (fail-closed). Rotas mapeiam `PlanLimitError` → **HTTP 402**
+(send/schedule/destinations); o web propaga `data.error` no toast. Web: `PlanPanel` no topo da
+Config (some no self-host; barras envios/grupos/membros/workspaces, badge de trial). TDD em
+`packages/tests/api/shared/plans.test.ts` (self-host bypassa; **envios/grupos agregam entre
+workspaces sem reset**; conta só o mês-calendário; **cap de workspace por dono**; trial expira;
+plano pago sem trial; **workspace governado pelo dono, não pelo viewer**; desconhecido→free).
+Verificado ao vivo: Grupos 1/3 idêntico em 2 workspaces (agrega), Workspaces 3/1 (sobre o cap),
+criar 4º workspace rejeitado pelo server ("Seu plano não permite criar mais workspaces").
 
 Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
 Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
@@ -440,7 +492,8 @@ sessão — ver Nota auth/tenancy). Sub-projetos multi-tenant que ficam pra depo
 cada um seu próprio ciclo: **múltiplos números de WhatsApp POR workspace** (o
 gateway já é multi-sessão — um número por workspace; vários números no MESMO
 workspace é que fica pra depois), **múltiplas contas ML + nichos** (hoje uma tag
-de afiliado por workspace), **billing/planos/trial** (SaaS) e **split da landing
+de afiliado por workspace), **pagamento/billing** (SaaS — planos/tiers/trial já
+existem, ver Nota planos/tiers; falta Stripe/checkout/upgrade) e **split da landing
 page**. Ordem/escopo abertos; construir sem fechar essas portas.
 
 Nota extensão de captura (Slice E, `apps/extension/`): extensão MV3 que roda no
@@ -547,6 +600,11 @@ Próximos passos:
   o espaçamento mesmo nos vencidos acumulados).
 - **Split aquisição ↔ orquestração (pré-SaaS):** preparar a troca do
   `ProductSource` local por extensão/API quando for pra VPS.
+- **Pagamento sobre a fundação de planos (ver Nota planos/tiers):** `@better-auth/stripe`
+  (checkout, portal, webhooks que escrevem `settings.plan`), upgrade/downgrade/
+  cancelamento, e a página de pricing da landing consumindo `PLANS` (expor `GET /plans`
+  catálogo quando a landing existir). Enforcement de nºWhatsApp/contas ML entra junto
+  com as features multi.
 
 NORTE (visão do usuário, longo prazo): **automação 100% da escolha de produto** —
 o sistema descobre e seleciona ofertas sozinho, sem o operador colar link ou

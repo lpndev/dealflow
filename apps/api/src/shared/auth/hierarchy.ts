@@ -5,15 +5,14 @@ import {
 } from "better-auth/api";
 import { and, eq, type SQL } from "drizzle-orm";
 import { getDb, type Db } from "@/shared/db";
+import { canAddMember } from "@/shared/plans";
 import { member, user } from "@/shared/schema";
+import { isOwner } from "./workspace-access";
 
 const MANAGERIAL = ["owner", "admin"];
 
 const roles = (value: string | null | undefined): string[] =>
   value ? value.split(",").map((r) => r.trim()) : [];
-
-export const isOwner = (role: string | null | undefined): boolean =>
-  roles(role).includes("owner");
 
 const isManagerial = (role: string | null | undefined): boolean =>
   roles(role).some((r) => MANAGERIAL.includes(r));
@@ -95,4 +94,11 @@ export const hierarchyGuard = createAuthMiddleware(async (ctx) => {
     requestedRole: requestedRole(body.role),
   });
   if (!allowed) throw new APIError("FORBIDDEN", { message: "forbidden" });
+
+  if (ctx.path === "/organization/invite-member" && !canAddMember(db, orgId)) {
+    throw new APIError("FORBIDDEN", {
+      message:
+        "Limite de membros do plano atingido. Faça upgrade para convidar mais.",
+    });
+  }
 });

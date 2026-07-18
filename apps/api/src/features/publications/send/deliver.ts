@@ -1,5 +1,5 @@
 import type { DeliveryResult } from "@dealflow/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/shared/db";
 import { DeliveryError } from "@/shared/errors";
 import type { MessagingProvider } from "@/shared/messaging";
@@ -52,6 +52,31 @@ export function loadPublicationContent(
       ),
     )
     .get();
+}
+
+export function newSendCount(
+  db: Db,
+  workspaceId: string,
+  publicationId: string,
+  destinationIds: string[],
+): number {
+  if (destinationIds.length === 0) return 0;
+  const alreadySent = new Set(
+    db
+      .select({ destinationId: delivery.destinationId })
+      .from(delivery)
+      .where(
+        and(
+          eq(delivery.publicationId, publicationId),
+          eq(delivery.workspaceId, workspaceId),
+          eq(delivery.status, "sent"),
+          inArray(delivery.destinationId, destinationIds),
+        ),
+      )
+      .all()
+      .map((r) => r.destinationId),
+  );
+  return destinationIds.filter((id) => !alreadySent.has(id)).length;
 }
 
 export async function deliverOne(

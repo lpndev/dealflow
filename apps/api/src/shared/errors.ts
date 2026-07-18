@@ -7,3 +7,5 @@ export class DeliveryError extends Error {}
 export class SettingsError extends Error {}
 
 export class ScheduleError extends Error {}
+
+export class PlanLimitError extends Error {}

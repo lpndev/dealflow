@@ -73,6 +73,41 @@ export type Settings = {
   mlAffiliateTag: string | null;
 };
 
+export type PlanId = "free" | "starter" | "pro" | "business";
+
+export type PlanLimits = {
+  sendsPerMonth: number | null;
+  destinations: number | null;
+  members: number | null;
+  workspaces: number | null;
+  whatsappNumbers: number | null;
+  mlAccounts: number | null;
+};
+
+export type Plan = {
+  id: PlanId;
+  name: string;
+  priceBrl: number | null;
+  limits: PlanLimits;
+};
+
+export type WorkspaceUsage = {
+  sendsThisMonth: number;
+  destinations: number;
+  members: number;
+  workspaces: number;
+};
+
+export type PlanStatus = {
+  planId: PlanId;
+  name: string;
+  selfHost: boolean;
+  trialEndsAt: string | null;
+  trialExpired: boolean;
+  limits: PlanLimits;
+  usage: WorkspaceUsage;
+};
+
 export type DashboardRange = "day" | "week" | "month" | "year";
 
 export type DashboardBucket = { bucket: string; sent: number; failed: number };

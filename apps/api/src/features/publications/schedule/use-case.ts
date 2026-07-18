@@ -3,6 +3,7 @@ import { listDestinationsByIds } from "@/features/destinations/use-case";
 import { getSettings } from "@/features/settings/use-case";
 import type { Db } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
+import { assertCanSend } from "@/shared/plans";
 import { delivery, publication } from "@/shared/schema";
 
 export type ScheduleInput = {
@@ -64,6 +65,9 @@ export function schedulePublication(
           .all()
           .map((item) => item.destinationId),
   );
+
+  const newCount = destinationIds.filter((id) => !existingIds.has(id)).length;
+  assertCanSend(db, workspaceId, newCount, now);
 
   const { delayMinSeconds, delayMaxSeconds } = getSettings(db, workspaceId);
 

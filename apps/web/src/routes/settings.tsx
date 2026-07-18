@@ -19,6 +19,7 @@ import {
   ErrorNote,
   GroupsConfig,
   Panel,
+  PlanPanel,
   PreviewBubble,
   WhatsAppConfig,
 } from "@/components";
@@ -104,6 +105,7 @@ export function SettingsTab() {
 
   return (
     <div className="flex flex-col gap-8">
+      <PlanPanel />
       <WhatsAppConfig />
       <GroupsConfig />
       {error && <ErrorNote>{error.message}</ErrorNote>}

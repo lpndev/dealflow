@@ -34,6 +34,11 @@ export async function createWorkspace(name: string) {
     const suffix = Math.random().toString(36).slice(2, 7);
     res = await organization.create({ name, slug: `${baseSlug}-${suffix}` });
   }
+  if (res.error?.code === "YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION") {
+    throw new Error(
+      "Seu plano não permite criar mais workspaces. Faça upgrade para adicionar outro.",
+    );
+  }
   if (res.error || !res.data) {
     throw new Error(res.error?.message ?? "Falha ao criar workspace.");
   }

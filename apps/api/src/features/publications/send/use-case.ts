@@ -3,9 +3,11 @@ import { listDestinationsByIds } from "@/features/destinations/use-case";
 import type { Db } from "@/shared/db";
 import { DeliveryError } from "@/shared/errors";
 import type { MessagingProvider } from "@/shared/messaging";
+import { assertCanSend } from "@/shared/plans";
 import {
   deliverOne,
   loadPublicationContent,
+  newSendCount,
   refreshPublicationStatus,
 } from "./deliver";
 
@@ -28,6 +30,12 @@ export async function sendPublication(
   const byId = new Map(destinations.map((item) => [item.id, item]));
   const missing = destinationIds.find((id) => !byId.has(id));
   if (missing) throw new DeliveryError(`destination not found: ${missing}`);
+
+  assertCanSend(
+    db,
+    workspaceId,
+    newSendCount(db, workspaceId, pub.id, destinationIds),
+  );
 
   const results: DeliveryResult[] = [];
   for (const destinationId of destinationIds) {

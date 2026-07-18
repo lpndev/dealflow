@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
 import { getDb } from "@/shared/db";
+import { canCreateWorkspace } from "@/shared/plans";
 import * as schema from "@/shared/schema";
 import { hierarchyGuard } from "./hierarchy";
 import { ac, admin, member, owner } from "./permissions";
@@ -28,6 +29,7 @@ export const auth = betterAuth({
     organization({
       ac,
       roles: { owner, admin, member },
+      allowUserToCreateOrganization: (u) => canCreateWorkspace(getDb(), u.id),
     }),
     apiKey({ enableSessionForAPIKeys: false, enableMetadata: true }),
   ],

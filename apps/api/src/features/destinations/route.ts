@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
 import { requireAuth, requireRole, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
+import { PlanLimitError } from "@/shared/errors";
 import {
   listDestinations,
   publicDestinations,
@@ -28,16 +29,23 @@ destinations.patch("/:id", requireRole("owner", "admin"), async (c) => {
   if (typeof body?.enabled !== "boolean") {
     return c.json({ error: "enabled must be a boolean" }, 400);
   }
-  return c.json({
-    destinations: publicDestinations(
-      setDestinationEnabled(
-        getDb(),
-        c.get("workspaceId"),
-        c.req.param("id"),
-        body.enabled,
+  try {
+    return c.json({
+      destinations: publicDestinations(
+        setDestinationEnabled(
+          getDb(),
+          c.get("workspaceId"),
+          c.req.param("id"),
+          body.enabled,
+        ),
       ),
-    ),
-  });
+    });
+  } catch (err) {
+    if (err instanceof PlanLimitError) {
+      return c.json({ error: err.message }, 402);
+    }
+    throw err;
+  }
 });
 
 destinations.post("/sync", requireRole("owner", "admin"), async (c) => {

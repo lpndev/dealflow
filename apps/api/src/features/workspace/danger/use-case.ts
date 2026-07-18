@@ -1,14 +1,13 @@
 import { eq } from "drizzle-orm";
 import { revokeWorkspaceApiKeys } from "@/features/settings/api-keys/use-case";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
-import { auth, isOwner } from "@/shared/auth";
+import { auth, ownedWorkspaceIds } from "@/shared/auth";
 import { getDb, type Db } from "@/shared/db";
 import {
   affiliateLink,
   dealSnapshot,
   delivery,
   destination,
-  member,
   product,
   publication,
   settings,
@@ -41,16 +40,6 @@ export async function deleteWorkspace(
     headers,
     body: { organizationId: workspaceId },
   });
-}
-
-function ownedWorkspaceIds(db: Db, userId: string): string[] {
-  return db
-    .select({ orgId: member.organizationId, role: member.role })
-    .from(member)
-    .where(eq(member.userId, userId))
-    .all()
-    .filter((m) => isOwner(m.role))
-    .map((m) => m.orgId);
 }
 
 export async function resetOwnedWorkspaces(

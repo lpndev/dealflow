@@ -140,4 +140,12 @@ export const settings = sqliteTable("settings", {
     .$defaultFn(now),
 });
 
+export const accountPlan = sqliteTable("account_plan", {
+  userId: text("user_id").primaryKey(),
+  plan: text("plan").notNull().default("free"),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(now),
+});
+
 export * from "./auth-schema";

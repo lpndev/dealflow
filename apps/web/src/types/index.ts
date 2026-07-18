@@ -3,6 +3,7 @@ export type {
   Destination,
   DeliveryResult,
   PublicationDraft as Form,
+  PlanStatus,
   QueueItem,
   Settings,
 } from "@dealflow/shared";

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
-import { ScheduleError } from "@/shared/errors";
+import { PlanLimitError, ScheduleError } from "@/shared/errors";
 import { schedulePublication } from "./use-case";
 
 export const schedule = new Hono<AppEnv>();
@@ -37,6 +37,8 @@ schedule.post("/:id/schedule", async (c) => {
     );
     return c.json({ scheduled });
   } catch (err) {
+    if (err instanceof PlanLimitError)
+      return c.json({ error: err.message }, 402);
     if (err instanceof ScheduleError)
       return c.json({ error: err.message }, 404);
     throw err;

@@ -1,6 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
+import {
+  assertCanEnableDestination,
+  destinationSlotsLeft,
+} from "@/shared/plans";
 import { destination } from "@/shared/schema";
 
 export function listDestinations(db: Db, workspaceId: string) {
@@ -39,6 +43,7 @@ export function setDestinationEnabled(
   id: string,
   enabled: boolean,
 ) {
+  if (enabled) assertCanEnableDestination(db, workspaceId);
   db.update(destination)
     .set({ enabled })
     .where(
@@ -54,6 +59,7 @@ export async function syncDestinations(
   provider: MessagingProvider,
 ) {
   const groups = await provider.listGroups(workspaceId);
+  let slotsLeft = destinationSlotsLeft(db, workspaceId);
 
   for (const group of groups) {
     const existing = db
@@ -79,6 +85,8 @@ export async function syncDestinations(
         )
         .run();
     } else {
+      const enabled = slotsLeft > 0;
+      if (enabled) slotsLeft -= 1;
       db.insert(destination)
         .values({
           id: crypto.randomUUID(),
@@ -86,6 +94,7 @@ export async function syncDestinations(
           provider: group.provider,
           externalId: group.externalId,
           name: group.name,
+          enabled,
         })
         .run();
     }

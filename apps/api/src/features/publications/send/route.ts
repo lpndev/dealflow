@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { whatsappGateway } from "@/integrations/whatsapp/gateway";
 import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
-import { DeliveryError } from "@/shared/errors";
+import { DeliveryError, PlanLimitError } from "@/shared/errors";
 import { sendPublication } from "./use-case";
 
 export const send = new Hono<AppEnv>();
@@ -29,6 +29,9 @@ send.post("/:id/send", async (c) => {
     );
     return c.json({ results });
   } catch (err) {
+    if (err instanceof PlanLimitError) {
+      return c.json({ error: err.message }, 402);
+    }
     if (err instanceof DeliveryError) {
       return c.json({ error: err.message }, 404);
     }
