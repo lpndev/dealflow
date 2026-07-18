@@ -9,4 +9,12 @@ window.addEventListener("message", (e) => {
     chrome.runtime.sendMessage({ type: "mint", sourceUrl: d.sourceUrl });
 });
 
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type === "mint-error")
+    window.postMessage(
+      { source: "dealflow-ext", type: "mint-error", error: msg.error },
+      "*",
+    );
+});
+
 window.postMessage({ source: "dealflow-ext", type: "pong" }, "*");

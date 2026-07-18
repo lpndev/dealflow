@@ -17,10 +17,13 @@ function CaptureButton({ auto }: { auto: boolean }) {
       await capture((label) => setState({ kind: "busy", label }));
       setState({ kind: "done" });
     } catch (e) {
-      setState({ kind: "error", message: (e as Error).message || String(e) });
+      const message = (e as Error).message || String(e);
+      setState({ kind: "error", message });
+      if (auto)
+        chrome.runtime.sendMessage({ type: "mint-failed", error: message });
     }
     setTimeout(() => setState({ kind: "idle" }), 3500);
-  }, []);
+  }, [auto]);
 
   useEffect(() => {
     if (auto) run();

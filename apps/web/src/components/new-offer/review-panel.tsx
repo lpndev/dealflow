@@ -7,21 +7,25 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@dealflow/ui/input-group";
-import { cn } from "@dealflow/ui/lib/utils";
-import { EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import {
+  ArrowClockwiseIcon,
+  FloppyDiskIcon,
+  HourglassIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { Panel, PreviewBubble } from "@/components";
 import { type Form } from "@/types";
 
 export function ReviewPanel(props: {
   form: Form;
   onChange: (field: keyof Form, value: string) => void;
-  onPreview: () => void;
   onSave: () => void;
   preview: string | null;
   ready: boolean;
-  needsAffiliate: boolean;
-  needsPrice: boolean;
-  onGenerate: () => void;
+  loading: boolean;
+  missingExtension: boolean;
+  mintError: string | null;
+  onRetryMint: () => void;
 }) {
   const { form, onChange } = props;
   return (
@@ -32,6 +36,29 @@ export function ReviewPanel(props: {
     >
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="flex flex-1 flex-col gap-4 lg:min-w-0">
+          {props.loading && (
+            <div className="flex items-center gap-2 border border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+              <HourglassIcon className="size-4 animate-pulse" />
+              Puxando preço e link do Mercado Livre pela extensão…
+            </div>
+          )}
+          {props.mintError && (
+            <div className="flex flex-col gap-2 border border-destructive/40 bg-destructive/10 px-4 py-4 text-xs text-destructive">
+              <div className="flex items-center gap-2">
+                <WarningCircleIcon className="size-4 shrink-0" />
+                <span>{props.mintError}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={props.onRetryMint}
+              >
+                <ArrowClockwiseIcon />
+                Tentar de novo
+              </Button>
+            </div>
+          )}
           <Field>
             <FieldLabel htmlFor="review-title">Título</FieldLabel>
             <Input
@@ -97,32 +124,14 @@ export function ReviewPanel(props: {
               onChange={(e) => onChange("affiliateUrl", e.target.value)}
             />
           </Field>
-          {(props.needsAffiliate || props.needsPrice) && (
-            <div
-              className={cn(
-                "flex flex-col gap-2 border px-4 py-4 text-xs",
-                props.needsAffiliate
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-border bg-muted/40 text-muted-foreground",
-              )}
-            >
-              <p>
-                {props.needsAffiliate
-                  ? "Falta o seu link de afiliado — nunca publique com o link de outra pessoa. Gere o seu abaixo (abre o produto no ML e traz o link e o preço de volta automático)."
-                  : "Faltou o preço — o ML bloqueia a leitura fora da sua sessão. Abra no ML pra puxar o preço real (o mesmo que o comprador vê no seu link)."}
-              </p>
-              <Button variant="outline" size="sm" onClick={props.onGenerate}>
-                {props.needsAffiliate
-                  ? "Abrir no ML e gerar meu link"
-                  : "Abrir no ML e atualizar preço"}
-              </Button>
+          {props.missingExtension && (
+            <div className="border border-border bg-muted/40 px-4 py-4 text-xs text-muted-foreground">
+              Extensão do Dealflow não instalada — não dá pra puxar preço e link
+              automaticamente. Instale a extensão para gerar o seu link na
+              página do produto.
             </div>
           )}
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={props.onPreview}>
-              <EyeIcon />
-              Pré-visualizar
-            </Button>
             <Button size="sm" onClick={props.onSave}>
               <FloppyDiskIcon />
               Salvar publicação
@@ -130,15 +139,12 @@ export function ReviewPanel(props: {
           </div>
         </div>
         <div className="flex flex-col gap-4 lg:w-80">
-          {form.imageUrl && (
-            <img
-              src={form.imageUrl}
-              alt=""
-              className="max-h-52 w-full border bg-muted object-contain p-2"
+          {(props.preview || form.imageUrl) && (
+            <PreviewBubble
+              imageUrl={form.imageUrl}
+              text={props.preview ?? undefined}
+              ready={props.ready}
             />
-          )}
-          {props.preview && (
-            <PreviewBubble text={props.preview} ready={props.ready} />
           )}
         </div>
       </div>

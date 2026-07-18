@@ -50,25 +50,39 @@ function scrape() {
   return { name, image, current, original };
 }
 
-const AFFILIATE_API = "https://www.mercadolivre.com.br/affiliate-program/api/v2";
+const AFFILIATE_API =
+  "https://www.mercadolivre.com.br/affiliate-program/api/v2";
 
 async function affiliateLink(url: string) {
   const tagsRes = await fetch(AFFILIATE_API + "/stripe/user/tags", {
     credentials: "include",
-  });
-  if (!tagsRes.ok) throw new Error("não autenticado como afiliado");
+  }).catch(() => null);
+  if (!tagsRes)
+    throw new Error("Sem conexão com o Mercado Livre. Verifique sua internet.");
+  if (!tagsRes.ok)
+    throw new Error(
+      "Entre no Mercado Livre como afiliado para gerar o link (você não está autenticado).",
+    );
   const tags = (await tagsRes.json()).tags || [];
   const tag = (tags.find((t: { in_use: boolean }) => t.in_use) || tags[0])?.tag;
-  if (!tag) throw new Error("sem etiqueta de afiliado nessa conta");
+  if (!tag)
+    throw new Error(
+      "Sua conta do Mercado Livre não tem uma etiqueta de afiliado ativa.",
+    );
   const res = await fetch(AFFILIATE_API + "/stripe/user/links", {
     method: "POST",
     headers: { "content-type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ url, tag }),
-  });
-  if (!res.ok) throw new Error("falha ao gerar o link (" + res.status + ")");
+  }).catch(() => null);
+  if (!res)
+    throw new Error("Sem conexão com o Mercado Livre. Verifique sua internet.");
+  if (!res.ok)
+    throw new Error(
+      "O Mercado Livre recusou gerar o link (" + res.status + ").",
+    );
   const link = (await res.json()).short_url;
-  if (!link) throw new Error("resposta sem short_url");
+  if (!link) throw new Error("O Mercado Livre respondeu sem o link.");
   return { link: link as string, tag: tag as string };
 }
 
