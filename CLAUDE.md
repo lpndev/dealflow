@@ -651,12 +651,21 @@ Nota config/env (2026-07-15): local não exige `.env` — tudo cai em defaults d
 config toda vive em env pra hospedar sem caçar valor: `HOST`/`PORT` (api),
 `WA_GATEWAY_HOST`/`WA_GATEWAY_PORT` (gateway), `BETTER_AUTH_URL`/
 `BETTER_AUTH_SECRET`/`TRUSTED_ORIGINS`/`WA_GATEWAY_URL`/`DATABASE_URL` (api),
-`VITE_API_URL` (web, injetada no build). **Um `.env` na raiz**: `bun run dev`
-rodado da raiz carrega o `.env` (auto-load do Bun) e os apps herdam `process.env`;
-o web lê os `VITE_*` do MESMO arquivo via `envDir: "../.."` no `vite.config.ts`
-(senão o Vite só olharia `apps/web`). Portas: api e gateway herdam o mesmo
-`process.env`, então NÃO podem compartilhar `PORT` — o gateway usa
-`WA_GATEWAY_PORT` (nome distinto, senão colidiriam em 3001). `.env.example`
+`VITE_API_URL` (web, injetada no build). **Um `.env` na raiz**, mas cada app tem
+que ser apontado pra ele: o Bun só auto-carrega `.env` do **cwd**, e
+`bun run --filter '*' dev` roda cada app com cwd = a pasta do workspace
+(`apps/api`, `apps/wa-gateway`) — NÃO sobe pra raiz. Logo os apps **não** herdam o
+`.env` da raiz sozinhos (bug real 2026-07-17: `SELF_HOST`/`BETTER_AUTH_SECRET` do
+`.env` nunca chegavam na api — ela caía nos defaults; o warning de low-entropy do
+better-auth era o sintoma). Fix: os scripts `dev`/`db:migrate` de api e gateway
+usam **`bun --env-file=../../.env ...`** (relativo ao cwd do app = `.env` da raiz;
+`--env-file` ausente não quebra — Bun ignora silenciosamente, então local sem
+`.env` continua caindo nos defaults). O web lê os `VITE_*` do MESMO arquivo via
+`envDir: "../.."` no `vite.config.ts` (senão o Vite só olharia `apps/web`). Portas:
+api e gateway carregam o mesmo `.env`, então NÃO podem compartilhar `PORT` — o
+gateway usa `WA_GATEWAY_PORT` (nome distinto, senão colidiriam em 3001). Mudou o
+`.env`? **Reiniciar o dev** (Ctrl+C + `bun run dev`) — `--watch` recarrega só
+código-fonte, nunca relê o `.env`. `.env.example`
 (commitado — `!.env.example` no `.gitignore`, que ignora `*.env*`) lista tudo com
 os defaults; hospedar = `cp .env.example .env` e ajustar. A extensão é artefato de
 browser: seus defaults (`apiUrl`/`webUrl`) ficam hardcoded e são sobrescritos no
