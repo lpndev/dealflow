@@ -14,6 +14,17 @@ test("signs up, onboards a workspace, and lands on the dashboard", async ({
   await expect(page.getByRole("link", { name: "Nova oferta" })).toBeVisible();
 });
 
+test("keeps a logged-in user out of login and signup", async ({ page }) => {
+  await signUpAndOnboard(page);
+
+  await page.goto("/login");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("link", { name: "Fila" })).toBeVisible();
+
+  await page.goto("/signup");
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("signs out, blocks protected routes, then re-logs in", async ({
   page,
 }) => {

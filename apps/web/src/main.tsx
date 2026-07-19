@@ -2,9 +2,13 @@ import { ThemeProvider } from "@dealflow/ui/theme-provider";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, redirect } from "react-router";
+import {
+  createBrowserRouter,
+  redirect,
+  type LoaderFunctionArgs,
+} from "react-router";
 import { RouterProvider } from "react-router/dom";
-import { authClient } from "@/lib/auth";
+import { authClient, safeRedirect } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import {
   AcceptInvite,
@@ -29,9 +33,17 @@ async function protectedLoader() {
   return data;
 }
 
+async function guestLoader({ request }: LoaderFunctionArgs) {
+  const { data } = await authClient.getSession();
+  if (!data) return null;
+  throw redirect(
+    safeRedirect(new URL(request.url).searchParams.get("redirect")),
+  );
+}
+
 const router = createBrowserRouter([
-  { path: "/login", Component: Login },
-  { path: "/signup", Component: Signup },
+  { path: "/login", Component: Login, loader: guestLoader },
+  { path: "/signup", Component: Signup, loader: guestLoader },
   { path: "/onboarding", Component: Onboarding },
   { path: "/accept-invite/:id", Component: AcceptInvite },
   {
