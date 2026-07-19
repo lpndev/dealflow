@@ -10,12 +10,16 @@ export function isRoleAllowed(
   return role !== null && (allowed as string[]).includes(role);
 }
 
+export function activeRole(headers: Headers): Promise<string | null> {
+  return auth.api
+    .getActiveMember({ headers })
+    .then((member) => member?.role ?? null)
+    .catch(() => null);
+}
+
 export function requireRole(...allowed: OrgRole[]) {
   return createMiddleware(async (c, next) => {
-    const member = await auth.api
-      .getActiveMember({ headers: c.req.raw.headers })
-      .catch(() => null);
-    if (!isRoleAllowed(member?.role ?? null, allowed)) {
+    if (!isRoleAllowed(await activeRole(c.req.raw.headers), allowed)) {
       return c.json({ error: "forbidden" }, 403);
     }
     await next();
