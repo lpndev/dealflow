@@ -14,9 +14,14 @@ import type {
 const GATEWAY_URL = process.env.WA_GATEWAY_URL ?? "http://localhost:3002";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = process.env.WA_GATEWAY_TOKEN;
   const res = await fetch(`${GATEWAY_URL}${path}`, {
     ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
+    headers: {
+      "content-type": "application/json",
+      ...(token && { "x-gateway-token": token }),
+      ...init?.headers,
+    },
     signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {

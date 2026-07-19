@@ -3,7 +3,8 @@ import type {
   GatewaySession,
   SendMessageResult,
 } from "@dealflow/shared";
-import { Hono } from "hono";
+import { Hono, type Env, type MiddlewareHandler } from "hono";
+import { bearerAuth } from "hono/bearer-auth";
 import { createMiddleware } from "hono/factory";
 import {
   endConnection,
@@ -32,6 +33,17 @@ app.use("*", async (c, next) => {
   }
   await next();
 });
+
+const gatewayAuth: MiddlewareHandler<Env> = (c, next) => {
+  const token = process.env.WA_GATEWAY_TOKEN;
+  if (!token) return next();
+  return bearerAuth({ token, headerName: "x-gateway-token", prefix: "" })(
+    c,
+    next,
+  );
+};
+
+app.use("/sessions/*", gatewayAuth);
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 

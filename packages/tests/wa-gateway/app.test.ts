@@ -1,5 +1,29 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import app from "@/app";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+it("requires the gateway token on every route except health when configured", async () => {
+  vi.stubEnv("WA_GATEWAY_TOKEN", "secret-token");
+
+  expect((await app.request("/sessions/test")).status).toBe(401);
+  const wrong = await app.request("/sessions/test", {
+    headers: { "x-gateway-token": "wrong-token" },
+  });
+  expect(wrong.status).toBe(401);
+
+  const right = await app.request("/sessions/test", {
+    headers: { "x-gateway-token": "secret-token" },
+  });
+  expect(right.status).toBe(200);
+  expect((await app.request("/health")).status).toBe(200);
+});
+
+it("stays open without a configured token (local trusted mode)", async () => {
+  expect((await app.request("/sessions/test")).status).toBe(200);
+});
 
 it("rejects direct requests originating in a browser", async () => {
   const res = await app.request("/health", {
