@@ -31,12 +31,14 @@ function toLocalInput(value: string | null): string {
     .slice(0, 16);
 }
 
-export function QueueRow(props: {
-  item: QueueItem;
-  when: string | null;
-  controls?: Controls;
-  onReschedule?: (dueAt: string) => void;
-}) {
+export function QueueRow(
+  props: Readonly<{
+    item: QueueItem;
+    when: string | null;
+    controls?: Controls;
+    onReschedule?: (dueAt: string) => void;
+  }>,
+) {
   const [editing, setEditing] = useState(false);
   const s = STATUS[props.item.status] ?? {
     label: props.item.status,

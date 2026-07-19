@@ -40,7 +40,9 @@ export function renderPublication(
   });
 
   return kept
-    .map((line) => line.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? ""))
+    .map((line) =>
+      line.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? ""),
+    )
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

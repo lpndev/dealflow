@@ -1,10 +1,12 @@
 import { ChecksIcon } from "@phosphor-icons/react";
 
-export function PreviewBubble(props: {
-  imageUrl?: string;
-  text?: string;
-  ready?: boolean;
-}) {
+export function PreviewBubble(
+  props: Readonly<{
+    imageUrl?: string;
+    text?: string;
+    ready?: boolean;
+  }>,
+) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">

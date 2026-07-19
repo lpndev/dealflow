@@ -9,9 +9,6 @@ import type { Db } from "@/shared/db";
 import type { MessagingProvider } from "@/shared/messaging";
 import { delivery, settings } from "@/shared/schema";
 
-// ponytail: scans all workspaces globally (not per-workspace fair queues) but
-// excludes paused workspaces in the query itself, so one paused tenant's
-// stale due row can't starve every other workspace's delivery forever
 export async function dispatchDue(
   db: Db,
   provider: MessagingProvider,

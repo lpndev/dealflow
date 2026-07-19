@@ -17,7 +17,7 @@ import {
 import { Field, FieldLabel } from "@dealflow/ui/field";
 import { Input } from "@dealflow/ui/input";
 import { BuildingsIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { toast } from "sonner";
 import {
   createWorkspace,
@@ -49,9 +49,10 @@ export function WorkspaceSwitcher() {
     window.location.assign("/");
   }
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleCreate(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    const name = String(new FormData(e.currentTarget).get("name") ?? "");
+    const field = new FormData(e.currentTarget).get("name");
+    const name = typeof field === "string" ? field : "";
     setBusy(true);
     try {
       await createWorkspace(name);
@@ -78,7 +79,7 @@ export function WorkspaceSwitcher() {
         />
         <DropdownMenuContent className="w-auto">
           {orgs.map((o) => (
-            <DropdownMenuItem key={o.id} onClick={() => switchTo(o.id)}>
+            <DropdownMenuItem key={o.id} onClick={() => void switchTo(o.id)}>
               {o.name}
             </DropdownMenuItem>
           ))}
@@ -95,7 +96,10 @@ export function WorkspaceSwitcher() {
           <DialogHeader>
             <DialogTitle>Novo workspace</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => void handleCreate(e)}
+            className="flex flex-col gap-4"
+          >
             <Field>
               <FieldLabel htmlFor="new-workspace-name">Nome</FieldLabel>
               <Input id="new-workspace-name" name="name" required autoFocus />

@@ -14,7 +14,7 @@ const config = {
   failed: { label: "Falhas", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
-export function DashboardChart(props: { data: DashboardBucket[] }) {
+export function DashboardChart(props: Readonly<{ data: DashboardBucket[] }>) {
   return (
     <ChartContainer config={config} className="h-64 w-full">
       <BarChart data={props.data} accessibilityLayer>

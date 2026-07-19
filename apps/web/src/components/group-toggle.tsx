@@ -1,10 +1,12 @@
 import { Checkbox } from "@dealflow/ui/checkbox";
 
-export function GroupToggle(props: {
-  name: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}) {
+export function GroupToggle(
+  props: Readonly<{
+    name: string;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+  }>,
+) {
   return (
     <li className="grow basis-full sm:basis-[calc(50%-0.25rem)]">
       <label

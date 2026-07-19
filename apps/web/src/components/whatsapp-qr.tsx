@@ -1,4 +1,4 @@
-export function WhatsAppQr({ qr }: { qr: string }) {
+export function WhatsAppQr({ qr }: Readonly<{ qr: string }>) {
   return (
     <>
       <p className="text-xs text-muted-foreground">

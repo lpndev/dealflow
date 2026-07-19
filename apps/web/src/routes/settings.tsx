@@ -9,7 +9,7 @@ import {
 } from "@dealflow/ui/input-group";
 import { Textarea } from "@dealflow/ui/textarea";
 import { FloppyDiskIcon } from "@phosphor-icons/react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { toast } from "sonner";
@@ -69,11 +69,11 @@ function DelayField({
   field,
   id,
   label,
-}: {
+}: Readonly<{
   field: DelayFieldApi;
   id: string;
   label: string;
-}) {
+}>) {
   const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
   return (
     <Field data-invalid={invalid}>
@@ -116,7 +116,7 @@ export function SettingsTab() {
   );
 }
 
-function SettingsForm({ settings }: { settings: Settings }) {
+function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
   const qc = useQueryClient();
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -156,7 +156,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
     },
   });
 
-  const isDirty = useStore(form.store, (s) => s.isDirty);
+  const isDirty = useSelector(form.store, (s) => s.isDirty);
   useUnsavedWarning(isDirty);
 
   function insertPlaceholder(current: string, placeholder: string) {
@@ -176,7 +176,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        form.handleSubmit();
+        void form.handleSubmit();
       }}
       className="flex flex-col gap-8"
     >

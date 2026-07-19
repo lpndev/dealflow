@@ -20,7 +20,7 @@ export function Popup() {
 
   function save(key: Key, value: string) {
     setConfig((prev) => ({ ...prev, [key]: value }));
-    chrome.storage.local.set({ [key]: value });
+    void chrome.storage.local.set({ [key]: value });
   }
 
   function normalize(key: "apiUrl" | "webUrl") {

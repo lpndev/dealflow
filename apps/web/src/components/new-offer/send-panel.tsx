@@ -12,17 +12,19 @@ import { Empty, GroupToggle, Panel } from "@/components";
 import { plural } from "@/lib";
 import { type DeliveryResult, type Destination } from "@/types";
 
-export function SendPanel(props: {
-  destinations: Destination[];
-  selected: Set<string>;
-  onToggle: (id: string) => void;
-  onSync: () => void;
-  onSendNow: () => void;
-  onSchedule: () => void;
-  startAt: string;
-  onStartAt: (value: string) => void;
-  results: DeliveryResult[] | null;
-}) {
+export function SendPanel(
+  props: Readonly<{
+    destinations: Destination[];
+    selected: Set<string>;
+    onToggle: (id: string) => void;
+    onSync: () => void;
+    onSendNow: () => void;
+    onSchedule: () => void;
+    startAt: string;
+    onStartAt: (value: string) => void;
+    results: DeliveryResult[] | null;
+  }>,
+) {
   const nameOf = (id: string) =>
     props.destinations.find((d) => d.id === id)?.name ?? id;
 

@@ -9,27 +9,27 @@ type LdNode = {
 };
 
 export function mlbIdFromUrl(url: string): string | undefined {
-  const match = url.match(/(MLBU?)-?(\d+)/i);
+  const match = /(MLBU?)-?(\d+)/i.exec(url);
   return match ? `${match[1].toUpperCase()}${match[2]}` : undefined;
 }
 
 export function productUrlFromSocialHtml(html: string): string | undefined {
-  const match = html.match(
-    /href=["']([^"']*\/(?:p\/MLB|up\/MLBU)\d+[^"']*)["']/i,
-  );
-  if (!match) return undefined;
-  try {
-    const url = new URL(match[1], "https://www.mercadolivre.com.br");
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return undefined;
+  for (const match of html.matchAll(/href=["']([^"']*)["']/gi)) {
+    if (!/\/(?:p\/MLB|up\/MLBU)\d+/i.test(match[1])) continue;
+    try {
+      const url = new URL(match[1], "https://www.mercadolivre.com.br");
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch {
+      return undefined;
+    }
   }
+  return undefined;
 }
 
 export function affiliateTagFromSocialHtml(html: string): string | undefined {
-  const match = html.match(/\/social\/(ct\d+)/i);
+  const match = /\/social\/(ct\d+)/i.exec(html);
   return match ? match[1] : undefined;
 }
 
@@ -72,7 +72,7 @@ function jsonLdProduct(html: string): LdNode | undefined {
 function ldNodes(data: unknown): LdNode[] {
   if (Array.isArray(data)) return data as LdNode[];
   if (data && typeof data === "object" && "@graph" in data) {
-    return ((data as { "@graph": LdNode[] })["@graph"] ?? []) as LdNode[];
+    return (data as { "@graph": LdNode[] })["@graph"] ?? [];
   }
   return [data as LdNode];
 }
@@ -95,7 +95,7 @@ function metaContent(html: string, property: string): string | undefined {
   const tags = html.match(/<meta\b[^>]*>/gi) ?? [];
   for (const tag of tags) {
     if (new RegExp(`(?:property|name)=["']${property}["']`, "i").test(tag)) {
-      const content = tag.match(/content=["']([^"']*)["']/i);
+      const content = /content=["']([^"']*)["']/i.exec(tag);
       if (content) return decodeEntities(content[1]);
     }
   }

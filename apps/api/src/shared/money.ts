@@ -9,8 +9,11 @@ export function parsePrice(text: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+const BRL = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 export function formatBrl(value: number): string {
-  const [int, dec] = value.toFixed(2).split(".");
-  const withThousands = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `R$ ${withThousands},${dec}`;
+  return `R$ ${BRL.format(value)}`;
 }

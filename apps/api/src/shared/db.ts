@@ -44,7 +44,7 @@ export function createDb(url: string): Db {
   process.umask(0o077);
   const sqlite = new Database(url);
   if (url !== ":memory:") chmodSync(url, 0o600);
-  sqlite.exec("PRAGMA foreign_keys = ON;");
+  sqlite.run("PRAGMA foreign_keys = ON;");
   const db = drizzle(sqlite, { schema });
   runMigrations(db, { migrationsFolder });
   seedLegacyWorkspace(db);

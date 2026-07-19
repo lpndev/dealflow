@@ -19,7 +19,6 @@ import {
 
 export const TRIAL_DAYS = 7;
 
-// ponytail: prices TBD (operator decides later); landing reads these over the wire.
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: "free",
@@ -179,7 +178,6 @@ export function resolvePlanForWorkspace(
     };
   }
   const owner = ownerOf(db, workspaceId);
-  // ponytail: orphan workspace (no owner member) — treat as free-active, never crash.
   if (!owner) {
     return {
       plan: PLANS.free,
@@ -235,10 +233,6 @@ function queuedSends(db: Db, ids: string[]): number {
   );
 }
 
-// ponytail: queued (scheduled/processing) deliveries count toward the monthly
-// cap so a burst of schedules can't outrun the limit before any dispatch. Month
-// attribution is approximate (all pending counted, not just this month's dueAt);
-// fail-closed and fine for the MVP's send volume.
 function usedSends(db: Db, ids: string[], now: Date): number {
   return sendsThisMonth(db, ids, now) + queuedSends(db, ids);
 }

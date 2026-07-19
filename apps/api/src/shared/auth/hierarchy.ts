@@ -76,7 +76,10 @@ function requestedRole(role: unknown): string | null {
 
 export const hierarchyGuard = createAuthMiddleware(async (ctx) => {
   if (!GUARDED.has(ctx.path)) return;
-  const session = await getSessionFromCtx(ctx).catch(() => null);
+  const session = (await getSessionFromCtx(ctx).catch(() => null)) as {
+    user?: { id?: string };
+    session?: { activeOrganizationId?: string | null };
+  } | null;
   const userId = session?.user?.id;
   const body = (ctx.body ?? {}) as Record<string, unknown>;
   const orgId =

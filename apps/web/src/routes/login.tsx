@@ -2,7 +2,7 @@ import { Button } from "@dealflow/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
 import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
 import { Input } from "@dealflow/ui/input";
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { redirectSearch, safeRedirect, signIn } from "@/lib";
 
@@ -14,7 +14,7 @@ export function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
@@ -24,7 +24,7 @@ export function Login() {
       setError(signInError.message ?? "Falha ao entrar.");
       return;
     }
-    navigate(safeRedirect(searchParams.get("redirect")));
+    void navigate(safeRedirect(searchParams.get("redirect")));
   }
 
   return (
@@ -34,7 +34,10 @@ export function Login() {
           <CardTitle>Entrar no Dealflow</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="flex flex-col gap-4"
+          >
             <Field data-invalid={!!error}>
               <FieldLabel htmlFor="login-email">E-mail</FieldLabel>
               <Input

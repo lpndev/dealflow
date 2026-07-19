@@ -43,7 +43,7 @@ function DangerAction({
   confirmWord,
   password,
   onConfirm,
-}: DangerActionProps) {
+}: Readonly<DangerActionProps>) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -149,7 +149,7 @@ export function DangerZone() {
             actionLabel="Revogar todas"
             onConfirm={async () => {
               await apiDelete("/api-keys");
-              queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+              void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
               toast.success("Chaves revogadas.");
             }}
           />

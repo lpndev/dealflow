@@ -8,9 +8,9 @@ export function parseMetadata(
   metadata: unknown,
 ): { organizationId?: string } | null {
   try {
-    return typeof metadata === "string"
-      ? JSON.parse(metadata)
-      : (metadata ?? null);
+    const parsed: unknown =
+      typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
   } catch {
     return null;
   }

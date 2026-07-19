@@ -8,11 +8,11 @@ function Usage({
   label,
   used,
   limit,
-}: {
+}: Readonly<{
   label: string;
   used: number;
   limit: number | null;
-}) {
+}>) {
   const pct = limit === null ? 0 : Math.min(100, (used / limit) * 100);
   const over = limit !== null && used >= limit;
   return (

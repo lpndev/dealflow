@@ -4,12 +4,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@dealflow/ui/tooltip";
 import { QuestionIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 
-export function Panel(props: {
-  title: string;
-  hint?: ReactNode;
-  eyebrow?: string;
-  children: ReactNode;
-}) {
+export function Panel(
+  props: Readonly<{
+    title: string;
+    hint?: ReactNode;
+    eyebrow?: string;
+    children: ReactNode;
+  }>,
+) {
   return (
     <Card>
       <CardHeader>
@@ -42,7 +44,7 @@ export function Panel(props: {
   );
 }
 
-export function Empty(props: { children: ReactNode }) {
+export function Empty(props: Readonly<{ children: ReactNode }>) {
   return (
     <p className="border border-dashed px-4 py-8 text-center text-xs text-muted-foreground">
       {props.children}
@@ -50,7 +52,7 @@ export function Empty(props: { children: ReactNode }) {
   );
 }
 
-export function ErrorNote(props: { children: ReactNode }) {
+export function ErrorNote(props: Readonly<{ children: ReactNode }>) {
   return (
     <Alert variant="destructive">
       <AlertDescription>{props.children}</AlertDescription>

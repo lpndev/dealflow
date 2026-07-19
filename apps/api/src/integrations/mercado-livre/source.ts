@@ -11,10 +11,8 @@ export function supportsMercadoLivre(url: string): boolean {
   return /(?:^|\.)(?:mercadoli(?:vre|bre)\.com(?:\.br)?|meli\.la)$/i.test(host);
 }
 
-// ponytail: env-gated fake so e2e drives the real import/parse pipeline
-// without hitting the anti-botted ML site. Real path is default.
 function fakeMercadoLivre(url: string): string {
-  const id = url.match(/MLBU?-?\d+/i)?.[0]?.replace("-", "") ?? "MLB123";
+  const id = /MLBU?-?\d+/i.exec(url)?.[0]?.replace("-", "") ?? "MLB123";
   return `<!doctype html><html><head>
     <meta property="og:title" content="Air Fryer 5L Mondial">
     <meta property="og:image" content="https://http2.mlstatic.com/${id}.jpg">
@@ -31,7 +29,7 @@ const useFakes =
   process.env.NODE_ENV !== "production" && !!process.env.DEALFLOW_FAKE_ML;
 
 export const fetchMercadoLivre: (url: string) => Promise<string> = useFakes
-  ? async (url) => fakeMercadoLivre(url)
+  ? (url) => Promise.resolve(fakeMercadoLivre(url))
   : realFetchMercadoLivre;
 
 export async function realFetchMercadoLivre(url: string): Promise<string> {

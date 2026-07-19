@@ -2,7 +2,7 @@ import { Button } from "@dealflow/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
 import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
 import { Input } from "@dealflow/ui/input";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router";
 import { createWorkspace, errMsg, useSession } from "@/lib";
 
@@ -16,21 +16,21 @@ export function Onboarding() {
   useEffect(() => {
     if (isPending) return;
     if (!data) {
-      navigate("/login", { replace: true });
+      void navigate("/login", { replace: true });
       return;
     }
     if (data.session.activeOrganizationId) {
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     }
   }, [isPending, data, navigate]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
       await createWorkspace(name);
-      navigate("/");
+      void navigate("/");
     } catch (err) {
       setError(errMsg(err, "Falha ao criar workspace."));
     } finally {
@@ -47,7 +47,10 @@ export function Onboarding() {
           <CardTitle>Crie seu workspace</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="flex flex-col gap-4"
+          >
             <Field data-invalid={!!error}>
               <FieldLabel htmlFor="onboarding-name">
                 Nome do workspace

@@ -16,17 +16,19 @@ import {
 import { Panel, PreviewBubble } from "@/components";
 import { type Form } from "@/types";
 
-export function ReviewPanel(props: {
-  form: Form;
-  onChange: (field: keyof Form, value: string) => void;
-  onSave: () => void;
-  preview: string | null;
-  ready: boolean;
-  loading: boolean;
-  missingExtension: boolean;
-  mintError: string | null;
-  onRetryMint: () => void;
-}) {
+export function ReviewPanel(
+  props: Readonly<{
+    form: Form;
+    onChange: (field: keyof Form, value: string) => void;
+    onSave: () => void;
+    preview: string | null;
+    ready: boolean;
+    loading: boolean;
+    missingExtension: boolean;
+    mintError: string | null;
+    onRetryMint: () => void;
+  }>,
+) {
   const { form, onChange } = props;
   return (
     <Panel

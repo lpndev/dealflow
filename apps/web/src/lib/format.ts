@@ -14,8 +14,10 @@ export const roleRank = (role: string | null | undefined): number =>
   ROLE_RANK[role ?? ""] ?? 0;
 
 export function copyWithToast(text: string, message: string) {
-  navigator.clipboard.writeText(text);
-  toast.success(message);
+  navigator.clipboard.writeText(text).then(
+    () => toast.success(message),
+    () => toast.error("Não consegui copiar. Copie manualmente."),
+  );
 }
 
 export const errMsg = (e: unknown, fallback: string) =>
@@ -44,5 +46,7 @@ const CONNECTION_LABEL: Record<string, string> = {
 export const connectionLabel = (connection: string) =>
   CONNECTION_LABEL[connection] ?? connection;
 
-export const connectionDot = (connected: boolean, qr: unknown): string =>
-  connected ? "bg-emerald-500" : qr ? "bg-primary" : "bg-muted-foreground";
+export const connectionDot = (connected: boolean, qr: unknown): string => {
+  if (connected) return "bg-emerald-500";
+  return qr ? "bg-primary" : "bg-muted-foreground";
+};

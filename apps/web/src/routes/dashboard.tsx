@@ -13,7 +13,7 @@ const RANGES: { value: DashboardRange; label: string }[] = [
   { value: "year", label: "Ano" },
 ];
 
-function Stat(props: { label: string; value: number }) {
+function Stat(props: Readonly<{ label: string; value: number }>) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-1 py-4">

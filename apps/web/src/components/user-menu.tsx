@@ -20,7 +20,7 @@ export function UserMenu() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/login");
+    void navigate("/login");
   }
 
   return (
@@ -38,7 +38,10 @@ export function UserMenu() {
           <DropdownMenuLabel>{session.user.email}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => void handleSignOut()}
+        >
           <SignOutIcon />
           Sair
         </DropdownMenuItem>

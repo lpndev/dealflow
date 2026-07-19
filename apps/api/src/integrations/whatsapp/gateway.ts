@@ -29,33 +29,35 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const base = (sessionId: string) =>
   `/sessions/${encodeURIComponent(sessionId)}`;
 
-// ponytail: env-gated in-memory fake so e2e exercises the real send/queue
-// pipeline without a paired phone. Real gateway is the default.
 function makeFakeGateway(): WhatsAppGateway {
   const connected = new Set<string>();
   return {
-    async listGroups() {
-      return [
+    listGroups: () =>
+      Promise.resolve([
         { provider: "whatsapp", externalId: "111@g.us", name: "Ofertas Top" },
         { provider: "whatsapp", externalId: "222@g.us", name: "Achadinhos" },
-      ];
-    },
-    async send(input) {
-      return { externalMessageId: `fake-${input.destinationExternalId}` };
-    },
-    async getSession(sessionId) {
-      return connected.has(sessionId)
-        ? { connection: "open", qr: null }
-        : { connection: "close", qr: "fake-qr-code" };
-    },
-    async connect(sessionId) {
+      ]),
+    send: (input) =>
+      Promise.resolve({
+        externalMessageId: `fake-${input.destinationExternalId}`,
+      }),
+    getSession: (sessionId) =>
+      Promise.resolve(
+        connected.has(sessionId)
+          ? { connection: "open", qr: null }
+          : { connection: "close", qr: "fake-qr-code" },
+      ),
+    connect: (sessionId) => {
       connected.add(sessionId);
+      return Promise.resolve();
     },
-    async end(sessionId) {
+    end: (sessionId) => {
       connected.delete(sessionId);
+      return Promise.resolve();
     },
-    async logout(sessionId) {
+    logout: (sessionId) => {
       connected.delete(sessionId);
+      return Promise.resolve();
     },
   };
 }

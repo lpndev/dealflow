@@ -3,12 +3,14 @@ import { Textarea } from "@dealflow/ui/textarea";
 import { ClipboardTextIcon } from "@phosphor-icons/react";
 import { Panel } from "@/components";
 
-export function ImportPanel(props: {
-  value: string;
-  onChange: (value: string) => void;
-  loading: boolean;
-  onImport: () => void;
-}) {
+export function ImportPanel(
+  props: Readonly<{
+    value: string;
+    onChange: (value: string) => void;
+    loading: boolean;
+    onImport: () => void;
+  }>,
+) {
   return (
     <Panel title="Importar" eyebrow="01">
       <Textarea

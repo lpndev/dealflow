@@ -24,14 +24,15 @@ function slugify(name: string): string {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-/, "")
+    .replace(/-$/, "");
 }
 
 export async function createWorkspace(name: string) {
   const baseSlug = slugify(name) || "workspace";
   let res = await organization.create({ name, slug: baseSlug });
   if (res.error?.code === "ORGANIZATION_SLUG_ALREADY_TAKEN") {
-    const suffix = Math.random().toString(36).slice(2, 7);
+    const suffix = crypto.randomUUID().slice(0, 5);
     res = await organization.create({ name, slug: `${baseSlug}-${suffix}` });
   }
   if (res.error?.code === "YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION") {

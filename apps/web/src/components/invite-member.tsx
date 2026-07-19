@@ -59,7 +59,7 @@ export function InviteMember() {
     onSuccess: (invitation) => {
       setLastLink(inviteLinkFor(invitation.id));
       setEmail("");
-      invalidate();
+      void invalidate();
       toast.success("Convite criado — copie o link para enviar.");
     },
     onError: (e) => toast.error(errMsg(e, "falha ao convidar")),

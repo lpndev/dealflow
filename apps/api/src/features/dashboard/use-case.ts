@@ -74,7 +74,6 @@ export function buckets(range: DashboardRange, now: Date): BucketDef[] {
   return defs;
 }
 
-// ponytail: O(events × buckets) scan; events are one operator's deliveries, buckets ≤ 30 — swap for a bucketed reduce if volume ever matters.
 export function buildSeries(
   defs: BucketDef[],
   sentTs: number[],

@@ -2,7 +2,7 @@ import { Button } from "@dealflow/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
 import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
 import { Input } from "@dealflow/ui/input";
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { redirectSearch, safeRedirect, signUp } from "@/lib";
 
@@ -15,7 +15,7 @@ export function Signup() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
@@ -30,7 +30,7 @@ export function Signup() {
       return;
     }
     const redirect = searchParams.get("redirect");
-    navigate(redirect ? safeRedirect(redirect) : "/onboarding");
+    void navigate(redirect ? safeRedirect(redirect) : "/onboarding");
   }
 
   return (
@@ -40,7 +40,10 @@ export function Signup() {
           <CardTitle>Criar conta no Dealflow</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="flex flex-col gap-4"
+          >
             <Field>
               <FieldLabel htmlFor="signup-name">Nome</FieldLabel>
               <Input

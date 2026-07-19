@@ -15,7 +15,7 @@ export function AcceptInvite() {
   useEffect(() => {
     if (isPending || !session || !id || started) return;
     setStarted(true);
-    (async () => {
+    void (async () => {
       const accepted = await organization.acceptInvitation({
         invitationId: id,
       });
@@ -31,7 +31,7 @@ export function AcceptInvite() {
         return;
       }
       toast.success("Convite aceito — bem-vindo ao workspace.");
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     })();
   }, [isPending, session, id, started, navigate]);
 
@@ -78,7 +78,7 @@ export function AcceptInvite() {
         {error && (
           <CardContent className="flex flex-col gap-4">
             <p className="text-xs text-destructive">{error}</p>
-            <Button onClick={() => navigate("/")}>Voltar ao início</Button>
+            <Button onClick={() => void navigate("/")}>Voltar ao início</Button>
           </CardContent>
         )}
       </Card>

@@ -28,11 +28,12 @@ export function ApiKeysPanel() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["api-keys"] });
 
   const create = useMutation({
-    mutationFn: (v: { name: string }) => apiPost("/api-keys", v),
+    mutationFn: (v: { name: string }) =>
+      apiPost<{ key?: string }>("/api-keys", v),
     onSuccess: (created) => {
-      setNewKey(created.key);
+      setNewKey(created.key ?? null);
       setName("");
-      invalidate();
+      void invalidate();
     },
     onError: (e) => toast.error(errMsg(e, "falha ao gerar chave")),
   });

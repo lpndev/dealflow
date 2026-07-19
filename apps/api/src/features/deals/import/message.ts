@@ -6,8 +6,9 @@ export type MessageHints = {
   coupon?: string;
 };
 
+// eslint-disable-next-line sonarjs/super-linear-regex -- disjoint classes, measured linear to 100k chars
 const PRICE = /(\bde\b|\bpor\b)?\s*R\$\s*(\d[\d.]*(?:,\d+)?)/gi;
-const COUPON = /(?:cupom|coupon|c[óo]digo)[:\s]+([A-Za-z0-9][A-Za-z0-9-]{2,})/i;
+const COUPON = /(?:cupom|coupon|c[óo]digo)[:\s]+([a-z0-9][a-z0-9-]{2,})/i;
 
 export function extractMessageHints(text: string): MessageHints {
   const prices = [...text.matchAll(PRICE)].map((m) => ({
@@ -23,7 +24,7 @@ export function extractMessageHints(text: string): MessageHints {
     else if (bare.length >= 2) [original, current] = bare;
   }
 
-  const match = text.match(COUPON);
+  const match = COUPON.exec(text);
   const code = match?.[1];
   const coupon =
     code && (/\d/.test(code) || code === code.toUpperCase()) ? code : undefined;

@@ -4,9 +4,6 @@ import { destination, member, publication } from "@/shared/schema";
 
 const LEGACY_WORKSPACE_ID = "default";
 
-// ponytail: single-operator local claim of the pre-existing data workspace;
-// onboarding (Task 6) handles the fresh/multi-tenant case; not
-// concurrency-safe (one machine, no transaction around the check+insert).
 export function resolveActiveWorkspace(db: Db, userId: string): string | null {
   const existingMembership = db
     .select()

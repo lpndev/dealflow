@@ -49,7 +49,7 @@ const NAV = [
 
 type NavItem = (typeof NAV)[number];
 
-function MobileNav({ items }: { items: NavItem[] }) {
+function MobileNav({ items }: Readonly<{ items: NavItem[] }>) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const current =
@@ -69,7 +69,7 @@ function MobileNav({ items }: { items: NavItem[] }) {
       />
       <DropdownMenuContent className="w-[calc(100vw-2rem)]">
         {items.map((n) => (
-          <DropdownMenuItem key={n.to} onClick={() => navigate(n.to)}>
+          <DropdownMenuItem key={n.to} onClick={() => void navigate(n.to)}>
             <n.icon />
             {n.label}
           </DropdownMenuItem>
