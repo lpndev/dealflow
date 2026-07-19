@@ -10,6 +10,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import type { ILogger } from "@whiskeysockets/baileys/lib/Utils/logger";
 import qrcode from "qrcode";
+import { fetchPublicImage } from "./fetch-image";
 
 const AUTH_ROOT = process.env.WA_AUTH_DIR ?? "wa-auth";
 const noop = () => {};
@@ -179,11 +180,10 @@ export async function sendMessage(
 ): Promise<{ externalMessageId: string }> {
   const { sock } = session(id);
   if (!sock) throw new Error("not connected");
+  const image = imageUrl ? await fetchPublicImage(imageUrl) : undefined;
   const result = await sock.sendMessage(
     to,
-    imageUrl
-      ? { image: { url: imageUrl }, caption: content }
-      : { text: content },
+    image ? { image, caption: content } : { text: content },
   );
   return { externalMessageId: result?.key?.id ?? "" };
 }
