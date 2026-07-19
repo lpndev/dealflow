@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
-import { Boom } from "@hapi/boom";
 import makeWASocket, {
   Browsers,
   DisconnectReason,
@@ -9,11 +8,20 @@ import makeWASocket, {
   useMultiFileAuthState,
   type WASocket,
 } from "@whiskeysockets/baileys";
-import pino from "pino";
+import type { ILogger } from "@whiskeysockets/baileys/lib/Utils/logger";
 import qrcode from "qrcode";
 
 const AUTH_ROOT = process.env.WA_AUTH_DIR ?? "wa-auth";
-const logger = pino({ level: "silent" });
+const noop = () => {};
+const logger: ILogger = {
+  level: "silent",
+  child: () => logger,
+  trace: noop,
+  debug: noop,
+  info: noop,
+  warn: noop,
+  error: noop,
+};
 
 type Session = {
   sock?: WASocket;
@@ -97,13 +105,19 @@ export async function connect(id: string): Promise<void> {
   });
   s.sock = sock;
 
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", () => {
+    saveCreds().catch((err: unknown) =>
+      console.error(`saveCreds failed for session ${id}`, err),
+    );
+  });
   sock.ev.on("connection.update", (update) => {
     if (update.qr) s.qr = update.qr;
     if (update.connection) s.connection = update.connection;
     if (update.connection === "open") s.qr = undefined;
     if (update.connection === "close") {
-      const code = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
+      const code = (
+        update.lastDisconnect?.error as { output?: { statusCode?: number } }
+      )?.output?.statusCode;
       if (s.desired === "up" && code !== DisconnectReason.loggedOut)
         void connect(id);
     }
@@ -118,7 +132,7 @@ export async function reconnect(id: string): Promise<void> {
 export function endConnection(id: string): void {
   const s = session(id);
   s.desired = "down";
-  s.sock?.end(undefined);
+  void s.sock?.end(undefined);
   s.sock = undefined;
   s.qr = undefined;
   s.connection = "close";
@@ -127,11 +141,7 @@ export function endConnection(id: string): void {
 export async function logout(id: string): Promise<void> {
   const s = session(id);
   s.desired = "down";
-  try {
-    await s.sock?.logout();
-  } catch {
-    /* already gone — still clear local session */
-  }
+  await s.sock?.logout().catch(() => undefined);
   s.sock = undefined;
   s.qr = undefined;
   s.connection = "close";

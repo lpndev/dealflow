@@ -8,10 +8,8 @@
   },
   "dependencies": {
     "@dealflow/shared": "workspace:*",
-    "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc13",
     "hono": "^4.6.16",
-    "pino": "^9.6.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
