@@ -18,7 +18,9 @@ test("imports a product, refuses to publish without our affiliate link, then sen
 
   // fail-closed invariant: a pasted product never yields an affiliate link
   await expect(page.locator("#review-affiliate")).toHaveValue("");
-  await expect(page.getByText(/Falta o seu link de afiliado/)).toBeVisible();
+  await expect(
+    page.getByText(/Extensão do Dealflow não instalada/),
+  ).toBeVisible();
 
   await saveWithAffiliate(page);
 
