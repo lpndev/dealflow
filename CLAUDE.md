@@ -327,12 +327,50 @@ qualquer outro erro devolve `null` e deixa passar — o guard do client é UX, n
 segurança (o backend valida request a request; ver Nota SPA §Segurança). Sessão dura
 **7 dias** (default), com renovação por atividade — não é 1 dia. Esse bug **não aparece
 no e2e** porque o harness desliga o rate limit (`DEALFLOW_E2E`); só aparece no uso real.
+Lição geral: mudou proteção → **medir os dois lados** (tráfego benigno continua
+passando E o ataque continua barrado — ex.: curl no sign-in até 429), porque o
+e2e desliga o rate limit e nunca acusa esse tipo de regressão.
 
 Diferido (portas abertas): planos/tiers/trial 7 dias JÁ construído (ver Nota
 planos/tiers) — falta só o **pagamento** (`@better-auth/stripe`, checkout, webhooks,
 upgrade/downgrade/cancelamento); e envio de email, múltiplos números de WhatsApp,
 múltiplas contas ML + nichos, split da landing page. Segredo em env
 (`BETTER_AUTH_SECRET`; throw em produção sem ele).
+
+Nota better-auth gotchas (1.6.23 — fatos fora do happy path da doc que custaram
+debug real):
+
+- **O plugin apiKey mora num package SEPARADO, `@better-auth/api-key`** — NÃO em
+  `better-auth/plugins` (que só tem `organization` etc.). Client: `apiKeyClient`
+  vem de `@better-auth/api-key/client`; `organizationClient` esse sim vem de
+  `better-auth/client/plugins`.
+- **`@better-auth/cli generate` roda sob NODE** (shebang node) — nunca pode
+  importar nada que puxe `bun:sqlite`. Pra gerar o schema Drizzle: config
+  temporária com adapter STUB (`drizzleAdapter({} as never, { provider:
+"sqlite", schema })` — a geração só lê a forma da config), apagar depois.
+  Migrar pelo pipeline normal `db:generate` → boot; **NUNCA `better-auth
+migrate`** (Kysely-only).
+- **Ordem dos databaseHooks:** no signup, `createUser`→`linkAccount`→
+  `createSession` rodam numa transação só; hooks `create.after` são ADIADOS pra
+  depois da transação inteira, `create.before` rodam inline. O que a sessão
+  precisa já na criação (ex.: `activeOrganizationId`) tem que acontecer em
+  `session.create.before`, não em `user.create.after` — senão a 1ª sessão
+  persiste com valor nulo pelo TTL inteiro (`shared/auth/workspace-claim.ts`).
+- **API keys são user-scoped por default** (`references: "user"`):
+  `listApiKeys`/`deleteApiKey` só veem/agem nas chaves do próprio user, e
+  `deleteApiKey` só checa dono, NÃO org — checar o workspace da metadata antes
+  de deletar. `listApiKeys` devolve `{ apiKeys, total, limit, offset }` (não
+  array). `metadata` pode voltar objeto OU string JSON — tratar os dois.
+- **`getActiveMember({ headers })` LANÇA** (`NO_ACTIVE_ORGANIZATION`) em vez de
+  devolver null sem org ativa — `.catch(() => null)` e negar é o padrão
+  fail-closed.
+- **`member.role` é string CSV** (multi-role) — check server-side sempre parseia
+  o CSV, nunca `=== "owner"`; centralizado em `roles()`/`isOwner()`
+  (`apps/api/src/shared/auth/hierarchy.ts`).
+- **O client do better-auth NÃO lança:** resolve `{ data, error }` com `error`
+  objeto plano (não `Error`) — ler `result.error?.message` direto. Ops void
+  (ex.: `cancelInvitation`) podem resolver `{ data: null, error: null }` no
+  SUCESSO — null-sem-erro é sucesso, não falha.
 
 Nota hierarquia + multi-workspace + danger zone (feat/roles-workspaces-danger-zone):
 extensão reuso-pesado da fundação, **sem novo modelo de papéis nem matriz custom**
@@ -751,7 +789,10 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
 
 - **Vitest roda SOB o runtime do Bun** (`bun run --bun`, ver script `test`) —
   obrigatório porque `apps/api/src/shared/db.ts` importa `bun:sqlite`, builtin
-  que só existe no Bun; workers de Node quebram. Config: `vitest.config.ts` com
+  que só existe no Bun; workers de Node quebram. Formas que NÃO funcionam:
+  `bun run vitest` procura um *script* chamado vitest, e `bunx vitest` baixa uma
+  cópia avulsa pro /tmp com resolução quebrada — sempre o bin local sob
+  `--bun`. Config: `vitest.config.ts` com
   `test.projects` (um por app), cada um com seu **próprio** alias `@` (o `@` de
   cada app aponta pra src diferente — api e wa-gateway têm ambos `@/app`, então
   NÃO dá pra compartilhar um alias só). `@support` → `packages/tests/support`.
@@ -863,11 +904,12 @@ o que sobra.
   qualquer tipo ainda exige problema real (casa com ponytail). Ex.: mantido só o
   `eslint-plugin-react-hooks` (React team), rejeitado `eslint-plugin-react-refresh`
   (terceiro).
-- **Ao finalizar uma task, sincronizar memória → diretrizes permanentes.** Tudo
-  que virou memória durante a task (fatos, feedback, decisões, referências) tem
-  que ser incorporado às diretrizes permanentes (este `CLAUDE.md` e `.claude/`)
-  antes de considerar a task concluída. Memória é rascunho; `CLAUDE.md`/`.claude/`
-  é a fonte de verdade versionada. Vale para toda task futura.
+- **Ao finalizar uma task, sincronizar memória → este `CLAUDE.md`.** Tudo que
+  virou memória durante a task (fatos, feedback, decisões, referências) tem que
+  ser incorporado aqui antes de considerar a task concluída. Memória é rascunho;
+  este arquivo é a **ÚNICA** fonte de verdade versionada — o antigo
+  `.claude/memory/` foi absorvido aqui (2026-07-19) e **não deve ser recriado**.
+  Vale para toda task futura.
 - **Ao finalizar, lembrar o operador de rodar `/simplify` e `/code-review` antes
   de commitar** — entrega mais precisa e eficiente antes de publicar (o repo é
   público). É um lembrete ao humano, não algo que o Claude dispara sozinho.
@@ -904,7 +946,13 @@ o que sobra.
 - **Prettier** manda na formatação; **ESLint** na qualidade (não acoplados).
 - **Commits** em inglês, minúsculos, uma linha, poucas palavras, convencionais
   (`feat:`, `chore:`, `docs:`, `fix:`...). Ex.: `feat: add web app`. Sem trailer
-  `Co-Authored-By`.
+  `Co-Authored-By` e **sem body** — mudança grande demais pra uma linha é sinal
+  de **split por concern** em vários commits: agrupar por camada/feature,
+  `git add <paths>` explícito por grupo, ordenados pra cada commit intermediário
+  ainda passar typecheck/test (contrato shared + api antes do web que consome).
+  Reescrever histórico já pushado (repo solo): `git reset --soft`, re-commitar
+  em grupos, `git push --force-with-lease`, conferindo árvore final idêntica
+  (`git diff <old> <new> --quiet`).
 - Mudanças pequenas e executáveis. Sem scaffold vazio antes de comportamento.
 
 ## Comandos
