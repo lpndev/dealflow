@@ -3,6 +3,7 @@ export type {
   Destination,
   DeliveryResult,
   PublicationDraft as Form,
+  PageMessage,
   PlanStatus,
   QueueItem,
   Settings,

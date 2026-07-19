@@ -1,6 +1,7 @@
 import { Button } from "@dealflow/ui/button";
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { sendRuntimeMessage } from "../messages";
 import { capture, productId } from "./ml-page";
 
 type State =
@@ -9,7 +10,20 @@ type State =
   | { kind: "done" }
   | { kind: "error"; message: string };
 
-function CaptureButton({ auto }: { auto: boolean }) {
+function buttonLabel(state: State): string {
+  switch (state.kind) {
+    case "busy":
+      return state.label;
+    case "done":
+      return "✓ Capturada";
+    case "error":
+      return "✗ " + state.message;
+    default:
+      return "Capturar oferta";
+  }
+}
+
+function CaptureButton({ auto }: Readonly<{ auto: boolean }>) {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   const run = useCallback(async () => {
@@ -20,30 +34,23 @@ function CaptureButton({ auto }: { auto: boolean }) {
       const message = (e as Error).message || String(e);
       setState({ kind: "error", message });
       if (auto)
-        chrome.runtime.sendMessage({ type: "mint-failed", error: message });
+        void sendRuntimeMessage({ type: "mint-failed", error: message });
     }
     setTimeout(() => setState({ kind: "idle" }), 3500);
   }, [auto]);
 
   useEffect(() => {
-    if (auto) run();
+    if (auto) void run();
   }, [auto, run]);
 
-  const label =
-    state.kind === "busy"
-      ? state.label
-      : state.kind === "done"
-        ? "✓ Capturada"
-        : state.kind === "error"
-          ? "✗ " + state.message
-          : "Capturar oferta";
+  const label = buttonLabel(state);
 
   return (
     <Button
       size={null}
       variant={state.kind === "error" ? "destructive" : "default"}
       disabled={state.kind === "busy"}
-      onClick={run}
+      onClick={() => void run()}
       className="gap-2 px-6 py-4 text-xl font-semibold shadow-lg"
     >
       {label}

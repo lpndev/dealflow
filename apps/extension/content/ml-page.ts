@@ -1,9 +1,13 @@
 import type { ExtractedDeal } from "@dealflow/shared";
+import { sendRuntimeMessage, type CaptureReply } from "../messages";
+
+type LdNode = { name?: string; image?: string | string[]; offers?: unknown };
+type AffiliateTag = { tag?: string; in_use?: boolean };
 
 const PRODUCT_RE = /\/(?:p|up)\/(MLBU?-?\d+)|\/(MLB-\d+)-/i;
 
 export function productId(): string | null {
-  const m = location.pathname.match(PRODUCT_RE);
+  const m = PRODUCT_RE.exec(location.pathname);
   const raw = m?.[1] ?? m?.[2];
   return raw ? raw.replace(/-/g, "").toUpperCase() : null;
 }
@@ -14,40 +18,50 @@ function parseBrl(text: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function scrape() {
-  let name: string | undefined;
-  let image: string | undefined;
-  let current: number | undefined;
+const first = <T>(value: T | T[]): T =>
+  Array.isArray(value) ? value[0] : value;
+
+function offerNode(): LdNode {
   for (const s of document.querySelectorAll(
     'script[type="application/ld+json"]',
   )) {
     try {
-      const j = JSON.parse(s.textContent ?? "");
-      const node = Array.isArray(j) ? j.find((x) => x.offers) : j;
-      if (node && node.offers) {
-        name = node.name;
-        image = Array.isArray(node.image) ? node.image[0] : node.image;
-        const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
-        current = offer && Number(offer.price);
-        break;
-      }
+      const parsed = JSON.parse(s.textContent ?? "") as LdNode | LdNode[];
+      const node = Array.isArray(parsed)
+        ? parsed.find((x) => x.offers)
+        : parsed;
+      if (node?.offers) return node;
     } catch {
-      /* ignore */
+      continue;
     }
   }
-  name ||= document.querySelector("h1.ui-pdp-title")?.textContent?.trim();
-  const origEl = document.querySelector(
+  return {};
+}
+
+function originalPrice(): number | undefined {
+  const el = document.querySelector(
     ".ui-pdp-price__original-value .andes-money-amount__fraction, s .andes-money-amount__fraction",
   );
-  const origCents = document.querySelector(
+  if (!el) return undefined;
+  const cents = document.querySelector(
     ".ui-pdp-price__original-value .andes-money-amount__cents, s .andes-money-amount__cents",
   );
-  const original = origEl
-    ? parseBrl(
-        origEl.textContent + (origCents ? "," + origCents.textContent : ""),
-      )
+  return parseBrl(el.textContent + (cents ? "," + cents.textContent : ""));
+}
+
+function scrape() {
+  const node = offerNode();
+  const offer = node.offers
+    ? (first(node.offers) as { price?: unknown })
     : undefined;
-  return { name, image, current, original };
+  return {
+    name:
+      node.name ||
+      document.querySelector("h1.ui-pdp-title")?.textContent?.trim(),
+    image: node.image ? first(node.image) : undefined,
+    current: offer ? Number(offer.price) : undefined,
+    original: originalPrice(),
+  };
 }
 
 const AFFILIATE_API =
@@ -63,8 +77,8 @@ async function affiliateLink(url: string) {
     throw new Error(
       "Entre no Mercado Livre como afiliado para gerar o link (você não está autenticado).",
     );
-  const tags = (await tagsRes.json()).tags || [];
-  const tag = (tags.find((t: { in_use: boolean }) => t.in_use) || tags[0])?.tag;
+  const { tags = [] } = (await tagsRes.json()) as { tags?: AffiliateTag[] };
+  const tag = (tags.find((t) => t.in_use) ?? tags[0])?.tag;
   if (!tag)
     throw new Error(
       "Sua conta do Mercado Livre não tem uma etiqueta de afiliado ativa.",
@@ -81,9 +95,9 @@ async function affiliateLink(url: string) {
     throw new Error(
       "O Mercado Livre recusou gerar o link (" + res.status + ").",
     );
-  const link = (await res.json()).short_url;
+  const { short_url: link } = (await res.json()) as { short_url?: string };
   if (!link) throw new Error("O Mercado Livre respondeu sem o link.");
-  return { link: link as string, tag: tag as string };
+  return { link, tag };
 }
 
 export async function capture(setStatus: (t: string) => void) {
@@ -103,10 +117,10 @@ export async function capture(setStatus: (t: string) => void) {
     price: { original, current },
   };
   setStatus("Enviando…");
-  const reply = await chrome.runtime.sendMessage({
+  const reply = (await sendRuntimeMessage({
     type: "capture",
     draft,
     affiliateTag,
-  });
-  if (!reply?.ok) throw new Error(reply?.error || "Dealflow não respondeu");
+  })) as CaptureReply | undefined;
+  if (!reply?.ok) throw new Error(reply?.error ?? "Dealflow não respondeu");
 }

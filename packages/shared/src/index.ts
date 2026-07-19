@@ -65,6 +65,12 @@ export type GatewayGroup = { id: string; name: string };
 
 export type GatewayMessage = Omit<SendMessageInput, "sessionId">;
 
+export type PageMessage =
+  | { source: "dealflow"; type: "ping" }
+  | { source: "dealflow"; type: "mint"; sourceUrl: string }
+  | { source: "dealflow-ext"; type: "pong" }
+  | { source: "dealflow-ext"; type: "mint-error"; error?: string };
+
 export type Settings = {
   delayMinSeconds: number;
   delayMaxSeconds: number;
