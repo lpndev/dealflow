@@ -31,13 +31,13 @@ it("fills coupon and de/por prices from the message text", async () => {
 });
 
 it("rejects input without any url", async () => {
-  expect(importDeal("sem link", async () => html)).rejects.toBeInstanceOf(
+  await expect(importDeal("sem link", async () => html)).rejects.toBeInstanceOf(
     ImportError,
   );
 });
 
 it("rejects a url from an unsupported marketplace", async () => {
-  expect(
+  await expect(
     importDeal("https://www.amazon.com.br/dp/B0XYZ", async () => html),
   ).rejects.toBeInstanceOf(ImportError);
 });

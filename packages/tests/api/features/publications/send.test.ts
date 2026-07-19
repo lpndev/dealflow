@@ -160,7 +160,7 @@ it("marks the publication sent when all deliveries succeed", async () => {
 
 it("rejects sending an unknown publication", async () => {
   const { db } = setup();
-  expect(
+  await expect(
     sendPublication(
       { publicationId: "missing", destinationIds: ["dest-0"] },
       db,
