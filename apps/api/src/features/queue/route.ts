@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { requireAuth, type AppEnv } from "@/shared/auth";
 import { getDb } from "@/shared/db";
 import { ScheduleError } from "@/shared/errors";
+import { stringArray } from "@/shared/validate";
 import {
   cancelScheduled,
   clearHistory,
@@ -79,12 +80,13 @@ queue.put("/queue/order", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     orderedIds?: unknown;
   } | null;
-  if (!Array.isArray(body?.orderedIds)) {
+  const orderedIds = stringArray(body?.orderedIds);
+  if (!orderedIds) {
     return c.json({ error: "orderedIds is required" }, 400);
   }
   const workspaceId = c.get("workspaceId");
   try {
-    reorderQueue(getDb(), workspaceId, body.orderedIds as string[]);
+    reorderQueue(getDb(), workspaceId, orderedIds);
     return c.json({ items: listQueue(getDb(), workspaceId) });
   } catch (err) {
     if (err instanceof ScheduleError)
