@@ -22,7 +22,8 @@ import {
 import "@dealflow/ui/styles.css";
 
 async function protectedLoader() {
-  const { data } = await authClient.getSession();
+  const { data, error } = await authClient.getSession();
+  if (error && error.status !== 401) return null;
   if (!data) throw redirect("/login");
   if (!data.session.activeOrganizationId) throw redirect("/onboarding");
   return data;
