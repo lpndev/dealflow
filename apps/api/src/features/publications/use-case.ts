@@ -10,7 +10,7 @@ import {
   product,
   publication,
 } from "@/shared/schema";
-import { normalizeUrl } from "@/shared/urls";
+import { isHttpUrl, isTrustedImageUrl, normalizeUrl } from "@/shared/urls";
 import { renderPublication, type RenderInput } from "./render";
 
 const PROVIDER = "mercado-livre";
@@ -150,29 +150,6 @@ function upsertProduct(
     })
     .run();
   return id;
-}
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const { protocol } = new URL(value);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-export function isTrustedImageUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      /(?:^|\.)mlstatic\.com$/i.test(url.hostname)
-    );
-  } catch {
-    return false;
-  }
 }
 
 function sameUrl(a: string, b: string): boolean {

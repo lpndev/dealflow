@@ -9,6 +9,29 @@ export function extractUrls(text: string): string[] {
   });
 }
 
+export function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function isTrustedImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      /(?:^|\.)mlstatic\.com$/i.test(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeUrl(url: string): string {
   const parsed = new URL(url.trim());
   parsed.hostname = parsed.hostname.toLowerCase();

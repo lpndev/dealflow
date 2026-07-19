@@ -37,6 +37,9 @@ export function updateSettings(
   const next: Settings = { ...getSettings(db, workspaceId), ...input };
   next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null;
 
+  if (next.mlAffiliateTag && next.mlAffiliateTag.length > 60) {
+    throw new SettingsError("affiliate tag must be at most 60 characters");
+  }
   if (
     !Number.isInteger(next.delayMinSeconds) ||
     !Number.isInteger(next.delayMaxSeconds) ||
