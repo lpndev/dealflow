@@ -92,7 +92,9 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 - **UI:** `@dealflow/ui` (`packages/ui`) — design system reutilizável, consumido
   como source `.tsx` (sem build, igual ao shared) (ver Nota packages/ui)
 - **Qualidade:** TypeScript strict, ESLint (flat, + `eslint-plugin-react-hooks`
-  oficial no web — nada de plugins de terceiro), Prettier (+
+  oficial no web e `eslint-plugin-sonarjs` da SonarSource — as regras do SonarLint
+  rodam no `bun run lint`; nada de plugins de terceiro), **lint type-aware**
+  (`ts.configs.recommendedTypeChecked` + `projectService`) (ver Nota lint), Prettier (+
   `@ianvs/prettier-plugin-sort-imports` e `prettier-plugin-tailwindcss`),
   **Vitest** (unit, roda sob o runtime do Bun) + **Playwright** (e2e),
   centralizados em `@dealflow/tests` (ver Nota testes)
@@ -141,8 +143,10 @@ e o workspace não tiver dir, os arquivos são movidos pra dentro — o número 
 pareado migra sem QR novo (verificado ao vivo 2026-07-12). O **web NÃO fala
 mais com o gateway** — tudo mediado pela API em `/wa/*`
 (`features/whatsapp/route.ts`, `requireAuth`, sessão = `workspaceId` da sessão
-de auth): `GET /wa/session` (status+QR, qualquer membro — um publisher
-convidado usa o WhatsApp do workspace sem parear nada), `POST
+de auth): `GET /wa/session` (status pra qualquer membro — um publisher
+convidado usa o WhatsApp do workspace sem parear nada; o **QR só sai pra
+admin+**, publisher recebe `qr:null` — senão, durante um pareamento, qualquer
+membro poderia escanear o QR primeiro e vincular o próprio telefone), `POST
 /wa/{connect,end,logout}` (admin+ via `requireRole`). A API fala com o gateway
 atrás do `MessagingProvider` (`shared/messaging.ts` — métodos recebem
 `sessionId` = workspaceId; invariante testada: a delivery usa o workspace dela
@@ -259,14 +263,26 @@ rota de domínio passa por `requireAuth` e filtra pelo `workspaceId` da sessão 
 a isolação por workspace é a fronteira que impede um operador ver dado do outro
 (testada em `workspace-isolation.test.ts`). A sessão de WhatsApp também é
 por-workspace (ver Slice 3): o web só a acessa via `/wa/*` autenticado; status
-pra qualquer membro, gerenciar (connect/end/logout) é admin+. O **gateway**
-(`:3002`) segue sem auth por request: é local, só a API fala com ele, confiado;
-o `:id` de sessão é validado (`^[A-Za-z0-9_-]+$`) antes de virar path de fs.
-Gateway valida `imageUrl` só por protocolo (http/https) —
-o `imageUrl` vem da oferta do próprio operador e o gateway é local, então SSRF
-de IP privado está fora do modelo de ameaça. Se um dia o gateway aceitar entrada
-não confiável (SaaS): resolver DNS, bloquear faixas privadas/loopback/link-local
-e fixar o IP resolvido no fetch.
+pra qualquer membro, QR e gerenciar (connect/end/logout) é admin+. O **gateway**
+(`:3002`): local sem token continua confiado (só a API fala com ele), mas
+`WA_GATEWAY_TOKEN` (env compartilhada, `.env` da raiz) liga auth por request —
+gateway exige `x-gateway-token` (`bearerAuth` first-party do Hono com
+`headerName` custom, compare timing-safe por digest; montado só em
+`/sessions/*`, `/health` fica aberto) e a API o envia; **bind fora de loopback sem token recusa subir**
+(`index.ts` do gateway, fail-closed). O `:id` de sessão é validado
+(`^[A-Za-z0-9_-]+$`) antes de virar path de fs. `imageUrl` no send: o gateway
+**baixa a imagem ele mesmo** (`fetch-image.ts`) e passa o Buffer ao Baileys —
+resolve DNS e exige todo IP público (`isPublicIp` bloqueia
+privado/loopback/link-local/CGNAT/reservado, v4 e v6/mapped, testado), re-valida
+cada hop de redirect (máx 3), timeout 15s e cap 5MB streaming. Residual aceito:
+janela TOCTOU de DNS-rebinding entre lookup e fetch (Bun não expõe pin de IP no
+fetch) — mitigada porque a API só aceita `imageUrl` do CDN mlstatic
+(`isTrustedImageUrl`). **Rate limit de domínio** (`shared/rate-limit.ts`):
+fixed-window em memória por `workspaceId` — `/deals/import` 10/min (dispara
+fetch server-side ao ML), send e schedule 20/min; `DEALFLOW_E2E` desliga (mesmo
+padrão do better-auth); ponytail: Map em memória num processo só — vira store
+compartilhado se a API escalar horizontal. Erros 429 saem como
+`{ error: "too many requests" }`.
 
 Nota auth/tenancy (fundação, feat/auth-tenancy-foundation): **better-auth**
 montado no Hono em `/api/auth/*` (adapter Drizzle, mesmo `bun:sqlite`/migração;
@@ -291,8 +307,27 @@ Extensão: autentica `/deals/capture` por `x-api-key` (chave gerada na aba Confi
 metadata guarda o `organizationId`) → workspace vem da chave; o slot de captura
 virou `Map` por-workspace. Web: better-auth React client, rotas públicas
 `/login`/`/signup`/`/onboarding`/`/accept-invite/:id`, guard (`protectedLoader`)
-no Layout, switcher de workspace + menu de usuário no header, aba Equipe (membros
+no Layout + `guestLoader` em `/login`/`/signup` (sessão ativa redireciona pra
+dentro honrando `?redirect=` via `safeRedirect` — logado não vê tela de auth;
+coberto no e2e), switcher de workspace + menu de usuário no header, aba Equipe (membros
 e convite por **link copiável**, sem email) e painel de API keys na Config.
+Rate limit + guard de sessão (corrigido 2026-07-18): o `rateLimit` do better-auth é
+`{ window: 10, max: 100 }` = **o default da lib**. NÃO apertar o global achando que
+protege login: o better-auth aplica `getDefaultSpecialRules()` que **sobrescreve** o
+global em `/sign-in`, `/sign-up`, `/change-password`, `/change-email` (**3 por 10s**) e
+nos de reset de senha (3 por 60s) — ordem: global → special rules → plugins →
+`customRules`. O projeto tinha `{ window: 60, max: 10 }` (10 req/min pra TUDO), o que
+não deixava o login mais seguro (já era 3/10s) e estrangulava `/get-session`, chamado a
+cada navegação de rota do SPA: bastavam ~10 navegações pra 429. Verificado ao vivo após
+o fix: 20/20 `get-session` = 200, e sign-in = `401,401,401,429,429,429` (brute force
+segue barrado). Junto, o `protectedLoader` (`main.tsx`) **distinguia mal**: fazia
+`if (!data) redirect("/login")`, então um 429 (ou rede caindo) deslogava a tela com a
+sessão **válida no banco**. Agora só manda pro login em `error.status === 401`; em
+qualquer outro erro devolve `null` e deixa passar — o guard do client é UX, não
+segurança (o backend valida request a request; ver Nota SPA §Segurança). Sessão dura
+**7 dias** (default), com renovação por atividade — não é 1 dia. Esse bug **não aparece
+no e2e** porque o harness desliga o rate limit (`DEALFLOW_E2E`); só aparece no uso real.
+
 Diferido (portas abertas): planos/tiers/trial 7 dias JÁ construído (ver Nota
 planos/tiers) — falta só o **pagamento** (`@better-auth/stripe`, checkout, webhooks,
 upgrade/downgrade/cancelamento); e envio de email, múltiplos números de WhatsApp,
@@ -390,7 +425,10 @@ clamp pra agora) deixa o operador escolher quando a fila começa. Assim a conta
 nunca dispara em rajada e um envio único não fica preso 20–40 min à toa. Um loop in-process
 (`scheduler.ts` `startScheduler`, setInterval 30s no boot da API) chama
 `dispatchDue` que pega o `scheduled` vencido mais antigo, um por vez, e reusa o
-`deliverOne` compartilhado (`send/deliver.ts`, extraído do send imediato — mesmo
+`deliverOne` compartilhado. O scan é **global entre workspaces** (não há fila
+justa por tenant), mas exclui os workspaces pausados **na própria query**
+(`notInArray` sobre `settings.queuePaused`) — senão a linha vencida e parada de
+um tenant pausado travaria a entrega de todos os outros pra sempre (`send/deliver.ts`, extraído do send imediato — mesmo
 caminho, mesma idempotência/dedupe). Falha vira `failed` e NÃO re-tenta sozinha
 (fail-closed; operador reenvia). Faixa de delay configurável em `settings`
 (tabela nova, default 1200–2400s = 20–40 min) na aba Config; "Enviar agora"
@@ -543,7 +581,12 @@ DOM+JSON-LD (a página logada não é anti-botada, o preço vem completo), monta
 `affiliateTag` lida no mint (`{ draft, affiliateTag }` no body) e a API a adota
 em `settings.mlAffiliateTag` **só quando está vazio** (`adoptAffiliateTag`,
 testado: nunca sobrescreve tag configurada) — o operador não digita a etiqueta;
-a primeira captura preenche. A API guarda o draft num slot único
+a primeira captura preenche. O body é validado na fronteira (`sanitizeDraft`,
+testado): `affiliateUrl`/`sourceUrl` exigem http(s) ≤1000 chars (senão 400),
+campos opcionais malformados são **descartados** em vez de rejeitar o draft
+(imagem só CDN mlstatic via `isTrustedImageUrl`, strings com cap, preços
+numéricos finitos) — robusto a mudança do ML sem armazenar lixo. A API guarda o
+draft num slot único
 em memória (`features/deals/capture/route.ts`, ponytail: handoff transiente numa
 máquina; virar tabela se precisar sobreviver a restart) e o `background` foca/abre
 a aba do Dealflow. O web "Nova oferta" faz poll de `GET /deals/capture` (consome e
@@ -671,6 +714,32 @@ os defaults; hospedar = `cp .env.example .env` e ajustar. A extensão é artefat
 browser: seus defaults (`apiUrl`/`webUrl`) ficam hardcoded e são sobrescritos no
 popup (chrome.storage), não por env.
 
+Nota lint (2026-07-18): o lint é **type-aware** — `ts.configs.recommendedTypeChecked`
+
+- `parserOptions.projectService` + `sonarjs.configs.recommended` (SonarSource, as
+  mesmas regras do SonarLint da IDE). Escopo e exceções, todas deliberadas:
+
+* **`**/components/ui/**` é ignorado** (primitives shadcn do registry, mesma regra
+  do `.prettierignore` — reformatá-los faria drift do registry).
+* **`packages/tests/**` e `*.config.{js,ts}` rodam sem type-aware**
+  (`disableTypeChecked`): os tsconfigs dos testes são `tsconfig.<escopo>.json`, que
+  o `projectService` não acha (ele procura `tsconfig.json`). Testes mantêm as regras
+  sonarjs não-tipadas. **`sonarjs/async-test-assertions` fica LIGADO** — foi ela que
+  pegou 3 `expect(...).rejects` sem `await` (ver Nota testes). Desligados só em teste:
+  skipped, float equality, senha fake, `/tmp`, http, IP hardcoded (o teste de
+  `isPublicIp` assere sobre IPs literais de propósito).
+* **`sonarjs/no-inconsistent-returns` fica OFF** (é off no profile do Sonar também):
+  briga com o contrato `Response | void` do middleware Hono e dos handlers React.
+* **`only-throw-error` aceita `Response` no web** (`allow: [{from:"lib",name:"Response"}]`)
+  — `throw redirect()` é o idioma documentado dos loaders do React Router.
+* Um único `eslint-disable` no projeto: o regex `PRICE` de `message.ts`, apontado como
+  super-linear. **Medido linear até 100k chars** (as classes `[\d.]` e `,` são
+  disjuntas → sem backtracking); apertar o regex mudaria o parsing documentado
+  (`"R$ 1.2"` → 1.2 viraria 1).
+* Regras da IDE que o plugin ESLint não tem (ex.: **S7776**, "use `Set`+`has()`") não
+  aparecem no `bun run lint` — se o SonarQube da IDE apontar algo que o lint não pega,
+  é isso; corrigir à mão.
+
 Nota testes (2026-07-15): a suíte deixou o `bun test` colocado por app e virou um
 package próprio, `@dealflow/tests` (`packages/tests`), com **Vitest** (unit) +
 **Playwright** (e2e). Decisão do operador (sobrepõe a antiga regra "tests
@@ -687,7 +756,7 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
   cada app aponta pra src diferente — api e wa-gateway têm ambos `@/app`, então
   NÃO dá pra compartilhar um alias só). `@support` → `packages/tests/support`.
   DB de teste é `:memory:` (via `NODE_ENV=test`). Deps que os testes importam
-  direto (só `drizzle-orm`) e os tipos (`@types/bun`, `@types/node`) moram no
+  direto (`drizzle-orm`, `hono`) e os tipos (`@types/bun`, `@types/node`) moram no
   `package.json` do `@dealflow/tests`; imports do src dos apps se resolvem
   sozinhos (relativos ao arquivo, caem no `node_modules` do app).
 - **Typecheck**: um `tsconfig.<escopo>.json` por projeto (api/wa-gateway/
@@ -714,6 +783,13 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
   `bunx playwright install chromium` (headless-shell, ~114MB, cacheado).
 - Essas libs são first-party (Vitest = time do Vite; Playwright = Microsoft);
   substituem o `bun test` como runner único do projeto.
+- **`expect(promise).rejects` SEM `await` não assere nada** — o teste passa mesmo
+  se a promise resolver. Três invariantes (import rejeita URL de marketplace não
+  suportado / sem URL; send rejeita publicação inexistente) estavam assim, achadas
+  pelo `sonarjs/async-test-assertions`. Sempre `await expect(...).rejects`.
+  O override de sonarjs pra `packages/tests/**` desliga só ruído de teste
+  (skipped, float equality, senha fake, `/tmp`, http) — **nunca**
+  `async-test-assertions`, que pega bug real.
 
 ## Arquitetura
 
@@ -750,7 +826,9 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
   (`overflow-x-hidden`); passe `className="w-auto"` nesses casos (user-menu,
   workspace-switcher).
 - **Contratos-fio em `@dealflow/shared`** (`ExtractedDeal`, `DeliveryResult`,
-  `QueueItem`, `Settings`): o que atravessa o HTTP mora aí e é importado de
+  `QueueItem`, `Settings`; também `PageMessage`, o protocolo `postMessage`
+  web↔extensão — cruza o fio, então mora aí, tipado uma vez pros dois lados):
+  o que atravessa o HTTP mora aí e é importado de
   `@dealflow/shared` — **sem shim/barrel local de re-export**. No fio datas são
   `string`; o servidor deriva a variante com `Date` via
   `Omit<QueueItem,"dueAt"|"sentAt"> & { dueAt: Date | null }`. NÃO confundir com
@@ -808,7 +886,11 @@ o que sobra.
 - **Verificar no browser** (app rodando) toda feature nova antes de commitar —
   teste verde não prova comportamento ponta-a-ponta. Refactor type-only/config
   dispensa (typecheck+lint+test+build cobrem).
-- **Sem comentários** no código. Nomes explícitos falam por si.
+- **Sem comentários** no código. Nomes explícitos falam por si. Isso vale inclusive
+  para os `ponytail:` que marcam simplificação deliberada: o **conhecimento vai pro
+  `CLAUDE.md`** (fonte de verdade versionada), o comentário não fica. Marcador em
+  `catch` vazio também não: reestruture (`catch { continue; }`,
+  `.catch(() => undefined)`) em vez de comentar.
 - **shadcn-first (web):** sempre usar componentes shadcn; **verificar o registro
   antes de criar um à mão** (`https://ui.shadcn.com/docs/components`). Só criar
   componente próprio quando compõe várias coisas que o shadcn não dá pronto — e
