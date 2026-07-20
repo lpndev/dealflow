@@ -26,7 +26,7 @@ export default [
     }
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}"],
+    files: ["apps/panel/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/only-throw-error": [
         "error",
@@ -36,7 +36,7 @@ export default [
   },
   {
     files: [
-      "apps/web/**/*.{ts,tsx}",
+      "apps/panel/**/*.{ts,tsx}",
       "apps/extension/**/*.{ts,tsx}",
       "packages/ui/**/*.{ts,tsx}"
     ],

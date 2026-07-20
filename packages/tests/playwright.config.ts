@@ -40,7 +40,7 @@ export default defineConfig({
     },
     {
       command: `bun run build && bun run preview -- --port ${WEB_PORT} --strictPort`,
-      cwd: `${root}apps/web`,
+      cwd: `${root}apps/panel`,
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,

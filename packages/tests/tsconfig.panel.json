@@ -4,9 +4,9 @@
     "lib": ["ESNext"],
     "types": ["node"],
     "paths": {
-      "@/*": ["../../apps/web/src/*"],
+      "@/*": ["../../apps/panel/src/*"],
       "@support/*": ["./support/*"]
     }
   },
-  "include": ["web"]
+  "include": ["panel"]
 }

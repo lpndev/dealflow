@@ -7,7 +7,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc -p tsconfig.api.json && tsc -p tsconfig.wa-gateway.json && tsc -p tsconfig.extension.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json"
+    "typecheck": "tsc -p tsconfig.api.json && tsc -p tsconfig.wa-gateway.json && tsc -p tsconfig.extension.json && tsc -p tsconfig.panel.json && tsc -p tsconfig.e2e.json"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

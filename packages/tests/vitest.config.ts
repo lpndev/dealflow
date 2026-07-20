@@ -33,11 +33,11 @@ export default defineConfig({
         }
       },
       {
-        resolve: { alias: { "@": r("../../apps/web/src") } },
+        resolve: { alias: { "@": r("../../apps/panel/src") } },
         test: {
-          name: "web",
+          name: "panel",
           environment: "node",
-          include: ["web/**/*.test.ts"]
+          include: ["panel/**/*.test.ts"]
         }
       }
     ]
