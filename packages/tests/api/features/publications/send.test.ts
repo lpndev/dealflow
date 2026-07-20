@@ -1,6 +1,10 @@
 import { testDb } from "@support/db"
 import { FakeMessaging } from "@support/fake-messaging"
 import { expect, it } from "vitest"
+import {
+  deliverOne,
+  loadPublicationContent
+} from "@/features/publications/send/deliver"
 import { sendPublication } from "@/features/publications/send/use-case"
 import { createPublication } from "@/features/publications/use-case"
 import { type Db } from "@/shared/db"
@@ -117,6 +121,26 @@ it("retry does not resend an already sent delivery", async () => {
   )
 
   expect(provider.sent).toHaveLength(1)
+})
+
+it("sends once when two concurrent deliveries race for the same destination", async () => {
+  const { db, pub } = await setup()
+  const [dest] = await seed(db, ["Grupo 1"])
+  const provider = new FakeMessaging()
+  const content = await loadPublicationContent(db, DEFAULT_WORKSPACE_ID, pub.id)
+  if (!content) throw new Error("publication content missing")
+
+  const results = await Promise.all([
+    deliverOne(db, DEFAULT_WORKSPACE_ID, provider, content, dest),
+    deliverOne(db, DEFAULT_WORKSPACE_ID, provider, content, dest)
+  ])
+
+  const rows = await db.select().from(delivery).all()
+  expect(provider.sent).toHaveLength(1)
+  expect(rows).toHaveLength(1)
+  expect(rows[0].status).toBe("sent")
+  expect(rows[0].attempts).toBe(1)
+  expect(results.every((r) => r.status !== "sent")).toBe(false)
 })
 
 it("marks a delivery failed on error and a retry can succeed", async () => {
