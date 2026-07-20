@@ -804,7 +804,7 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
 - **Vitest roda SOB o runtime do Bun** (`bun run --bun`, ver script `test`) —
   obrigatório porque `apps/api/src/shared/db.ts` importa `bun:sqlite`, builtin
   que só existe no Bun; workers de Node quebram. Formas que NÃO funcionam:
-  `bun run vitest` procura um *script* chamado vitest, e `bunx vitest` baixa uma
+  `bun run vitest` procura um _script_ chamado vitest, e `bunx vitest` baixa uma
   cópia avulsa pro /tmp com resolução quebrada — sempre o bin local sob
   `--bun`. Config: `vitest.config.ts` com
   `test.projects` (um por app), cada um com seu **próprio** alias `@` (o `@` de

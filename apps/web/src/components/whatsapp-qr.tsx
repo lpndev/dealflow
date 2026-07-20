@@ -14,5 +14,5 @@ export function WhatsAppQr({ qr }: Readonly<{ qr: string }>) {
         className="w-full bg-white p-2"
       />
     </>
-  );
+  )
 }

@@ -1,17 +1,17 @@
-import { apiKey } from "@better-auth/api-key";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization } from "better-auth/plugins";
-import { getDb } from "@/shared/db";
-import { canCreateWorkspace } from "@/shared/plans";
-import * as schema from "@/shared/schema";
-import { hierarchyGuard } from "./hierarchy";
-import { ac, admin, member, owner } from "./permissions";
-import { trustedOrigins } from "./trusted-origins";
-import { resolveActiveWorkspace } from "./workspace-claim";
+import { apiKey } from "@better-auth/api-key"
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { organization } from "better-auth/plugins"
+import { getDb } from "@/shared/db"
+import { canCreateWorkspace } from "@/shared/plans"
+import * as schema from "@/shared/schema"
+import { hierarchyGuard } from "./hierarchy"
+import { ac, admin, member, owner } from "./permissions"
+import { trustedOrigins } from "./trusted-origins"
+import { resolveActiveWorkspace } from "./workspace-claim"
 
 if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
-  throw new Error("BETTER_AUTH_SECRET is required in production");
+  throw new Error("BETTER_AUTH_SECRET is required in production")
 }
 
 export const auth = betterAuth({
@@ -27,9 +27,9 @@ export const auth = betterAuth({
     organization({
       ac,
       roles: { owner, admin, member },
-      allowUserToCreateOrganization: (u) => canCreateWorkspace(getDb(), u.id),
+      allowUserToCreateOrganization: (u) => canCreateWorkspace(getDb(), u.id)
     }),
-    apiKey({ enableSessionForAPIKeys: false, enableMetadata: true }),
+    apiKey({ enableSessionForAPIKeys: false, enableMetadata: true })
   ],
   databaseHooks: {
     session: {
@@ -37,13 +37,13 @@ export const auth = betterAuth({
         before(session) {
           const activeOrganizationId = resolveActiveWorkspace(
             getDb(),
-            session.userId,
-          );
+            session.userId
+          )
           return Promise.resolve({
-            data: { ...session, activeOrganizationId },
-          });
-        },
-      },
-    },
-  },
-});
+            data: { ...session, activeOrganizationId }
+          })
+        }
+      }
+    }
+  }
+})

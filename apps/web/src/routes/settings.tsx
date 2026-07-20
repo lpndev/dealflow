@@ -1,18 +1,18 @@
-import { Button } from "@dealflow/ui/button";
-import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
+import { Button } from "@dealflow/ui/button"
+import { Field, FieldError, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-  InputGroupText,
-} from "@dealflow/ui/input-group";
-import { Textarea } from "@dealflow/ui/textarea";
-import { FloppyDiskIcon } from "@phosphor-icons/react";
-import { useForm, useSelector } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
-import { toast } from "sonner";
+  InputGroupText
+} from "@dealflow/ui/input-group"
+import { Textarea } from "@dealflow/ui/textarea"
+import { FloppyDiskIcon } from "@phosphor-icons/react"
+import { useForm, useSelector } from "@tanstack/react-form"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRef } from "react"
+import { toast } from "sonner"
 import {
   ApiKeysPanel,
   DangerZone,
@@ -21,60 +21,60 @@ import {
   Panel,
   PlanPanel,
   PreviewBubble,
-  WhatsAppConfig,
-} from "@/components";
+  WhatsAppConfig
+} from "@/components"
 import {
   apiGet,
   apiPut,
   errMsg,
   fmtMin,
   useCanManage,
-  useUnsavedWarning,
-} from "@/lib";
-import { type Settings } from "@/types";
+  useUnsavedWarning
+} from "@/lib"
+import { type Settings } from "@/types"
 
 const PLACEHOLDERS = [
   { key: "{titulo}", desc: "nome do produto" },
   { key: "{de}", desc: "preço antigo" },
   { key: "{por}", desc: "preço atual" },
   { key: "{cupom}", desc: "cupom (some se vazio)" },
-  { key: "{link}", desc: "link de afiliado (obrigatório)" },
-];
+  { key: "{link}", desc: "link de afiliado (obrigatório)" }
+]
 
 const SAMPLE: Record<string, string> = {
   "{titulo}": "Air Fryer Mondial 5L",
   "{de}": "R$ 499,00",
   "{por}": "R$ 299,00",
   "{cupom}": "CASA20",
-  "{link}": "https://meli.la/aBcD",
-};
+  "{link}": "https://meli.la/aBcD"
+}
 
 function renderSample(template: string): string {
   return template
     .replace(/\{\w+\}/g, (m) => SAMPLE[m] ?? m)
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .trim()
 }
 
 type DelayFieldApi = {
   state: {
-    value: string;
-    meta: { isTouched: boolean; isValid: boolean; errors: unknown[] };
-  };
-  handleBlur: () => void;
-  handleChange: (value: string) => void;
-};
+    value: string
+    meta: { isTouched: boolean; isValid: boolean; errors: unknown[] }
+  }
+  handleBlur: () => void
+  handleChange: (value: string) => void
+}
 
 function DelayField({
   field,
   id,
-  label,
+  label
 }: Readonly<{
-  field: DelayFieldApi;
-  id: string;
-  label: string;
+  field: DelayFieldApi
+  id: string
+  label: string
 }>) {
-  const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
+  const invalid = field.state.meta.isTouched && !field.state.meta.isValid
   return (
     <Field data-invalid={invalid}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -93,15 +93,15 @@ function DelayField({
       </InputGroup>
       {invalid && <FieldError>{String(field.state.meta.errors[0])}</FieldError>}
     </Field>
-  );
+  )
 }
 
 export function SettingsTab() {
   const { data, error } = useQuery<Settings>({
     queryKey: ["settings"],
-    queryFn: () => apiGet("/settings"),
-  });
-  const canManage = useCanManage();
+    queryFn: () => apiGet("/settings")
+  })
+  const canManage = useCanManage()
 
   return (
     <div className="flex flex-col gap-8">
@@ -113,70 +113,70 @@ export function SettingsTab() {
       {canManage && <ApiKeysPanel />}
       <DangerZone />
     </div>
-  );
+  )
 }
 
 function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
-  const qc = useQueryClient();
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const qc = useQueryClient()
+  const ref = useRef<HTMLTextAreaElement>(null)
 
   const save = useMutation({
     mutationFn: (v: {
-      min: string;
-      max: string;
-      tag: string;
-      template: string;
+      min: string
+      max: string
+      tag: string
+      template: string
     }) =>
       apiPut("/settings", {
         delayMinSeconds: Math.round(Number(v.min) * 60),
         delayMaxSeconds: Math.round(Number(v.max) * 60),
         messageTemplate: v.template,
-        mlAffiliateTag: v.tag,
+        mlAffiliateTag: v.tag
       }),
     onSuccess: (d) => {
-      qc.setQueryData(["settings"], d);
-      toast.success("Configurações salvas.");
+      qc.setQueryData(["settings"], d)
+      toast.success("Configurações salvas.")
     },
-    onError: (e) => toast.error(errMsg(e, "falha ao salvar")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao salvar"))
+  })
 
   const form = useForm({
     defaultValues: {
       min: String(Math.round(settings.delayMinSeconds / 60)),
       max: String(Math.round(settings.delayMaxSeconds / 60)),
       tag: settings.mlAffiliateTag ?? "",
-      template: settings.messageTemplate,
+      template: settings.messageTemplate
     },
     onSubmit: async ({ value }) => {
       const ok = await save.mutateAsync(value).then(
         () => true,
-        () => false,
-      );
-      if (ok) form.reset(value);
-    },
-  });
+        () => false
+      )
+      if (ok) form.reset(value)
+    }
+  })
 
-  const isDirty = useSelector(form.store, (s) => s.isDirty);
-  useUnsavedWarning(isDirty);
+  const isDirty = useSelector(form.store, (s) => s.isDirty)
+  useUnsavedWarning(isDirty)
 
   function insertPlaceholder(current: string, placeholder: string) {
-    const el = ref.current;
-    const start = el?.selectionStart ?? current.length;
-    const end = el?.selectionEnd ?? current.length;
-    const next = current.slice(0, start) + placeholder + current.slice(end);
-    form.setFieldValue("template", next);
+    const el = ref.current
+    const start = el?.selectionStart ?? current.length
+    const end = el?.selectionEnd ?? current.length
+    const next = current.slice(0, start) + placeholder + current.slice(end)
+    form.setFieldValue("template", next)
     requestAnimationFrame(() => {
-      el?.focus();
-      const pos = start + placeholder.length;
-      el?.setSelectionRange(pos, pos);
-    });
+      el?.focus()
+      const pos = start + placeholder.length
+      el?.setSelectionRange(pos, pos)
+    })
   }
 
   return (
     <form
       onSubmit={(e) => {
-        e.preventDefault();
-        void form.handleSubmit();
+        e.preventDefault()
+        void form.handleSubmit()
       }}
       className="flex flex-col gap-8"
     >
@@ -220,11 +220,15 @@ function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
               name="min"
               validators={{
                 onChange: ({ value }) =>
-                  Number(value) > 0 ? undefined : "Informe um mínimo válido.",
+                  Number(value) > 0 ? undefined : "Informe um mínimo válido."
               }}
             >
               {(field) => (
-                <DelayField field={field} id="settings-min" label="Mínimo" />
+                <DelayField
+                  field={field}
+                  id="settings-min"
+                  label="Mínimo"
+                />
               )}
             </form.Field>
             <form.Field
@@ -235,11 +239,15 @@ function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
                   Number(value) >= Number(fieldApi.form.getFieldValue("min")) &&
                   Number(value) > 0
                     ? undefined
-                    : "O máximo precisa ser ≥ o mínimo.",
+                    : "O máximo precisa ser ≥ o mínimo."
               }}
             >
               {(field) => (
-                <DelayField field={field} id="settings-max" label="Máximo" />
+                <DelayField
+                  field={field}
+                  id="settings-max"
+                  label="Máximo"
+                />
               )}
             </form.Field>
           </div>
@@ -247,17 +255,17 @@ function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
             selector={(s) => ({ min: s.values.min, max: s.values.max })}
           >
             {({ min, max }) => {
-              const minN = Number(min) * 60;
-              const maxN = Number(max) * 60;
+              const minN = Number(min) * 60
+              const maxN = Number(max) * 60
               const ok =
-                Number.isFinite(minN) && Number.isFinite(maxN) && maxN >= minN;
+                Number.isFinite(minN) && Number.isFinite(maxN) && maxN >= minN
               return (
                 <p className="text-xs text-muted-foreground">
                   {ok
                     ? `Cada envio sai ${fmtMin(minN)}–${fmtMin(maxN)} após o anterior.`
                     : "Defina um intervalo válido (máx ≥ mín)."}
                 </p>
-              );
+              )
             }}
           </form.Subscribe>
         </div>
@@ -281,7 +289,7 @@ function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
                 onChange: ({ value }) =>
                   value.includes("{link}")
                     ? undefined
-                    : "O template precisa conter {link}.",
+                    : "O template precisa conter {link}."
               }}
             >
               {(field) => (
@@ -336,12 +344,15 @@ function SettingsForm({ settings }: Readonly<{ settings: Settings }>) {
 
       <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting] as const}>
         {([canSubmit, isSubmitting]) => (
-          <Button type="submit" disabled={!canSubmit || isSubmitting}>
+          <Button
+            type="submit"
+            disabled={!canSubmit || isSubmitting}
+          >
             <FloppyDiskIcon />
             Salvar configurações
           </Button>
         )}
       </form.Subscribe>
     </form>
-  );
+  )
 }

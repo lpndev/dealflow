@@ -1,15 +1,15 @@
-import { Badge } from "@dealflow/ui/badge";
-import { Button } from "@dealflow/ui/button";
+import { Badge } from "@dealflow/ui/badge"
+import { Button } from "@dealflow/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@dealflow/ui/dropdown-menu";
-import { TrashIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Empty, ErrorNote, InviteMember, Panel } from "@/components";
+  DropdownMenuTrigger
+} from "@dealflow/ui/dropdown-menu"
+import { TrashIcon } from "@phosphor-icons/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { Empty, ErrorNote, InviteMember, Panel } from "@/components"
 import {
   errMsg,
   organization,
@@ -17,51 +17,54 @@ import {
   roleRank,
   unwrapAuth,
   useActiveRole,
-  useSession,
-} from "@/lib";
+  useSession
+} from "@/lib"
 
-const ASSIGNABLE_ROLES = ["owner", "admin", "member"] as const;
+const ASSIGNABLE_ROLES = ["owner", "admin", "member"] as const
 
 export function Team() {
-  const qc = useQueryClient();
-  const { data: session } = useSession();
-  const viewerRole = useActiveRole();
-  const viewerRank = roleRank(viewerRole);
-  const canAssignRoles = viewerRole === "owner";
+  const qc = useQueryClient()
+  const { data: session } = useSession()
+  const viewerRole = useActiveRole()
+  const viewerRank = roleRank(viewerRole)
+  const canAssignRoles = viewerRole === "owner"
 
   const { data, error } = useQuery({
     queryKey: ["members"],
-    queryFn: () => unwrapAuth(organization.listMembers()),
-  });
-  const members = data?.members ?? [];
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["members"] });
+    queryFn: () => unwrapAuth(organization.listMembers())
+  })
+  const members = data?.members ?? []
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["members"] })
 
   const updateRole = useMutation({
     mutationFn: (v: { memberId: string; role: string }) =>
       unwrapAuth(organization.updateMemberRole(v)),
     onSuccess: invalidate,
-    onError: (e) => toast.error(errMsg(e, "falha ao mudar papel")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao mudar papel"))
+  })
 
   const remove = useMutation({
     mutationFn: (memberIdOrEmail: string) =>
       unwrapAuth(organization.removeMember({ memberIdOrEmail })),
     onSuccess: invalidate,
-    onError: (e) => toast.error(errMsg(e, "falha ao remover membro")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao remover membro"))
+  })
 
   return (
     <div className="flex flex-col gap-8">
-      <Panel title="Membros" hint="Quem tem acesso a este workspace.">
+      <Panel
+        title="Membros"
+        hint="Quem tem acesso a este workspace."
+      >
         {error && <ErrorNote>{error.message}</ErrorNote>}
         {members.length === 0 ? (
           <Empty>Nenhum membro ainda.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {members.map((m) => {
-              const isSelf = m.userId === session?.user.id;
-              const canManage = viewerRank > roleRank(m.role);
-              const showRoleMenu = canAssignRoles && !isSelf;
+              const isSelf = m.userId === session?.user.id
+              const canManage = viewerRank > roleRank(m.role)
+              const showRoleMenu = canAssignRoles && !isSelf
               return (
                 <li
                   key={m.id}
@@ -79,7 +82,10 @@ export function Team() {
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                          >
                             {ROLE_LABEL[m.role] ?? m.role}
                           </Button>
                         }
@@ -95,7 +101,7 @@ export function Team() {
                             >
                               {r === "owner" ? "Tornar dono" : ROLE_LABEL[r]}
                             </DropdownMenuItem>
-                          ),
+                          )
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -116,7 +122,7 @@ export function Team() {
                     <TrashIcon />
                   </Button>
                 </li>
-              );
+              )
             })}
           </ul>
         )}
@@ -124,5 +130,5 @@ export function Team() {
 
       <InviteMember />
     </div>
-  );
+  )
 }

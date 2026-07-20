@@ -7,13 +7,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@dealflow/ui/alert-dialog";
-import { Button } from "@dealflow/ui/button";
-import { Input } from "@dealflow/ui/input";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Panel } from "@/components";
+  AlertDialogTrigger
+} from "@dealflow/ui/alert-dialog"
+import { Button } from "@dealflow/ui/button"
+import { Input } from "@dealflow/ui/input"
+import { useState } from "react"
+import { toast } from "sonner"
+import { Panel } from "@/components"
 import {
   apiDelete,
   apiPost,
@@ -23,18 +23,18 @@ import {
   useActiveRole,
   useCanManage,
   useOrganizations,
-  useSession,
-} from "@/lib";
-import { queryClient } from "@/lib/query";
+  useSession
+} from "@/lib"
+import { queryClient } from "@/lib/query"
 
 type DangerActionProps = {
-  title: string;
-  description: string;
-  actionLabel: string;
-  confirmWord?: string;
-  password?: boolean;
-  onConfirm: (input: string) => Promise<void>;
-};
+  title: string
+  description: string
+  actionLabel: string
+  confirmWord?: string
+  password?: boolean
+  onConfirm: (input: string) => Promise<void>
+}
 
 function DangerAction({
   title,
@@ -42,27 +42,27 @@ function DangerAction({
   actionLabel,
   confirmWord,
   password,
-  onConfirm,
+  onConfirm
 }: Readonly<DangerActionProps>) {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState("")
+  const [busy, setBusy] = useState(false)
 
   const ready =
-    (!confirmWord || value === confirmWord) && (!password || value.length > 0);
+    (!confirmWord || value === confirmWord) && (!password || value.length > 0)
 
   async function handle() {
-    setBusy(true);
+    setBusy(true)
     try {
-      await onConfirm(value);
+      await onConfirm(value)
     } catch (e) {
-      toast.error(errMsg(e, "falha na operação"));
-      setBusy(false);
-      return;
+      toast.error(errMsg(e, "falha na operação"))
+      setBusy(false)
+      return
     }
-    setBusy(false);
-    setOpen(false);
-    setValue("");
+    setBusy(false)
+    setOpen(false)
+    setValue("")
   }
 
   return (
@@ -74,13 +74,17 @@ function DangerAction({
       <AlertDialog
         open={open}
         onOpenChange={(next) => {
-          setOpen(next);
-          if (!next) setValue("");
+          setOpen(next)
+          if (!next) setValue("")
         }}
       >
         <AlertDialogTrigger
           render={
-            <Button variant="destructive" size="sm" className="shrink-0">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="shrink-0"
+            >
               {actionLabel}
             </Button>
           }
@@ -105,8 +109,8 @@ function DangerAction({
               variant="destructive"
               disabled={!ready || busy}
               onClick={(e) => {
-                e.preventDefault();
-                void handle();
+                e.preventDefault()
+                void handle()
               }}
             >
               {actionLabel}
@@ -115,26 +119,26 @@ function DangerAction({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }
 
 async function reloadIntoRemaining() {
-  const remaining = (await organization.list()).data ?? [];
+  const remaining = (await organization.list()).data ?? []
   if (remaining[0]) {
-    await organization.setActive({ organizationId: remaining[0].id });
+    await organization.setActive({ organizationId: remaining[0].id })
   }
-  window.location.assign("/");
+  window.location.assign("/")
 }
 
 export function DangerZone() {
-  const { data: session } = useSession();
-  const isOwner = useActiveRole() === "owner";
-  const canManage = useCanManage();
+  const { data: session } = useSession()
+  const isOwner = useActiveRole() === "owner"
+  const canManage = useCanManage()
 
-  const { data: orgs } = useOrganizations();
+  const { data: orgs } = useOrganizations()
   const activeName = orgs?.find(
-    (o) => o.id === session?.session.activeOrganizationId,
-  )?.name;
+    (o) => o.id === session?.session.activeOrganizationId
+  )?.name
 
   return (
     <Panel
@@ -148,9 +152,9 @@ export function DangerZone() {
             description="Invalida todas as chaves deste workspace. A extensão precisará de uma nova."
             actionLabel="Revogar todas"
             onConfirm={async () => {
-              await apiDelete("/api-keys");
-              void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-              toast.success("Chaves revogadas.");
+              await apiDelete("/api-keys")
+              void queryClient.invalidateQueries({ queryKey: ["api-keys"] })
+              toast.success("Chaves revogadas.")
             }}
           />
         )}
@@ -162,8 +166,8 @@ export function DangerZone() {
             actionLabel="Excluir workspace"
             confirmWord={activeName}
             onConfirm={async () => {
-              await apiDelete("/workspace");
-              await reloadIntoRemaining();
+              await apiDelete("/workspace")
+              await reloadIntoRemaining()
             }}
           />
         )}
@@ -174,8 +178,8 @@ export function DangerZone() {
           actionLabel="Resetar tudo"
           confirmWord="RESETAR"
           onConfirm={async () => {
-            await apiPost("/workspace/reset", {});
-            await reloadIntoRemaining();
+            await apiPost("/workspace/reset", {})
+            await reloadIntoRemaining()
           }}
         />
 
@@ -185,21 +189,21 @@ export function DangerZone() {
           actionLabel="Excluir conta"
           password
           onConfirm={async (pw) => {
-            const email = session?.user.email;
-            if (!email) throw new Error("sessão inválida");
+            const email = session?.user.email
+            if (!email) throw new Error("sessão inválida")
             const check = await authClient.signIn.email({
               email,
-              password: pw,
-            });
-            if (check.error) throw new Error("senha incorreta");
-            await apiPost("/workspace/reset", {});
-            const { error } = await authClient.deleteUser({ password: pw });
+              password: pw
+            })
+            if (check.error) throw new Error("senha incorreta")
+            await apiPost("/workspace/reset", {})
+            const { error } = await authClient.deleteUser({ password: pw })
             if (error)
-              throw new Error(error.message ?? "falha ao excluir conta");
-            window.location.assign("/signup");
+              throw new Error(error.message ?? "falha ao excluir conta")
+            window.location.assign("/signup")
           }}
         />
       </div>
     </Panel>
-  );
+  )
 }

@@ -1,27 +1,27 @@
-import { Button } from "@dealflow/ui/button";
+import { Button } from "@dealflow/ui/button"
 import {
   ArrowsClockwiseIcon,
   PowerIcon,
-  SignOutIcon,
-} from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Panel } from "@/components";
-import { WhatsAppQr } from "@/components/whatsapp-qr";
-import { apiPost, connectionDot, connectionLabel } from "@/lib";
-import { sessionQuery } from "@/lib/query";
+  SignOutIcon
+} from "@phosphor-icons/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Panel } from "@/components"
+import { WhatsAppQr } from "@/components/whatsapp-qr"
+import { apiPost, connectionDot, connectionLabel } from "@/lib"
+import { sessionQuery } from "@/lib/query"
 
 export function WhatsAppConfig() {
-  const qc = useQueryClient();
-  const { data } = useQuery(sessionQuery);
-  const connection = data?.connection ?? "desconhecido";
-  const qr = data?.qr ?? null;
+  const qc = useQueryClient()
+  const { data } = useQuery(sessionQuery)
+  const connection = data?.connection ?? "desconhecido"
+  const qr = data?.qr ?? null
 
   const act = useMutation({
     mutationFn: (path: string) => apiPost(path, {}),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["wa-session"] }),
-  });
-  const busy = act.isPending;
-  const connected = connection === "open";
+    onSettled: () => qc.invalidateQueries({ queryKey: ["wa-session"] })
+  })
+  const busy = act.isPending
+  const connected = connection === "open"
 
   return (
     <Panel
@@ -78,5 +78,5 @@ export function WhatsAppConfig() {
         </div>
       )}
     </Panel>
-  );
+  )
 }

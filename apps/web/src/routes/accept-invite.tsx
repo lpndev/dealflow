@@ -1,44 +1,44 @@
-import { Button } from "@dealflow/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
-import { organization, useSession } from "@/lib";
+import { Button } from "@dealflow/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card"
+import { useEffect, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router"
+import { toast } from "sonner"
+import { organization, useSession } from "@/lib"
 
 export function AcceptInvite() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { data: session, isPending } = useSession();
-  const [error, setError] = useState("");
-  const [started, setStarted] = useState(false);
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { data: session, isPending } = useSession()
+  const [error, setError] = useState("")
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
-    if (isPending || !session || !id || started) return;
-    setStarted(true);
+    if (isPending || !session || !id || started) return
+    setStarted(true)
     void (async () => {
       const accepted = await organization.acceptInvitation({
-        invitationId: id,
-      });
+        invitationId: id
+      })
       if (accepted.error || !accepted.data) {
-        setError(accepted.error?.message ?? "Convite inválido ou expirado.");
-        return;
+        setError(accepted.error?.message ?? "Convite inválido ou expirado.")
+        return
       }
       const { error: setActiveError } = await organization.setActive({
-        organizationId: accepted.data.invitation.organizationId,
-      });
+        organizationId: accepted.data.invitation.organizationId
+      })
       if (setActiveError) {
-        setError(setActiveError.message ?? "Falha ao ativar workspace.");
-        return;
+        setError(setActiveError.message ?? "Falha ao ativar workspace.")
+        return
       }
-      toast.success("Convite aceito — bem-vindo ao workspace.");
-      void navigate("/", { replace: true });
-    })();
-  }, [isPending, session, id, started, navigate]);
+      toast.success("Convite aceito — bem-vindo ao workspace.")
+      void navigate("/", { replace: true })
+    })()
+  }, [isPending, session, id, started, navigate])
 
-  if (isPending) return null;
+  if (isPending) return null
 
   if (!session) {
-    const target = `/accept-invite/${id}`;
+    const target = `/accept-invite/${id}`
     return (
       <div className="flex min-h-full items-center justify-center px-6 py-8">
         <Card className="w-full max-w-sm">
@@ -64,7 +64,7 @@ export function AcceptInvite() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -83,5 +83,5 @@ export function AcceptInvite() {
         )}
       </Card>
     </div>
-  );
+  )
 }

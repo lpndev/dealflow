@@ -1,11 +1,11 @@
-import { fileURLToPath } from "node:url";
-import { defineConfig, devices } from "@playwright/test";
+import { fileURLToPath } from "node:url"
+import { defineConfig, devices } from "@playwright/test"
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
-const API_PORT = 3011;
-const WEB_PORT = 4321;
-const API_URL = `http://localhost:${API_PORT}`;
-const WEB_URL = `http://localhost:${WEB_PORT}`;
+const root = fileURLToPath(new URL("../..", import.meta.url))
+const API_PORT = 3011
+const WEB_PORT = 4321
+const API_URL = `http://localhost:${API_PORT}`
+const WEB_URL = `http://localhost:${WEB_PORT}`
 
 const apiEnv = {
   NODE_ENV: "test",
@@ -17,8 +17,8 @@ const apiEnv = {
   DEALFLOW_E2E: "1",
   BETTER_AUTH_URL: API_URL,
   BETTER_AUTH_SECRET: "e2e-secret-not-a-real-secret",
-  TRUSTED_ORIGINS: WEB_URL,
-};
+  TRUSTED_ORIGINS: WEB_URL
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -36,7 +36,7 @@ export default defineConfig({
       url: `${API_URL}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
-      env: apiEnv,
+      env: apiEnv
     },
     {
       command: `bun run build && bun run preview -- --port ${WEB_PORT} --strictPort`,
@@ -44,7 +44,7 @@ export default defineConfig({
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
-      env: { VITE_API_URL: API_URL },
-    },
-  ],
-});
+      env: { VITE_API_URL: API_URL }
+    }
+  ]
+})

@@ -1,70 +1,70 @@
-import type { Settings } from "@dealflow/shared";
-import { eq } from "drizzle-orm";
-import { DEFAULT_TEMPLATE } from "@/features/publications/render";
-import type { Db } from "@/shared/db";
-import { SettingsError } from "@/shared/errors";
-import { settings } from "@/shared/schema";
+import type { Settings } from "@dealflow/shared"
+import { eq } from "drizzle-orm"
+import { DEFAULT_TEMPLATE } from "@/features/publications/render"
+import type { Db } from "@/shared/db"
+import { SettingsError } from "@/shared/errors"
+import { settings } from "@/shared/schema"
 
 const DEFAULTS: Settings = {
   delayMinSeconds: 1200,
   delayMaxSeconds: 2400,
   queuePaused: false,
   messageTemplate: DEFAULT_TEMPLATE,
-  mlAffiliateTag: null,
-};
+  mlAffiliateTag: null
+}
 
 export function getSettings(db: Db, workspaceId: string): Settings {
   const row = db
     .select()
     .from(settings)
     .where(eq(settings.workspaceId, workspaceId))
-    .get();
-  if (!row) return { ...DEFAULTS };
+    .get()
+  if (!row) return { ...DEFAULTS }
   return {
     delayMinSeconds: row.delayMinSeconds,
     delayMaxSeconds: row.delayMaxSeconds,
     queuePaused: row.queuePaused,
     messageTemplate: row.messageTemplate ?? DEFAULT_TEMPLATE,
-    mlAffiliateTag: row.mlAffiliateTag ?? null,
-  };
+    mlAffiliateTag: row.mlAffiliateTag ?? null
+  }
 }
 
 export function updateSettings(
   db: Db,
   workspaceId: string,
-  input: Partial<Settings>,
+  input: Partial<Settings>
 ): Settings {
-  const next: Settings = { ...getSettings(db, workspaceId), ...input };
-  next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null;
+  const next: Settings = { ...getSettings(db, workspaceId), ...input }
+  next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null
 
   if (next.mlAffiliateTag && next.mlAffiliateTag.length > 60) {
-    throw new SettingsError("affiliate tag must be at most 60 characters");
+    throw new SettingsError("affiliate tag must be at most 60 characters")
   }
   if (
     !Number.isInteger(next.delayMinSeconds) ||
     !Number.isInteger(next.delayMaxSeconds) ||
     next.delayMinSeconds < 0
   ) {
-    throw new SettingsError("delays must be non-negative whole seconds");
+    throw new SettingsError("delays must be non-negative whole seconds")
   }
   if (next.delayMaxSeconds < next.delayMinSeconds) {
-    throw new SettingsError("max delay must be greater than or equal to min");
+    throw new SettingsError("max delay must be greater than or equal to min")
   }
   if (!next.messageTemplate.includes("{link}")) {
-    throw new SettingsError("template must include the {link} placeholder");
+    throw new SettingsError("template must include the {link} placeholder")
   }
 
   db.insert(settings)
     .values({
       workspaceId,
       ...next,
-      updatedAt: new Date(),
+      updatedAt: new Date()
     })
     .onConflictDoUpdate({
       target: settings.workspaceId,
-      set: { ...next, updatedAt: new Date() },
+      set: { ...next, updatedAt: new Date() }
     })
-    .run();
+    .run()
 
-  return getSettings(db, workspaceId);
+  return getSettings(db, workspaceId)
 }

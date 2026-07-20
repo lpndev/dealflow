@@ -6,12 +6,12 @@ export type {
   PageMessage,
   PlanStatus,
   QueueItem,
-  Settings,
-} from "@dealflow/shared";
+  Settings
+} from "@dealflow/shared"
 
 export type ApiKeyInfo = {
-  id: string;
-  name: string;
-  start: string | null;
-  createdAt: string;
-};
+  id: string
+  name: string
+  start: string | null
+  createdAt: string
+}

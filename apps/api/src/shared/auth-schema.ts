@@ -1,11 +1,11 @@
-import { relations, sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm"
 import {
   index,
   integer,
   sqliteTable,
   text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+  uniqueIndex
+} from "drizzle-orm/sqlite-core"
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -21,8 +21,8 @@ export const user = sqliteTable("user", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+    .notNull()
+})
 
 export const session = sqliteTable(
   "session",
@@ -41,10 +41,10 @@ export const session = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    activeOrganizationId: text("active_organization_id"),
+    activeOrganizationId: text("active_organization_id")
   },
-  (table) => [index("session_userId_idx").on(table.userId)],
-);
+  (table) => [index("session_userId_idx").on(table.userId)]
+)
 
 export const account = sqliteTable(
   "account",
@@ -59,10 +59,10 @@ export const account = sqliteTable(
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
     accessTokenExpiresAt: integer("access_token_expires_at", {
-      mode: "timestamp_ms",
+      mode: "timestamp_ms"
     }),
     refreshTokenExpiresAt: integer("refresh_token_expires_at", {
-      mode: "timestamp_ms",
+      mode: "timestamp_ms"
     }),
     scope: text("scope"),
     password: text("password"),
@@ -71,10 +71,10 @@ export const account = sqliteTable(
       .notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
+      .notNull()
   },
-  (table) => [index("account_userId_idx").on(table.userId)],
-);
+  (table) => [index("account_userId_idx").on(table.userId)]
+)
 
 export const verification = sqliteTable(
   "verification",
@@ -89,10 +89,10 @@ export const verification = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
+      .notNull()
   },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
-);
+  (table) => [index("verification_identifier_idx").on(table.identifier)]
+)
 
 export const organization = sqliteTable(
   "organization",
@@ -102,10 +102,10 @@ export const organization = sqliteTable(
     slug: text("slug").notNull().unique(),
     logo: text("logo"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    metadata: text("metadata"),
+    metadata: text("metadata")
   },
-  (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
-);
+  (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)]
+)
 
 export const member = sqliteTable(
   "member",
@@ -118,13 +118,13 @@ export const member = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: text("role").default("member").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull()
   },
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
-    index("member_userId_idx").on(table.userId),
-  ],
-);
+    index("member_userId_idx").on(table.userId)
+  ]
+)
 
 export const invitation = sqliteTable(
   "invitation",
@@ -142,13 +142,13 @@ export const invitation = sqliteTable(
       .notNull(),
     inviterId: text("inviter_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" })
   },
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),
-    index("invitation_email_idx").on(table.email),
-  ],
-);
+    index("invitation_email_idx").on(table.email)
+  ]
+)
 
 export const apikey = sqliteTable(
   "apikey",
@@ -165,7 +165,7 @@ export const apikey = sqliteTable(
     lastRefillAt: integer("last_refill_at", { mode: "timestamp_ms" }),
     enabled: integer("enabled", { mode: "boolean" }).default(true),
     rateLimitEnabled: integer("rate_limit_enabled", {
-      mode: "boolean",
+      mode: "boolean"
     }).default(true),
     rateLimitTimeWindow: integer("rate_limit_time_window").default(86400000),
     rateLimitMax: integer("rate_limit_max").default(10),
@@ -176,59 +176,59 @@ export const apikey = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
     permissions: text("permissions"),
-    metadata: text("metadata"),
+    metadata: text("metadata")
   },
   (table) => [
     index("apikey_configId_idx").on(table.configId),
     index("apikey_referenceId_idx").on(table.referenceId),
-    index("apikey_key_idx").on(table.key),
-  ],
-);
+    index("apikey_key_idx").on(table.key)
+  ]
+)
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   members: many(member),
-  invitations: many(invitation),
-}));
+  invitations: many(invitation)
+}))
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
-    references: [user.id],
-  }),
-}));
+    references: [user.id]
+  })
+}))
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
-    references: [user.id],
-  }),
-}));
+    references: [user.id]
+  })
+}))
 
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
-  invitations: many(invitation),
-}));
+  invitations: many(invitation)
+}))
 
 export const memberRelations = relations(member, ({ one }) => ({
   organization: one(organization, {
     fields: [member.organizationId],
-    references: [organization.id],
+    references: [organization.id]
   }),
   user: one(user, {
     fields: [member.userId],
-    references: [user.id],
-  }),
-}));
+    references: [user.id]
+  })
+}))
 
 export const invitationRelations = relations(invitation, ({ one }) => ({
   organization: one(organization, {
     fields: [invitation.organizationId],
-    references: [organization.id],
+    references: [organization.id]
   }),
   user: one(user, {
     fields: [invitation.inviterId],
-    references: [user.id],
-  }),
-}));
+    references: [user.id]
+  })
+}))

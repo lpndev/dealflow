@@ -1,73 +1,73 @@
-import type { PublicationDraft } from "@dealflow/shared";
-import { and, eq } from "drizzle-orm";
-import { getSettings } from "@/features/settings/use-case";
-import type { Db } from "@/shared/db";
-import { PublicationError } from "@/shared/errors";
-import { parsePrice } from "@/shared/money";
+import type { PublicationDraft } from "@dealflow/shared"
+import { and, eq } from "drizzle-orm"
+import { getSettings } from "@/features/settings/use-case"
+import type { Db } from "@/shared/db"
+import { PublicationError } from "@/shared/errors"
+import { parsePrice } from "@/shared/money"
 import {
   affiliateLink,
   dealSnapshot,
   product,
-  publication,
-} from "@/shared/schema";
-import { isHttpUrl, isTrustedImageUrl, normalizeUrl } from "@/shared/urls";
-import { renderPublication, type RenderInput } from "./render";
+  publication
+} from "@/shared/schema"
+import { isHttpUrl, isTrustedImageUrl, normalizeUrl } from "@/shared/urls"
+import { renderPublication, type RenderInput } from "./render"
 
-const PROVIDER = "mercado-livre";
+const PROVIDER = "mercado-livre"
 
-export type PublicationInput = Partial<PublicationDraft>;
+export type PublicationInput = Partial<PublicationDraft>
 
 export type PublicationResult = {
-  id: string;
-  content: string;
-  status: "ready";
-};
+  id: string
+  content: string
+  status: "ready"
+}
 
 export function previewPublication(
   input: PublicationInput,
   db: Db,
-  workspaceId: string,
+  workspaceId: string
 ): { content: string } {
-  const { messageTemplate } = getSettings(db, workspaceId);
-  return { content: renderPublication(toRenderInput(input), messageTemplate) };
+  const { messageTemplate } = getSettings(db, workspaceId)
+  return { content: renderPublication(toRenderInput(input), messageTemplate) }
 }
 
 export function createPublication(
   input: PublicationInput,
   db: Db,
-  workspaceId: string,
+  workspaceId: string
 ): PublicationResult {
-  const title = input.title?.trim();
-  const affiliateUrl = input.affiliateUrl?.trim();
-  const sourceUrl = input.sourceUrl?.trim();
+  const title = input.title?.trim()
+  const affiliateUrl = input.affiliateUrl?.trim()
+  const sourceUrl = input.sourceUrl?.trim()
 
-  if (!title) throw new PublicationError("title is required");
-  if (!affiliateUrl) throw new PublicationError("affiliate link is required");
+  if (!title) throw new PublicationError("title is required")
+  if (!affiliateUrl) throw new PublicationError("affiliate link is required")
   if (!isHttpUrl(affiliateUrl)) {
-    throw new PublicationError("affiliate link must be a valid url");
+    throw new PublicationError("affiliate link must be a valid url")
   }
   if (sourceUrl && sameUrl(affiliateUrl, sourceUrl)) {
-    throw new PublicationError("affiliate link must not be the source link");
+    throw new PublicationError("affiliate link must not be the source link")
   }
   if (input.imageUrl && !isTrustedImageUrl(input.imageUrl)) {
-    throw new PublicationError("image must use the Mercado Livre image CDN");
+    throw new PublicationError("image must use the Mercado Livre image CDN")
   }
 
-  const render = toRenderInput(input);
+  const render = toRenderInput(input)
   const content = renderPublication(
     render,
-    getSettings(db, workspaceId).messageTemplate,
-  );
+    getSettings(db, workspaceId).messageTemplate
+  )
 
   const productId = upsertProduct(db, {
     workspaceId,
     externalId: input.externalId?.trim() || undefined,
     canonicalUrl: sourceUrl,
     title,
-    imageUrl: input.imageUrl?.trim() || undefined,
-  });
+    imageUrl: input.imageUrl?.trim() || undefined
+  })
 
-  const dealId = crypto.randomUUID();
+  const dealId = crypto.randomUUID()
   db.insert(dealSnapshot)
     .values({
       id: dealId,
@@ -75,21 +75,21 @@ export function createPublication(
       productId,
       originalPrice: render.originalPrice,
       currentPrice: render.currentPrice,
-      coupon: render.coupon,
+      coupon: render.coupon
     })
-    .run();
+    .run()
 
-  const affiliateLinkId = crypto.randomUUID();
+  const affiliateLinkId = crypto.randomUUID()
   db.insert(affiliateLink)
     .values({ id: affiliateLinkId, workspaceId, productId, url: affiliateUrl })
-    .run();
+    .run()
 
-  const id = crypto.randomUUID();
+  const id = crypto.randomUUID()
   db.insert(publication)
     .values({ id, workspaceId, dealId, affiliateLinkId, content })
-    .run();
+    .run()
 
-  return { id, content, status: "ready" };
+  return { id, content, status: "ready" }
 }
 
 function toRenderInput(input: PublicationInput): RenderInput {
@@ -102,19 +102,19 @@ function toRenderInput(input: PublicationInput): RenderInput {
       ? parsePrice(input.currentPrice)
       : undefined,
     coupon: input.coupon?.trim() || undefined,
-    affiliateUrl: input.affiliateUrl?.trim() ?? "",
-  };
+    affiliateUrl: input.affiliateUrl?.trim() ?? ""
+  }
 }
 
 function upsertProduct(
   db: Db,
   input: {
-    workspaceId: string;
-    externalId?: string;
-    canonicalUrl?: string;
-    title?: string;
-    imageUrl?: string;
-  },
+    workspaceId: string
+    externalId?: string
+    canonicalUrl?: string
+    title?: string
+    imageUrl?: string
+  }
 ): string {
   if (input.externalId) {
     const existing = db
@@ -124,20 +124,20 @@ function upsertProduct(
         and(
           eq(product.workspaceId, input.workspaceId),
           eq(product.provider, PROVIDER),
-          eq(product.externalId, input.externalId),
-        ),
+          eq(product.externalId, input.externalId)
+        )
       )
-      .get();
+      .get()
     if (existing) {
       db.update(product)
         .set({ title: input.title, imageUrl: input.imageUrl })
         .where(eq(product.id, existing.id))
-        .run();
-      return existing.id;
+        .run()
+      return existing.id
     }
   }
 
-  const id = crypto.randomUUID();
+  const id = crypto.randomUUID()
   db.insert(product)
     .values({
       id,
@@ -146,16 +146,16 @@ function upsertProduct(
       externalId: input.externalId,
       canonicalUrl: input.canonicalUrl,
       title: input.title,
-      imageUrl: input.imageUrl,
+      imageUrl: input.imageUrl
     })
-    .run();
-  return id;
+    .run()
+  return id
 }
 
 function sameUrl(a: string, b: string): boolean {
   try {
-    return normalizeUrl(a) === normalizeUrl(b);
+    return normalizeUrl(a) === normalizeUrl(b)
   } catch {
-    return a === b;
+    return a === b
   }
 }

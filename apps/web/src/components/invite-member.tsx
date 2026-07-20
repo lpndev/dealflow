@@ -1,76 +1,71 @@
-import { Badge } from "@dealflow/ui/badge";
-import { Button } from "@dealflow/ui/button";
+import { Badge } from "@dealflow/ui/badge"
+import { Button } from "@dealflow/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@dealflow/ui/dropdown-menu";
-import { Field, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
-import {
-  CheckIcon,
-  CopyIcon,
-  UserPlusIcon,
-  XIcon,
-} from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Empty, ErrorNote, Panel } from "@/components";
+  DropdownMenuTrigger
+} from "@dealflow/ui/dropdown-menu"
+import { Field, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
+import { CheckIcon, CopyIcon, UserPlusIcon, XIcon } from "@phosphor-icons/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { toast } from "sonner"
+import { Empty, ErrorNote, Panel } from "@/components"
 import {
   copyWithToast,
   errMsg,
   organization,
   ROLE_LABEL,
   unwrapAuth,
-  useActiveRole,
-} from "@/lib";
+  useActiveRole
+} from "@/lib"
 
-type InviteRole = "admin" | "member";
+type InviteRole = "admin" | "member"
 
 function inviteLinkFor(id: string) {
-  return `${window.location.origin}/accept-invite/${id}`;
+  return `${window.location.origin}/accept-invite/${id}`
 }
 
 function copyLink(link: string) {
-  copyWithToast(link, "Link copiado.");
+  copyWithToast(link, "Link copiado.")
 }
 
 export function InviteMember() {
-  const qc = useQueryClient();
-  const viewerRole = useActiveRole();
+  const qc = useQueryClient()
+  const viewerRole = useActiveRole()
   const inviteRoles: InviteRole[] =
-    viewerRole === "owner" ? ["admin", "member"] : ["member"];
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<InviteRole>("member");
-  const [lastLink, setLastLink] = useState<string | null>(null);
+    viewerRole === "owner" ? ["admin", "member"] : ["member"]
+  const [email, setEmail] = useState("")
+  const [role, setRole] = useState<InviteRole>("member")
+  const [lastLink, setLastLink] = useState<string | null>(null)
 
   const { data, error } = useQuery({
     queryKey: ["invitations"],
-    queryFn: () => unwrapAuth(organization.listInvitations()),
-  });
-  const pending = (data ?? []).filter((i) => i.status === "pending");
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["invitations"] });
+    queryFn: () => unwrapAuth(organization.listInvitations())
+  })
+  const pending = (data ?? []).filter((i) => i.status === "pending")
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["invitations"] })
 
   const invite = useMutation({
     mutationFn: (v: { email: string; role: InviteRole }) =>
       unwrapAuth(organization.inviteMember(v)),
     onSuccess: (invitation) => {
-      setLastLink(inviteLinkFor(invitation.id));
-      setEmail("");
-      void invalidate();
-      toast.success("Convite criado — copie o link para enviar.");
+      setLastLink(inviteLinkFor(invitation.id))
+      setEmail("")
+      void invalidate()
+      toast.success("Convite criado — copie o link para enviar.")
     },
-    onError: (e) => toast.error(errMsg(e, "falha ao convidar")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao convidar"))
+  })
 
   const cancel = useMutation({
     mutationFn: (invitationId: string) =>
       unwrapAuth(organization.cancelInvitation({ invitationId })),
     onSuccess: invalidate,
-    onError: (e) => toast.error(errMsg(e, "falha ao cancelar convite")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao cancelar convite"))
+  })
 
   return (
     <Panel
@@ -79,9 +74,9 @@ export function InviteMember() {
     >
       <form
         onSubmit={(e) => {
-          e.preventDefault();
-          if (!email) return;
-          invite.mutate({ email, role });
+          e.preventDefault()
+          if (!email) return
+          invite.mutate({ email, role })
         }}
         className="flex flex-col gap-4"
       >
@@ -100,14 +95,20 @@ export function InviteMember() {
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button type="button" variant="outline">
+                  <Button
+                    type="button"
+                    variant="outline"
+                  >
                     {ROLE_LABEL[role]}
                   </Button>
                 }
               />
               <DropdownMenuContent>
                 {inviteRoles.map((r) => (
-                  <DropdownMenuItem key={r} onClick={() => setRole(r)}>
+                  <DropdownMenuItem
+                    key={r}
+                    onClick={() => setRole(r)}
+                  >
                     {r === role && <CheckIcon />}
                     {ROLE_LABEL[r]}
                   </DropdownMenuItem>
@@ -117,7 +118,10 @@ export function InviteMember() {
           ) : (
             <Badge variant="secondary">{ROLE_LABEL[role]}</Badge>
           )}
-          <Button type="submit" disabled={invite.isPending}>
+          <Button
+            type="submit"
+            disabled={invite.isPending}
+          >
             <UserPlusIcon />
             Convidar
           </Button>
@@ -128,7 +132,11 @@ export function InviteMember() {
         <Field>
           <FieldLabel>Link do convite</FieldLabel>
           <div className="flex gap-2">
-            <Input readOnly value={lastLink} className="font-mono" />
+            <Input
+              readOnly
+              value={lastLink}
+              className="font-mono"
+            />
             <Button
               type="button"
               variant="outline"
@@ -185,5 +193,5 @@ export function InviteMember() {
         </ul>
       )}
     </Panel>
-  );
+  )
 }

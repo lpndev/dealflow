@@ -1,38 +1,38 @@
-import { Button } from "@dealflow/ui/button";
-import { Input } from "@dealflow/ui/input";
+import { Button } from "@dealflow/ui/button"
+import { Input } from "@dealflow/ui/input"
 import {
   ArrowsClockwiseIcon,
   CalendarDotsIcon,
   CheckIcon,
   PaperPlaneTiltIcon,
-  XIcon,
-} from "@phosphor-icons/react";
-import { useState } from "react";
-import { Empty, GroupToggle, Panel } from "@/components";
-import { plural } from "@/lib";
-import { type DeliveryResult, type Destination } from "@/types";
+  XIcon
+} from "@phosphor-icons/react"
+import { useState } from "react"
+import { Empty, GroupToggle, Panel } from "@/components"
+import { plural } from "@/lib"
+import { type DeliveryResult, type Destination } from "@/types"
 
 export function SendPanel(
   props: Readonly<{
-    destinations: Destination[];
-    selected: Set<string>;
-    onToggle: (id: string) => void;
-    onSync: () => void;
-    onSendNow: () => void;
-    onSchedule: () => void;
-    startAt: string;
-    onStartAt: (value: string) => void;
-    results: DeliveryResult[] | null;
-  }>,
+    destinations: Destination[]
+    selected: Set<string>
+    onToggle: (id: string) => void
+    onSync: () => void
+    onSendNow: () => void
+    onSchedule: () => void
+    startAt: string
+    onStartAt: (value: string) => void
+    results: DeliveryResult[] | null
+  }>
 ) {
   const nameOf = (id: string) =>
-    props.destinations.find((d) => d.id === id)?.name ?? id;
+    props.destinations.find((d) => d.id === id)?.name ?? id
 
-  const [scheduling, setScheduling] = useState(false);
+  const [scheduling, setScheduling] = useState(false)
   const clearSchedule = () => {
-    props.onStartAt("");
-    setScheduling(false);
-  };
+    props.onStartAt("")
+    setScheduling(false)
+  }
 
   return (
     <Panel
@@ -46,7 +46,11 @@ export function SendPanel(
             ? `${props.selected.size} grupo${plural(props.selected.size)} selecionado${plural(props.selected.size)}`
             : "Escolha os grupos"}
         </span>
-        <Button variant="ghost" size="sm" onClick={props.onSync}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={props.onSync}
+        >
           <ArrowsClockwiseIcon />
           Sincronizar grupos
         </Button>
@@ -118,7 +122,10 @@ export function SendPanel(
       {props.results && (
         <ul className="flex flex-col gap-2 border-t pt-4 font-mono text-xs">
           {props.results.map((r) => (
-            <li key={r.destinationId} className="flex items-center gap-2">
+            <li
+              key={r.destinationId}
+              className="flex items-center gap-2"
+            >
               {r.status === "sent" ? (
                 <CheckIcon className="size-4 text-emerald-500" />
               ) : (
@@ -133,5 +140,5 @@ export function SendPanel(
         </ul>
       )}
     </Panel>
-  );
+  )
 }

@@ -1,44 +1,44 @@
-import { auth, parseMetadata } from "@/shared/auth";
+import { auth, parseMetadata } from "@/shared/auth"
 
 export async function createWorkspaceApiKey(
   headers: Headers,
   workspaceId: string,
-  name: string,
+  name: string
 ) {
   return auth.api.createApiKey({
     headers,
-    body: { name, metadata: { organizationId: workspaceId } },
-  });
+    body: { name, metadata: { organizationId: workspaceId } }
+  })
 }
 
 export async function listWorkspaceApiKeys(
   headers: Headers,
-  workspaceId: string,
+  workspaceId: string
 ) {
-  const { apiKeys } = await auth.api.listApiKeys({ headers });
+  const { apiKeys } = await auth.api.listApiKeys({ headers })
   return apiKeys.filter(
-    (k) => parseMetadata(k.metadata)?.organizationId === workspaceId,
-  );
+    (k) => parseMetadata(k.metadata)?.organizationId === workspaceId
+  )
 }
 
 export async function deleteWorkspaceApiKey(
   headers: Headers,
   workspaceId: string,
-  keyId: string,
+  keyId: string
 ) {
-  const mine = await listWorkspaceApiKeys(headers, workspaceId);
-  if (!mine.some((k) => k.id === keyId)) return false;
-  await auth.api.deleteApiKey({ headers, body: { keyId } });
-  return true;
+  const mine = await listWorkspaceApiKeys(headers, workspaceId)
+  if (!mine.some((k) => k.id === keyId)) return false
+  await auth.api.deleteApiKey({ headers, body: { keyId } })
+  return true
 }
 
 export async function revokeWorkspaceApiKeys(
   headers: Headers,
-  workspaceId: string,
+  workspaceId: string
 ) {
-  const mine = await listWorkspaceApiKeys(headers, workspaceId);
+  const mine = await listWorkspaceApiKeys(headers, workspaceId)
   for (const k of mine) {
-    await auth.api.deleteApiKey({ headers, body: { keyId: k.id } });
+    await auth.api.deleteApiKey({ headers, body: { keyId: k.id } })
   }
-  return mine.length;
+  return mine.length
 }

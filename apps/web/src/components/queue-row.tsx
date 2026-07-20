@@ -1,49 +1,49 @@
-import { Button } from "@dealflow/ui/button";
-import { Input } from "@dealflow/ui/input";
+import { Button } from "@dealflow/ui/button"
+import { Input } from "@dealflow/ui/input"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   ClockIcon,
-  XIcon,
-} from "@phosphor-icons/react";
-import { useState } from "react";
-import { fmtTime } from "@/lib";
-import { type QueueItem } from "@/types";
+  XIcon
+} from "@phosphor-icons/react"
+import { useState } from "react"
+import { fmtTime } from "@/lib"
+import { type QueueItem } from "@/types"
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   scheduled: { label: "agendado", cls: "text-primary" },
   processing: { label: "enviando…", cls: "text-primary" },
   sent: { label: "enviado", cls: "text-emerald-500" },
-  failed: { label: "falhou", cls: "text-destructive" },
-};
+  failed: { label: "falhou", cls: "text-destructive" }
+}
 
 type Controls = {
-  onUp?: () => void;
-  onDown?: () => void;
-  onCancel: () => void;
-};
+  onUp?: () => void
+  onDown?: () => void
+  onCancel: () => void
+}
 
 function toLocalInput(value: string | null): string {
-  if (!value) return "";
-  const d = new Date(value);
+  if (!value) return ""
+  const d = new Date(value)
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
     .toISOString()
-    .slice(0, 16);
+    .slice(0, 16)
 }
 
 export function QueueRow(
   props: Readonly<{
-    item: QueueItem;
-    when: string | null;
-    controls?: Controls;
-    onReschedule?: (dueAt: string) => void;
-  }>,
+    item: QueueItem
+    when: string | null
+    controls?: Controls
+    onReschedule?: (dueAt: string) => void
+  }>
 ) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(false)
   const s = STATUS[props.item.status] ?? {
     label: props.item.status,
-    cls: "text-muted-foreground",
-  };
+    cls: "text-muted-foreground"
+  }
   return (
     <li className="flex items-center gap-4 border bg-card px-4 py-2">
       {props.item.imageUrl && (
@@ -73,9 +73,9 @@ export function QueueRow(
             defaultValue={toLocalInput(props.when)}
             onBlur={() => setEditing(false)}
             onChange={(e) => {
-              if (!e.target.value) return;
-              props.onReschedule?.(new Date(e.target.value).toISOString());
-              setEditing(false);
+              if (!e.target.value) return
+              props.onReschedule?.(new Date(e.target.value).toISOString())
+              setEditing(false)
             }}
             className="w-auto font-mono"
           />
@@ -131,5 +131,5 @@ export function QueueRow(
         </div>
       )}
     </li>
-  );
+  )
 }

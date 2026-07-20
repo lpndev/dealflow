@@ -4,10 +4,10 @@ import {
   real,
   sqliteTable,
   text,
-  unique,
-} from "drizzle-orm/sqlite-core";
+  unique
+} from "drizzle-orm/sqlite-core"
 
-const now = () => new Date();
+const now = () => new Date()
 
 export const product = sqliteTable(
   "product",
@@ -21,10 +21,10 @@ export const product = sqliteTable(
     imageUrl: text("image_url"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(now),
+      .$defaultFn(now)
   },
-  (t) => [unique().on(t.workspaceId, t.provider, t.externalId)],
-);
+  (t) => [unique().on(t.workspaceId, t.provider, t.externalId)]
+)
 
 export const dealSnapshot = sqliteTable("deal_snapshot", {
   id: text("id").primaryKey(),
@@ -38,8 +38,8 @@ export const dealSnapshot = sqliteTable("deal_snapshot", {
   coupon: text("coupon"),
   observedAt: integer("observed_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(now),
-});
+    .$defaultFn(now)
+})
 
 export const affiliateLink = sqliteTable("affiliate_link", {
   id: text("id").primaryKey(),
@@ -53,8 +53,8 @@ export const affiliateLink = sqliteTable("affiliate_link", {
     .default("valid"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(now),
-});
+    .$defaultFn(now)
+})
 
 export const publication = sqliteTable("publication", {
   id: text("id").primaryKey(),
@@ -71,8 +71,8 @@ export const publication = sqliteTable("publication", {
     .default("ready"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(now),
-});
+    .$defaultFn(now)
+})
 
 export const destination = sqliteTable(
   "destination",
@@ -85,10 +85,10 @@ export const destination = sqliteTable(
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(now),
+      .$defaultFn(now)
   },
-  (t) => [unique().on(t.workspaceId, t.provider, t.externalId)],
-);
+  (t) => [unique().on(t.workspaceId, t.provider, t.externalId)]
+)
 
 export const delivery = sqliteTable(
   "delivery",
@@ -102,7 +102,7 @@ export const delivery = sqliteTable(
       .notNull()
       .references(() => destination.id),
     status: text("status", {
-      enum: ["pending", "scheduled", "processing", "sent", "failed"],
+      enum: ["pending", "scheduled", "processing", "sent", "failed"]
     })
       .notNull()
       .default("pending"),
@@ -114,18 +114,18 @@ export const delivery = sqliteTable(
     archivedAt: integer("archived_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
-      .$defaultFn(now),
+      .$defaultFn(now)
   },
   (t) => [
     unique().on(t.publicationId, t.destinationId),
     index("delivery_workspace_status_due_idx").on(
       t.workspaceId,
       t.status,
-      t.dueAt,
+      t.dueAt
     ),
-    index("delivery_status_due_idx").on(t.status, t.dueAt),
-  ],
-);
+    index("delivery_status_due_idx").on(t.status, t.dueAt)
+  ]
+)
 
 export const settings = sqliteTable("settings", {
   workspaceId: text("workspace_id").primaryKey(),
@@ -138,15 +138,15 @@ export const settings = sqliteTable("settings", {
   mlAffiliateTag: text("ml_affiliate_tag"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(now),
-});
+    .$defaultFn(now)
+})
 
 export const accountPlan = sqliteTable("account_plan", {
   userId: text("user_id").primaryKey(),
   plan: text("plan").notNull().default("free"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
-    .$defaultFn(now),
-});
+    .$defaultFn(now)
+})
 
-export * from "./auth-schema";
+export * from "./auth-schema"

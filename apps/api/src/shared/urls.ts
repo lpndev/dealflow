@@ -1,41 +1,41 @@
-const TRAILING = new Set([".", ",", ";", ":", ")", "]", "}", ">", '"', "'"]);
+const TRAILING = new Set([".", ",", ";", ":", ")", "]", "}", ">", '"', "'"])
 
 export function extractUrls(text: string): string[] {
-  const matches = text.match(/https?:\/\/\S+/g) ?? [];
+  const matches = text.match(/https?:\/\/\S+/g) ?? []
   return matches.map((url) => {
-    let end = url.length;
-    while (end > 0 && TRAILING.has(url[end - 1])) end--;
-    return url.slice(0, end);
-  });
+    let end = url.length
+    while (end > 0 && TRAILING.has(url[end - 1])) end--
+    return url.slice(0, end)
+  })
 }
 
 export function isHttpUrl(value: string): boolean {
   try {
-    const { protocol } = new URL(value);
-    return protocol === "http:" || protocol === "https:";
+    const { protocol } = new URL(value)
+    return protocol === "http:" || protocol === "https:"
   } catch {
-    return false;
+    return false
   }
 }
 
 export function isTrustedImageUrl(value: string): boolean {
   try {
-    const url = new URL(value);
+    const url = new URL(value)
     return (
       url.protocol === "https:" &&
       !url.username &&
       !url.password &&
       /(?:^|\.)mlstatic\.com$/i.test(url.hostname)
-    );
+    )
   } catch {
-    return false;
+    return false
   }
 }
 
 export function normalizeUrl(url: string): string {
-  const parsed = new URL(url.trim());
-  parsed.hostname = parsed.hostname.toLowerCase();
-  parsed.search = "";
-  parsed.hash = "";
-  return parsed.toString();
+  const parsed = new URL(url.trim())
+  parsed.hostname = parsed.hostname.toLowerCase()
+  parsed.search = ""
+  parsed.hash = ""
+  return parsed.toString()
 }

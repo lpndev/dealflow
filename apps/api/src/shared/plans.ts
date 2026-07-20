@@ -1,23 +1,18 @@
-import type {
-  Plan,
-  PlanId,
-  PlanStatus,
-  WorkspaceUsage,
-} from "@dealflow/shared";
-import { and, count, eq, gte, inArray } from "drizzle-orm";
-import { isOwner, ownedWorkspaceIds } from "./auth/workspace-access";
-import type { Db } from "./db";
-import { PlanLimitError } from "./errors";
+import type { Plan, PlanId, PlanStatus, WorkspaceUsage } from "@dealflow/shared"
+import { and, count, eq, gte, inArray } from "drizzle-orm"
+import { isOwner, ownedWorkspaceIds } from "./auth/workspace-access"
+import type { Db } from "./db"
+import { PlanLimitError } from "./errors"
 import {
   accountPlan,
   delivery,
   destination,
   invitation,
   member,
-  user,
-} from "./schema";
+  user
+} from "./schema"
 
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 7
 
 export const PLANS: Record<PlanId, Plan> = {
   free: {
@@ -30,8 +25,8 @@ export const PLANS: Record<PlanId, Plan> = {
       members: 1,
       workspaces: 1,
       whatsappNumbers: 1,
-      mlAccounts: 1,
-    },
+      mlAccounts: 1
+    }
   },
   starter: {
     id: "starter",
@@ -43,8 +38,8 @@ export const PLANS: Record<PlanId, Plan> = {
       members: 2,
       workspaces: 1,
       whatsappNumbers: 1,
-      mlAccounts: 1,
-    },
+      mlAccounts: 1
+    }
   },
   pro: {
     id: "pro",
@@ -56,8 +51,8 @@ export const PLANS: Record<PlanId, Plan> = {
       members: 5,
       workspaces: 3,
       whatsappNumbers: 2,
-      mlAccounts: 3,
-    },
+      mlAccounts: 3
+    }
   },
   business: {
     id: "business",
@@ -69,10 +64,10 @@ export const PLANS: Record<PlanId, Plan> = {
       members: null,
       workspaces: null,
       whatsappNumbers: 5,
-      mlAccounts: 10,
-    },
-  },
-};
+      mlAccounts: 10
+    }
+  }
+}
 
 const SELF_HOST_PLAN: Plan = {
   id: "free",
@@ -84,19 +79,19 @@ const SELF_HOST_PLAN: Plan = {
     members: null,
     workspaces: null,
     whatsappNumbers: null,
-    mlAccounts: null,
-  },
-};
+    mlAccounts: null
+  }
+}
 
-export const isSelfHost = (): boolean => process.env.SELF_HOST === "true";
+export const isSelfHost = (): boolean => process.env.SELF_HOST === "true"
 
 function ownerOf(db: Db, workspaceId: string): string | null {
   const rows = db
     .select({ userId: member.userId, role: member.role })
     .from(member)
     .where(eq(member.organizationId, workspaceId))
-    .all();
-  return rows.find((r) => isOwner(r.role))?.userId ?? null;
+    .all()
+  return rows.find((r) => isOwner(r.role))?.userId ?? null
 }
 
 function storedPlanId(db: Db, userId: string): PlanId {
@@ -104,8 +99,8 @@ function storedPlanId(db: Db, userId: string): PlanId {
     .select({ plan: accountPlan.plan })
     .from(accountPlan)
     .where(eq(accountPlan.userId, userId))
-    .get()?.plan;
-  return id && id in PLANS ? (id as PlanId) : "free";
+    .get()?.plan
+  return id && id in PLANS ? (id as PlanId) : "free"
 }
 
 function userCreatedAt(db: Db, userId: string): Date | null {
@@ -115,21 +110,21 @@ function userCreatedAt(db: Db, userId: string): Date | null {
       .from(user)
       .where(eq(user.id, userId))
       .get()?.createdAt ?? null
-  );
+  )
 }
 
 export type ResolvedPlan = {
-  plan: Plan;
-  selfHost: boolean;
-  ownerId: string | null;
-  trialEndsAt: Date | null;
-  trialExpired: boolean;
-};
+  plan: Plan
+  selfHost: boolean
+  ownerId: string | null
+  trialEndsAt: Date | null
+  trialExpired: boolean
+}
 
 export function resolvePlanForUser(
   db: Db,
   userId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): ResolvedPlan {
   if (isSelfHost()) {
     return {
@@ -137,36 +132,36 @@ export function resolvePlanForUser(
       selfHost: true,
       ownerId: userId,
       trialEndsAt: null,
-      trialExpired: false,
-    };
+      trialExpired: false
+    }
   }
 
-  const id = storedPlanId(db, userId);
-  const plan = PLANS[id];
+  const id = storedPlanId(db, userId)
+  const plan = PLANS[id]
   if (id !== "free") {
     return {
       plan,
       selfHost: false,
       ownerId: userId,
       trialEndsAt: null,
-      trialExpired: false,
-    };
+      trialExpired: false
+    }
   }
 
-  const created = userCreatedAt(db, userId);
+  const created = userCreatedAt(db, userId)
   const trialEndsAt = created
     ? new Date(created.getTime() + TRIAL_DAYS * 86_400_000)
-    : null;
+    : null
   const trialExpired = trialEndsAt
     ? now.getTime() >= trialEndsAt.getTime()
-    : false;
-  return { plan, selfHost: false, ownerId: userId, trialEndsAt, trialExpired };
+    : false
+  return { plan, selfHost: false, ownerId: userId, trialEndsAt, trialExpired }
 }
 
 export function resolvePlanForWorkspace(
   db: Db,
   workspaceId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): ResolvedPlan {
   if (isSelfHost()) {
     return {
@@ -174,34 +169,34 @@ export function resolvePlanForWorkspace(
       selfHost: true,
       ownerId: null,
       trialEndsAt: null,
-      trialExpired: false,
-    };
+      trialExpired: false
+    }
   }
-  const owner = ownerOf(db, workspaceId);
+  const owner = ownerOf(db, workspaceId)
   if (!owner) {
     return {
       plan: PLANS.free,
       selfHost: false,
       ownerId: null,
       trialEndsAt: null,
-      trialExpired: false,
-    };
+      trialExpired: false
+    }
   }
-  return resolvePlanForUser(db, owner, now);
+  return resolvePlanForUser(db, owner, now)
 }
 
 function scopeIds(
   db: Db,
   resolved: ResolvedPlan,
-  workspaceId: string | null,
+  workspaceId: string | null
 ): string[] {
-  if (resolved.ownerId) return ownedWorkspaceIds(db, resolved.ownerId);
-  return workspaceId ? [workspaceId] : [];
+  if (resolved.ownerId) return ownedWorkspaceIds(db, resolved.ownerId)
+  return workspaceId ? [workspaceId] : []
 }
 
 function sendsThisMonth(db: Db, ids: string[], now: Date): number {
-  if (ids.length === 0) return 0;
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (ids.length === 0) return 0
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   return (
     db
       .select({ n: count() })
@@ -210,15 +205,15 @@ function sendsThisMonth(db: Db, ids: string[], now: Date): number {
         and(
           inArray(delivery.workspaceId, ids),
           eq(delivery.status, "sent"),
-          gte(delivery.sentAt, monthStart),
-        ),
+          gte(delivery.sentAt, monthStart)
+        )
       )
       .get()?.n ?? 0
-  );
+  )
 }
 
 function queuedSends(db: Db, ids: string[]): number {
-  if (ids.length === 0) return 0;
+  if (ids.length === 0) return 0
   return (
     db
       .select({ n: count() })
@@ -226,19 +221,19 @@ function queuedSends(db: Db, ids: string[]): number {
       .where(
         and(
           inArray(delivery.workspaceId, ids),
-          inArray(delivery.status, ["scheduled", "processing"]),
-        ),
+          inArray(delivery.status, ["scheduled", "processing"])
+        )
       )
       .get()?.n ?? 0
-  );
+  )
 }
 
 function usedSends(db: Db, ids: string[], now: Date): number {
-  return sendsThisMonth(db, ids, now) + queuedSends(db, ids);
+  return sendsThisMonth(db, ids, now) + queuedSends(db, ids)
 }
 
 function enabledDestinations(db: Db, ids: string[]): number {
-  if (ids.length === 0) return 0;
+  if (ids.length === 0) return 0
   return (
     db
       .select({ n: count() })
@@ -246,23 +241,23 @@ function enabledDestinations(db: Db, ids: string[]): number {
       .where(
         and(
           inArray(destination.workspaceId, ids),
-          eq(destination.enabled, true),
-        ),
+          eq(destination.enabled, true)
+        )
       )
       .get()?.n ?? 0
-  );
+  )
 }
 
 function memberSlotsUsed(db: Db, ids: string[]): number {
-  if (ids.length === 0) return 0;
+  if (ids.length === 0) return 0
   const memberUserIds = new Set(
     db
       .select({ userId: member.userId })
       .from(member)
       .where(inArray(member.organizationId, ids))
       .all()
-      .map((r) => r.userId),
-  );
+      .map((r) => r.userId)
+  )
   const pending =
     db
       .select({ n: count() })
@@ -270,11 +265,11 @@ function memberSlotsUsed(db: Db, ids: string[]): number {
       .where(
         and(
           inArray(invitation.organizationId, ids),
-          eq(invitation.status, "pending"),
-        ),
+          eq(invitation.status, "pending")
+        )
       )
-      .get()?.n ?? 0;
-  return memberUserIds.size + pending;
+      .get()?.n ?? 0
+  return memberUserIds.size + pending
 }
 
 function usageForScope(db: Db, ids: string[], now: Date): WorkspaceUsage {
@@ -282,15 +277,15 @@ function usageForScope(db: Db, ids: string[], now: Date): WorkspaceUsage {
     sendsThisMonth: usedSends(db, ids, now),
     destinations: enabledDestinations(db, ids),
     members: memberSlotsUsed(db, ids),
-    workspaces: ids.length,
-  };
+    workspaces: ids.length
+  }
 }
 
 function toStatus(
   db: Db,
   r: ResolvedPlan,
   ids: string[],
-  now: Date,
+  now: Date
 ): PlanStatus {
   return {
     planId: r.plan.id,
@@ -299,105 +294,105 @@ function toStatus(
     trialEndsAt: r.trialEndsAt?.toISOString() ?? null,
     trialExpired: r.trialExpired,
     limits: r.plan.limits,
-    usage: usageForScope(db, ids, now),
-  };
+    usage: usageForScope(db, ids, now)
+  }
 }
 
 export function planStatusForUser(
   db: Db,
   userId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): PlanStatus {
-  const r = resolvePlanForUser(db, userId, now);
-  return toStatus(db, r, scopeIds(db, r, null), now);
+  const r = resolvePlanForUser(db, userId, now)
+  return toStatus(db, r, scopeIds(db, r, null), now)
 }
 
 export function planStatusForWorkspace(
   db: Db,
   workspaceId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): PlanStatus {
-  const r = resolvePlanForWorkspace(db, workspaceId, now);
-  return toStatus(db, r, scopeIds(db, r, workspaceId), now);
+  const r = resolvePlanForWorkspace(db, workspaceId, now)
+  return toStatus(db, r, scopeIds(db, r, workspaceId), now)
 }
 
 const TRIAL_OVER =
-  "Seu período de teste terminou. Assine um plano para continuar.";
+  "Seu período de teste terminou. Assine um plano para continuar."
 
 export function assertCanSend(
   db: Db,
   workspaceId: string,
   adding: number,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): void {
-  const r = resolvePlanForWorkspace(db, workspaceId, now);
-  if (r.selfHost) return;
-  if (r.trialExpired) throw new PlanLimitError(TRIAL_OVER);
-  const limit = r.plan.limits.sendsPerMonth;
-  if (limit === null) return;
-  const ids = scopeIds(db, r, workspaceId);
+  const r = resolvePlanForWorkspace(db, workspaceId, now)
+  if (r.selfHost) return
+  if (r.trialExpired) throw new PlanLimitError(TRIAL_OVER)
+  const limit = r.plan.limits.sendsPerMonth
+  if (limit === null) return
+  const ids = scopeIds(db, r, workspaceId)
   if (usedSends(db, ids, now) + adding > limit) {
     throw new PlanLimitError(
-      `Limite de ${limit} envios/mês do plano ${r.plan.name} atingido.`,
-    );
+      `Limite de ${limit} envios/mês do plano ${r.plan.name} atingido.`
+    )
   }
 }
 
 export function assertCanEnableDestination(
   db: Db,
   workspaceId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): void {
-  const r = resolvePlanForWorkspace(db, workspaceId, now);
-  if (r.selfHost) return;
-  if (r.trialExpired) throw new PlanLimitError(TRIAL_OVER);
-  const limit = r.plan.limits.destinations;
-  if (limit === null) return;
-  const ids = scopeIds(db, r, workspaceId);
+  const r = resolvePlanForWorkspace(db, workspaceId, now)
+  if (r.selfHost) return
+  if (r.trialExpired) throw new PlanLimitError(TRIAL_OVER)
+  const limit = r.plan.limits.destinations
+  if (limit === null) return
+  const ids = scopeIds(db, r, workspaceId)
   if (enabledDestinations(db, ids) >= limit) {
     throw new PlanLimitError(
-      `Limite de ${limit} grupos do plano ${r.plan.name} atingido.`,
-    );
+      `Limite de ${limit} grupos do plano ${r.plan.name} atingido.`
+    )
   }
 }
 
 export function destinationSlotsLeft(
   db: Db,
   workspaceId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): number {
-  const r = resolvePlanForWorkspace(db, workspaceId, now);
-  if (r.selfHost) return Infinity;
-  if (r.trialExpired) return 0;
-  const limit = r.plan.limits.destinations;
-  if (limit === null) return Infinity;
-  const ids = scopeIds(db, r, workspaceId);
-  return Math.max(0, limit - enabledDestinations(db, ids));
+  const r = resolvePlanForWorkspace(db, workspaceId, now)
+  if (r.selfHost) return Infinity
+  if (r.trialExpired) return 0
+  const limit = r.plan.limits.destinations
+  if (limit === null) return Infinity
+  const ids = scopeIds(db, r, workspaceId)
+  return Math.max(0, limit - enabledDestinations(db, ids))
 }
 
 export function canAddMember(
   db: Db,
   workspaceId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): boolean {
-  const r = resolvePlanForWorkspace(db, workspaceId, now);
-  if (r.selfHost) return true;
-  if (r.trialExpired) return false;
-  const limit = r.plan.limits.members;
-  if (limit === null) return true;
-  const ids = scopeIds(db, r, workspaceId);
-  return memberSlotsUsed(db, ids) < limit;
+  const r = resolvePlanForWorkspace(db, workspaceId, now)
+  if (r.selfHost) return true
+  if (r.trialExpired) return false
+  const limit = r.plan.limits.members
+  if (limit === null) return true
+  const ids = scopeIds(db, r, workspaceId)
+  return memberSlotsUsed(db, ids) < limit
 }
 
 export function canCreateWorkspace(
   db: Db,
   userId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): boolean {
-  const r = resolvePlanForUser(db, userId, now);
-  if (r.selfHost) return true;
-  if (r.trialExpired) return false;
-  const limit = r.plan.limits.workspaces;
-  if (limit === null) return true;
-  return ownedWorkspaceIds(db, userId).length < limit;
+  const r = resolvePlanForUser(db, userId, now)
+  if (r.selfHost) return true
+  if (r.trialExpired) return false
+  const limit = r.plan.limits.workspaces
+  if (limit === null) return true
+  return ownedWorkspaceIds(db, userId).length < limit
 }

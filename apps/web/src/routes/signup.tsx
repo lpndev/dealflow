@@ -1,36 +1,36 @@
-import { Button } from "@dealflow/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
-import { Field, FieldError, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
-import { useState, type SyntheticEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import { redirectSearch, safeRedirect, signUp } from "@/lib";
+import { Button } from "@dealflow/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card"
+import { Field, FieldError, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
+import { useState, type SyntheticEvent } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router"
+import { redirectSearch, safeRedirect, signUp } from "@/lib"
 
 export function Signup() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
 
   async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
+    e.preventDefault()
+    setBusy(true)
+    setError("")
     const { error: signUpError } = await signUp.email({
       name,
       email,
-      password,
-    });
-    setBusy(false);
+      password
+    })
+    setBusy(false)
     if (signUpError) {
-      setError(signUpError.message ?? "Falha ao criar conta.");
-      return;
+      setError(signUpError.message ?? "Falha ao criar conta.")
+      return
     }
-    const redirect = searchParams.get("redirect");
-    void navigate(redirect ? safeRedirect(redirect) : "/onboarding");
+    const redirect = searchParams.get("redirect")
+    void navigate(redirect ? safeRedirect(redirect) : "/onboarding")
   }
 
   return (
@@ -78,7 +78,10 @@ export function Signup() {
               />
               {error && <FieldError>{error}</FieldError>}
             </Field>
-            <Button type="submit" disabled={busy}>
+            <Button
+              type="submit"
+              disabled={busy}
+            >
               Criar conta
             </Button>
             <p className="text-center text-xs text-muted-foreground">
@@ -86,7 +89,7 @@ export function Signup() {
               <Link
                 to={{
                   pathname: "/login",
-                  search: redirectSearch(searchParams),
+                  search: redirectSearch(searchParams)
                 }}
                 className="text-primary hover:underline"
               >
@@ -97,5 +100,5 @@ export function Signup() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

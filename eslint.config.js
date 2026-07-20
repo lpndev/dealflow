@@ -1,8 +1,8 @@
-import js from "@eslint/js";
-import reactHooks from "eslint-plugin-react-hooks";
-import sonarjs from "eslint-plugin-sonarjs";
-import globals from "globals";
-import ts from "typescript-eslint";
+import js from "@eslint/js"
+import reactHooks from "eslint-plugin-react-hooks"
+import sonarjs from "eslint-plugin-sonarjs"
+import globals from "globals"
+import ts from "typescript-eslint"
 
 export default [
   {
@@ -10,8 +10,8 @@ export default [
       "**/dist/**",
       "**/node_modules/**",
       "**/components/ui/**",
-      "apps/api/drizzle/**",
-    ],
+      "apps/api/drizzle/**"
+    ]
   },
   js.configs.recommended,
   ...ts.configs.recommendedTypeChecked,
@@ -21,31 +21,31 @@ export default [
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+        tsconfigRootDir: import.meta.dirname
+      }
+    }
   },
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/only-throw-error": [
         "error",
-        { allow: [{ from: "lib", name: "Response" }] },
-      ],
-    },
+        { allow: [{ from: "lib", name: "Response" }] }
+      ]
+    }
   },
   {
     files: [
       "apps/web/**/*.{ts,tsx}",
       "apps/extension/**/*.{ts,tsx}",
-      "packages/ui/**/*.{ts,tsx}",
+      "packages/ui/**/*.{ts,tsx}"
     ],
     plugins: { "react-hooks": reactHooks },
-    rules: { ...reactHooks.configs.recommended.rules },
+    rules: { ...reactHooks.configs.recommended.rules }
   },
   {
     files: ["apps/extension/**/*.{ts,tsx}"],
-    languageOptions: { globals: { ...globals.webextensions } },
+    languageOptions: { globals: { ...globals.webextensions } }
   },
   {
     files: ["packages/tests/**/*.ts"],
@@ -56,11 +56,11 @@ export default [
       "sonarjs/publicly-writable-directories": "off",
       "sonarjs/no-hardcoded-passwords": "off",
       "sonarjs/no-clear-text-protocols": "off",
-      "sonarjs/no-hardcoded-ip": "off",
-    },
+      "sonarjs/no-hardcoded-ip": "off"
+    }
   },
   {
     files: ["**/*.js", "**/*.config.ts", "packages/tests/**"],
-    ...ts.configs.disableTypeChecked,
-  },
-];
+    ...ts.configs.disableTypeChecked
+  }
+]

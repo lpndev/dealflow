@@ -1,48 +1,48 @@
-import { Button } from "@dealflow/ui/button";
-import { Field, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
-import { CopyIcon, KeyIcon, TrashIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Empty, ErrorNote, Panel } from "@/components";
+import { Button } from "@dealflow/ui/button"
+import { Field, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
+import { CopyIcon, KeyIcon, TrashIcon } from "@phosphor-icons/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { toast } from "sonner"
+import { Empty, ErrorNote, Panel } from "@/components"
 import {
   apiDelete,
   apiGet,
   apiPost,
   copyWithToast,
   errMsg,
-  fmtTime,
-} from "@/lib";
-import { type ApiKeyInfo } from "@/types";
+  fmtTime
+} from "@/lib"
+import { type ApiKeyInfo } from "@/types"
 
 export function ApiKeysPanel() {
-  const qc = useQueryClient();
-  const [name, setName] = useState("");
-  const [newKey, setNewKey] = useState<string | null>(null);
+  const qc = useQueryClient()
+  const [name, setName] = useState("")
+  const [newKey, setNewKey] = useState<string | null>(null)
 
   const { data, error } = useQuery<ApiKeyInfo[]>({
     queryKey: ["api-keys"],
-    queryFn: () => apiGet("/api-keys"),
-  });
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["api-keys"] });
+    queryFn: () => apiGet("/api-keys")
+  })
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["api-keys"] })
 
   const create = useMutation({
     mutationFn: (v: { name: string }) =>
       apiPost<{ key?: string }>("/api-keys", v),
     onSuccess: (created) => {
-      setNewKey(created.key ?? null);
-      setName("");
-      void invalidate();
+      setNewKey(created.key ?? null)
+      setName("")
+      void invalidate()
     },
-    onError: (e) => toast.error(errMsg(e, "falha ao gerar chave")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao gerar chave"))
+  })
 
   const remove = useMutation({
     mutationFn: (id: string) => apiDelete(`/api-keys/${id}`),
     onSuccess: invalidate,
-    onError: (e) => toast.error(errMsg(e, "falha ao revogar chave")),
-  });
+    onError: (e) => toast.error(errMsg(e, "falha ao revogar chave"))
+  })
 
   return (
     <Panel
@@ -51,8 +51,8 @@ export function ApiKeysPanel() {
     >
       <form
         onSubmit={(e) => {
-          e.preventDefault();
-          create.mutate({ name: name || "Extensão" });
+          e.preventDefault()
+          create.mutate({ name: name || "Extensão" })
         }}
         className="flex items-end gap-2"
       >
@@ -65,7 +65,10 @@ export function ApiKeysPanel() {
             onChange={(e) => setName(e.target.value)}
           />
         </Field>
-        <Button type="submit" disabled={create.isPending}>
+        <Button
+          type="submit"
+          disabled={create.isPending}
+        >
           <KeyIcon />
           Gerar chave
         </Button>
@@ -77,7 +80,11 @@ export function ApiKeysPanel() {
             Copie agora — a chave não será mostrada de novo.
           </p>
           <div className="flex gap-2">
-            <Input readOnly value={newKey} className="font-mono" />
+            <Input
+              readOnly
+              value={newKey}
+              className="font-mono"
+            />
             <Button
               type="button"
               variant="outline"
@@ -123,5 +130,5 @@ export function ApiKeysPanel() {
         </ul>
       )}
     </Panel>
-  );
+  )
 }

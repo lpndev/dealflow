@@ -1,30 +1,30 @@
-import { Field, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
-import { useEffect, useState } from "react";
+import { Field, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
+import { useEffect, useState } from "react"
 
 const DEFAULTS = {
   apiUrl: "http://localhost:3001",
   webUrl: "http://localhost:5173",
-  apiKey: "",
-};
+  apiKey: ""
+}
 
-type Config = typeof DEFAULTS;
-type Key = keyof Config;
+type Config = typeof DEFAULTS
+type Key = keyof Config
 
 export function Popup() {
-  const [config, setConfig] = useState<Config>(DEFAULTS);
+  const [config, setConfig] = useState<Config>(DEFAULTS)
 
   useEffect(() => {
-    chrome.storage.local.get(DEFAULTS, (v) => setConfig(v as Config));
-  }, []);
+    chrome.storage.local.get(DEFAULTS, (v) => setConfig(v as Config))
+  }, [])
 
   function save(key: Key, value: string) {
-    setConfig((prev) => ({ ...prev, [key]: value }));
-    void chrome.storage.local.set({ [key]: value });
+    setConfig((prev) => ({ ...prev, [key]: value }))
+    void chrome.storage.local.set({ [key]: value })
   }
 
   function normalize(key: "apiUrl" | "webUrl") {
-    save(key, config[key].trim() || DEFAULTS[key]);
+    save(key, config[key].trim() || DEFAULTS[key])
   }
 
   return (
@@ -68,5 +68,5 @@ export function Popup() {
         clique em “Capturar oferta”.
       </p>
     </div>
-  );
+  )
 }

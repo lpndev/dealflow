@@ -1,9 +1,4 @@
 {
-  "semi": true,
-  "singleQuote": false,
-  "trailingComma": "all",
-  "printWidth": 80,
-  "tabWidth": 2,
   "plugins": [
     "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss"
@@ -15,5 +10,28 @@
     "^[.]"
   ],
   "importOrderParserPlugins": ["typescript", "jsx"],
-  "tailwindStylesheet": "./packages/ui/src/styles/globals.css"
+  "tailwindStylesheet": "./packages/ui/src/styles/globals.css",
+
+  "arrowParens": "always",
+  "bracketSameLine": false,
+  "objectWrap": "preserve",
+  "bracketSpacing": true,
+  "semi": false,
+  "experimentalOperatorPosition": "end",
+  "experimentalTernaries": false,
+  "singleQuote": false,
+  "jsxSingleQuote": false,
+  "quoteProps": "as-needed",
+  "trailingComma": "none",
+  "singleAttributePerLine": true,
+  "htmlWhitespaceSensitivity": "ignore",
+  "vueIndentScriptAndStyle": true,
+  "proseWrap": "preserve",
+  "endOfLine": "lf",
+  "insertPragma": false,
+  "printWidth": 80,
+  "requirePragma": false,
+  "tabWidth": 2,
+  "useTabs": false,
+  "embeddedLanguageFormatting": "auto"
 }

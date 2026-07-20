@@ -1,11 +1,11 @@
-import { Checkbox } from "@dealflow/ui/checkbox";
+import { Checkbox } from "@dealflow/ui/checkbox"
 
 export function GroupToggle(
   props: Readonly<{
-    name: string;
-    checked: boolean;
-    onCheckedChange: (checked: boolean) => void;
-  }>,
+    name: string
+    checked: boolean
+    onCheckedChange: (checked: boolean) => void
+  }>
 ) {
   return (
     <li className="grow basis-full sm:basis-[calc(50%-0.25rem)]">
@@ -23,5 +23,5 @@ export function GroupToggle(
         <span className="truncate">{props.name}</span>
       </label>
     </li>
-  );
+  )
 }

@@ -1,8 +1,8 @@
-import { Hono } from "hono";
-import { requireAuth, type AppEnv } from "@/shared/auth";
-import { getDb } from "@/shared/db";
-import { ScheduleError } from "@/shared/errors";
-import { stringArray } from "@/shared/validate";
+import { Hono } from "hono"
+import { requireAuth, type AppEnv } from "@/shared/auth"
+import { getDb } from "@/shared/db"
+import { ScheduleError } from "@/shared/errors"
+import { stringArray } from "@/shared/validate"
 import {
   cancelScheduled,
   clearHistory,
@@ -11,86 +11,83 @@ import {
   listQueue,
   reorderQueue,
   rescheduleDelivery,
-  setQueuePaused,
-} from "./use-case";
+  setQueuePaused
+} from "./use-case"
 
-export const queue = new Hono<AppEnv>();
+export const queue = new Hono<AppEnv>()
 
-queue.use("*", requireAuth);
+queue.use("*", requireAuth)
 
 queue.get("/queue", (c) => {
-  const db = getDb();
-  const workspaceId = c.get("workspaceId");
+  const db = getDb()
+  const workspaceId = c.get("workspaceId")
   return c.json({
     items: listQueue(db, workspaceId),
-    paused: isQueuePaused(db, workspaceId),
-  });
-});
+    paused: isQueuePaused(db, workspaceId)
+  })
+})
 
 queue.get("/history", (c) =>
-  c.json({ items: listHistory(getDb(), c.get("workspaceId")) }),
-);
+  c.json({ items: listHistory(getDb(), c.get("workspaceId")) })
+)
 
 queue.delete("/history", (c) => {
-  clearHistory(getDb(), c.get("workspaceId"));
-  return c.json({ ok: true });
-});
+  clearHistory(getDb(), c.get("workspaceId"))
+  return c.json({ ok: true })
+})
 
 queue.post("/queue/pause", (c) => {
-  setQueuePaused(getDb(), c.get("workspaceId"), true);
-  return c.json({ paused: true });
-});
+  setQueuePaused(getDb(), c.get("workspaceId"), true)
+  return c.json({ paused: true })
+})
 
 queue.post("/queue/resume", (c) => {
-  setQueuePaused(getDb(), c.get("workspaceId"), false);
-  return c.json({ paused: false });
-});
+  setQueuePaused(getDb(), c.get("workspaceId"), false)
+  return c.json({ paused: false })
+})
 
 queue.put("/queue/:id/time", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
-    dueAt?: unknown;
-  } | null;
-  const dueAt = typeof body?.dueAt === "string" ? new Date(body.dueAt) : null;
+    dueAt?: unknown
+  } | null
+  const dueAt = typeof body?.dueAt === "string" ? new Date(body.dueAt) : null
   if (!dueAt || Number.isNaN(dueAt.getTime())) {
-    return c.json({ error: "dueAt must be a valid ISO date" }, 400);
+    return c.json({ error: "dueAt must be a valid ISO date" }, 400)
   }
-  const workspaceId = c.get("workspaceId");
+  const workspaceId = c.get("workspaceId")
   try {
-    rescheduleDelivery(getDb(), workspaceId, c.req.param("id"), dueAt);
-    return c.json({ items: listQueue(getDb(), workspaceId) });
+    rescheduleDelivery(getDb(), workspaceId, c.req.param("id"), dueAt)
+    return c.json({ items: listQueue(getDb(), workspaceId) })
   } catch (err) {
-    if (err instanceof ScheduleError)
-      return c.json({ error: err.message }, 409);
-    throw err;
+    if (err instanceof ScheduleError) return c.json({ error: err.message }, 409)
+    throw err
   }
-});
+})
 
 queue.delete("/queue/:id", (c) => {
   try {
-    cancelScheduled(getDb(), c.get("workspaceId"), c.req.param("id"));
-    return c.json({ ok: true });
+    cancelScheduled(getDb(), c.get("workspaceId"), c.req.param("id"))
+    return c.json({ ok: true })
   } catch (err) {
-    if (err instanceof ScheduleError)
-      return c.json({ error: err.message }, 409);
-    throw err;
+    if (err instanceof ScheduleError) return c.json({ error: err.message }, 409)
+    throw err
   }
-});
+})
 
 queue.put("/queue/order", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
-    orderedIds?: unknown;
-  } | null;
-  const orderedIds = stringArray(body?.orderedIds);
+    orderedIds?: unknown
+  } | null
+  const orderedIds = stringArray(body?.orderedIds)
   if (!orderedIds) {
-    return c.json({ error: "orderedIds is required" }, 400);
+    return c.json({ error: "orderedIds is required" }, 400)
   }
-  const workspaceId = c.get("workspaceId");
+  const workspaceId = c.get("workspaceId")
   try {
-    reorderQueue(getDb(), workspaceId, orderedIds);
-    return c.json({ items: listQueue(getDb(), workspaceId) });
+    reorderQueue(getDb(), workspaceId, orderedIds)
+    return c.json({ items: listQueue(getDb(), workspaceId) })
   } catch (err) {
-    if (err instanceof ScheduleError)
-      return c.json({ error: err.message }, 409);
-    throw err;
+    if (err instanceof ScheduleError) return c.json({ error: err.message }, 409)
+    throw err
   }
-});
+})

@@ -23,7 +23,7 @@
     "test": "NODE_ENV=test bun run --bun --filter=@dealflow/tests test",
     "test:watch": "NODE_ENV=test bun run --bun --filter=@dealflow/tests test:watch",
     "test:e2e": "bun run --filter=@dealflow/tests test:e2e",
-    "lint": "eslint .",
+    "lint": "eslint --fix .",
     "typecheck": "bun run --filter '*' typecheck",
     "format": "prettier --write ."
   },

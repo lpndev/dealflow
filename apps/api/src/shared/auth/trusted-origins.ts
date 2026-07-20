@@ -3,7 +3,7 @@ export const trustedOrigins = [
   ...(process.env.TRUSTED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
-    .filter(Boolean),
-];
+    .filter(Boolean)
+]
 
-export const trustedOriginSet = new Set(trustedOrigins);
+export const trustedOriginSet = new Set(trustedOrigins)

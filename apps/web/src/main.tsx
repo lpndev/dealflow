@@ -1,15 +1,15 @@
-import { ThemeProvider } from "@dealflow/ui/theme-provider";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { ThemeProvider } from "@dealflow/ui/theme-provider"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
 import {
   createBrowserRouter,
   redirect,
-  type LoaderFunctionArgs,
-} from "react-router";
-import { RouterProvider } from "react-router/dom";
-import { authClient, safeRedirect } from "@/lib/auth";
-import { queryClient } from "@/lib/query";
+  type LoaderFunctionArgs
+} from "react-router"
+import { RouterProvider } from "react-router/dom"
+import { authClient, safeRedirect } from "@/lib/auth"
+import { queryClient } from "@/lib/query"
 import {
   AcceptInvite,
   Dashboard,
@@ -21,24 +21,24 @@ import {
   QueueTab,
   SettingsTab,
   Signup,
-  Team,
-} from "@/routes";
-import "@dealflow/ui/styles.css";
+  Team
+} from "@/routes"
+import "@dealflow/ui/styles.css"
 
 async function protectedLoader() {
-  const { data, error } = await authClient.getSession();
-  if (error && error.status !== 401) return null;
-  if (!data) throw redirect("/login");
-  if (!data.session.activeOrganizationId) throw redirect("/onboarding");
-  return data;
+  const { data, error } = await authClient.getSession()
+  if (error && error.status !== 401) return null
+  if (!data) throw redirect("/login")
+  if (!data.session.activeOrganizationId) throw redirect("/onboarding")
+  return data
 }
 
 async function guestLoader({ request }: LoaderFunctionArgs) {
-  const { data } = await authClient.getSession();
-  if (!data) return null;
+  const { data } = await authClient.getSession()
+  if (!data) return null
   throw redirect(
-    safeRedirect(new URL(request.url).searchParams.get("redirect")),
-  );
+    safeRedirect(new URL(request.url).searchParams.get("redirect"))
+  )
 }
 
 const router = createBrowserRouter([
@@ -56,17 +56,20 @@ const router = createBrowserRouter([
       { path: "queue", Component: QueueTab },
       { path: "history", Component: HistoryTab },
       { path: "team", Component: Team },
-      { path: "settings", Component: SettingsTab },
-    ],
-  },
-]);
+      { path: "settings", Component: SettingsTab }
+    ]
+  }
+])
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider
+      defaultTheme="dark"
+      storageKey="vite-ui-theme"
+    >
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
     </ThemeProvider>
-  </StrictMode>,
-);
+  </StrictMode>
+)

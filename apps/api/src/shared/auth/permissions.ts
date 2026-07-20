@@ -1,9 +1,9 @@
-import { createAccessControl } from "better-auth/plugins/access";
+import { createAccessControl } from "better-auth/plugins/access"
 import {
   adminAc,
   defaultStatements,
-  ownerAc,
-} from "better-auth/plugins/organization/access";
+  ownerAc
+} from "better-auth/plugins/organization/access"
 
 export const statement = {
   ...defaultStatements,
@@ -11,16 +11,16 @@ export const statement = {
   destination: ["read", "manage"],
   whatsapp: ["manage"],
   settings: ["read", "manage"],
-  apikey: ["manage"],
-} as const;
+  apikey: ["manage"]
+} as const
 
-export const ac = createAccessControl(statement);
+export const ac = createAccessControl(statement)
 
 export const member = ac.newRole({
   publication: ["create", "send"],
   destination: ["read"],
-  settings: ["read"],
-});
+  settings: ["read"]
+})
 
 export const admin = ac.newRole({
   ...adminAc.statements,
@@ -28,8 +28,8 @@ export const admin = ac.newRole({
   destination: ["read", "manage"],
   whatsapp: ["manage"],
   settings: ["read", "manage"],
-  apikey: ["manage"],
-});
+  apikey: ["manage"]
+})
 
 export const owner = ac.newRole({
   ...ownerAc.statements,
@@ -37,5 +37,5 @@ export const owner = ac.newRole({
   destination: ["read", "manage"],
   whatsapp: ["manage"],
   settings: ["read", "manage"],
-  apikey: ["manage"],
-});
+  apikey: ["manage"]
+})

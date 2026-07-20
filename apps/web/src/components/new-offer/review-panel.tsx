@@ -1,35 +1,35 @@
-import { Button } from "@dealflow/ui/button";
-import { Field, FieldLabel } from "@dealflow/ui/field";
-import { Input } from "@dealflow/ui/input";
+import { Button } from "@dealflow/ui/button"
+import { Field, FieldLabel } from "@dealflow/ui/field"
+import { Input } from "@dealflow/ui/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-  InputGroupText,
-} from "@dealflow/ui/input-group";
+  InputGroupText
+} from "@dealflow/ui/input-group"
 import {
   ArrowClockwiseIcon,
   FloppyDiskIcon,
   HourglassIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react";
-import { Panel, PreviewBubble } from "@/components";
-import { type Form } from "@/types";
+  WarningCircleIcon
+} from "@phosphor-icons/react"
+import { Panel, PreviewBubble } from "@/components"
+import { type Form } from "@/types"
 
 export function ReviewPanel(
   props: Readonly<{
-    form: Form;
-    onChange: (field: keyof Form, value: string) => void;
-    onSave: () => void;
-    preview: string | null;
-    ready: boolean;
-    loading: boolean;
-    missingExtension: boolean;
-    mintError: string | null;
-    onRetryMint: () => void;
-  }>,
+    form: Form
+    onChange: (field: keyof Form, value: string) => void
+    onSave: () => void
+    preview: string | null
+    ready: boolean
+    loading: boolean
+    missingExtension: boolean
+    mintError: string | null
+    onRetryMint: () => void
+  }>
 ) {
-  const { form, onChange } = props;
+  const { form, onChange } = props
   return (
     <Panel
       title="Revisar"
@@ -134,7 +134,10 @@ export function ReviewPanel(
             </div>
           )}
           <div className="flex gap-2">
-            <Button size="sm" onClick={props.onSave}>
+            <Button
+              size="sm"
+              onClick={props.onSave}
+            >
               <FloppyDiskIcon />
               Salvar publicação
             </Button>
@@ -151,5 +154,5 @@ export function ReviewPanel(
         </div>
       </div>
     </Panel>
-  );
+  )
 }

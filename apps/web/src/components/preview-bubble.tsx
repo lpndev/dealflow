@@ -1,11 +1,11 @@
-import { ChecksIcon } from "@phosphor-icons/react";
+import { ChecksIcon } from "@phosphor-icons/react"
 
 export function PreviewBubble(
   props: Readonly<{
-    imageUrl?: string;
-    text?: string;
-    ready?: boolean;
-  }>,
+    imageUrl?: string
+    text?: string
+    ready?: boolean
+  }>
 ) {
   return (
     <div className="flex flex-col gap-2">
@@ -38,5 +38,5 @@ export function PreviewBubble(
         )}
       </div>
     </div>
-  );
+  )
 }

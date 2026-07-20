@@ -1,3 +1,3 @@
-export { ImportPanel } from "./import-panel";
-export { ReviewPanel } from "./review-panel";
-export { SendPanel } from "./send-panel";
+export { ImportPanel } from "./import-panel"
+export { ReviewPanel } from "./review-panel"
+export { SendPanel } from "./send-panel"

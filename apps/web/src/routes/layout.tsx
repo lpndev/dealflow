@@ -1,13 +1,13 @@
-import { Button } from "@dealflow/ui/button";
+import { Button } from "@dealflow/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@dealflow/ui/dropdown-menu";
-import { ModeToggle } from "@dealflow/ui/mode-toggle";
-import { Toaster } from "@dealflow/ui/sonner";
-import { TooltipProvider } from "@dealflow/ui/tooltip";
+  DropdownMenuTrigger
+} from "@dealflow/ui/dropdown-menu"
+import { ModeToggle } from "@dealflow/ui/mode-toggle"
+import { Toaster } from "@dealflow/ui/sonner"
+import { TooltipProvider } from "@dealflow/ui/tooltip"
 import {
   ChartBarIcon,
   ClockCounterClockwiseIcon,
@@ -15,11 +15,11 @@ import {
   GearIcon,
   ListIcon,
   TagIcon,
-  UsersIcon,
-} from "@phosphor-icons/react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { UserMenu, WhatsAppStatus, WorkspaceSwitcher } from "@/components";
-import { useCanManage } from "@/lib";
+  UsersIcon
+} from "@phosphor-icons/react"
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router"
+import { UserMenu, WhatsAppStatus, WorkspaceSwitcher } from "@/components"
+import { useCanManage } from "@/lib"
 
 const NAV = [
   { to: "/", label: "Início", icon: ChartBarIcon, end: true },
@@ -29,39 +29,43 @@ const NAV = [
     to: "/history",
     label: "Histórico",
     icon: ClockCounterClockwiseIcon,
-    end: false,
+    end: false
   },
   {
     to: "/team",
     label: "Equipe",
     icon: UsersIcon,
     end: false,
-    adminOnly: true,
+    adminOnly: true
   },
   {
     to: "/settings",
     label: "Config",
     icon: GearIcon,
     end: false,
-    adminOnly: true,
-  },
-];
+    adminOnly: true
+  }
+]
 
-type NavItem = (typeof NAV)[number];
+type NavItem = (typeof NAV)[number]
 
 function MobileNav({ items }: Readonly<{ items: NavItem[] }>) {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
   const current =
     items.find((n) =>
-      n.end ? pathname === n.to : pathname.startsWith(n.to) && n.to !== "/",
-    ) ?? items[0];
+      n.end ? pathname === n.to : pathname.startsWith(n.to) && n.to !== "/"
+    ) ?? items[0]
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" className="w-full justify-start">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+          >
             <ListIcon />
             {current.label}
           </Button>
@@ -69,19 +73,22 @@ function MobileNav({ items }: Readonly<{ items: NavItem[] }>) {
       />
       <DropdownMenuContent className="w-[calc(100vw-2rem)]">
         {items.map((n) => (
-          <DropdownMenuItem key={n.to} onClick={() => void navigate(n.to)}>
+          <DropdownMenuItem
+            key={n.to}
+            onClick={() => void navigate(n.to)}
+          >
             <n.icon />
             {n.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
 
 export function Layout() {
-  const canManage = useCanManage();
-  const nav = NAV.filter((n) => !n.adminOnly || canManage);
+  const canManage = useCanManage()
+  const nav = NAV.filter((n) => !n.adminOnly || canManage)
 
   return (
     <TooltipProvider>
@@ -134,5 +141,5 @@ export function Layout() {
         <Toaster />
       </div>
     </TooltipProvider>
-  );
+  )
 }

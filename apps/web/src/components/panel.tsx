@@ -1,16 +1,16 @@
-import { Alert, AlertDescription } from "@dealflow/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@dealflow/ui/tooltip";
-import { QuestionIcon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { Alert, AlertDescription } from "@dealflow/ui/alert"
+import { Card, CardContent, CardHeader, CardTitle } from "@dealflow/ui/card"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@dealflow/ui/tooltip"
+import { QuestionIcon } from "@phosphor-icons/react"
+import { type ReactNode } from "react"
 
 export function Panel(
   props: Readonly<{
-    title: string;
-    hint?: ReactNode;
-    eyebrow?: string;
-    children: ReactNode;
-  }>,
+    title: string
+    hint?: ReactNode
+    eyebrow?: string
+    children: ReactNode
+  }>
 ) {
   return (
     <Card>
@@ -41,7 +41,7 @@ export function Panel(
         {props.children}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export function Empty(props: Readonly<{ children: ReactNode }>) {
@@ -49,7 +49,7 @@ export function Empty(props: Readonly<{ children: ReactNode }>) {
     <p className="border border-dashed px-4 py-8 text-center text-xs text-muted-foreground">
       {props.children}
     </p>
-  );
+  )
 }
 
 export function ErrorNote(props: Readonly<{ children: ReactNode }>) {
@@ -57,5 +57,5 @@ export function ErrorNote(props: Readonly<{ children: ReactNode }>) {
     <Alert variant="destructive">
       <AlertDescription>{props.children}</AlertDescription>
     </Alert>
-  );
+  )
 }

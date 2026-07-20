@@ -1,65 +1,65 @@
-import { and, eq, inArray } from "drizzle-orm";
-import type { Db } from "@/shared/db";
-import type { MessagingProvider } from "@/shared/messaging";
+import { and, eq, inArray } from "drizzle-orm"
+import type { Db } from "@/shared/db"
+import type { MessagingProvider } from "@/shared/messaging"
 import {
   assertCanEnableDestination,
-  destinationSlotsLeft,
-} from "@/shared/plans";
-import { destination } from "@/shared/schema";
+  destinationSlotsLeft
+} from "@/shared/plans"
+import { destination } from "@/shared/schema"
 
 export function listDestinations(db: Db, workspaceId: string) {
   return db
     .select()
     .from(destination)
     .where(eq(destination.workspaceId, workspaceId))
-    .all();
+    .all()
 }
 
 export function publicDestinations(rows: ReturnType<typeof listDestinations>) {
-  return rows.map(({ id, name, enabled }) => ({ id, name, enabled }));
+  return rows.map(({ id, name, enabled }) => ({ id, name, enabled }))
 }
 
 export function listDestinationsByIds(
   db: Db,
   workspaceId: string,
-  ids: string[],
+  ids: string[]
 ) {
-  if (ids.length === 0) return [];
+  if (ids.length === 0) return []
   return db
     .select()
     .from(destination)
     .where(
       and(
         eq(destination.workspaceId, workspaceId),
-        inArray(destination.id, ids),
-      ),
+        inArray(destination.id, ids)
+      )
     )
-    .all();
+    .all()
 }
 
 export function setDestinationEnabled(
   db: Db,
   workspaceId: string,
   id: string,
-  enabled: boolean,
+  enabled: boolean
 ) {
-  if (enabled) assertCanEnableDestination(db, workspaceId);
+  if (enabled) assertCanEnableDestination(db, workspaceId)
   db.update(destination)
     .set({ enabled })
     .where(
-      and(eq(destination.id, id), eq(destination.workspaceId, workspaceId)),
+      and(eq(destination.id, id), eq(destination.workspaceId, workspaceId))
     )
-    .run();
-  return listDestinations(db, workspaceId);
+    .run()
+  return listDestinations(db, workspaceId)
 }
 
 export async function syncDestinations(
   db: Db,
   workspaceId: string,
-  provider: MessagingProvider,
+  provider: MessagingProvider
 ) {
-  const groups = await provider.listGroups(workspaceId);
-  let slotsLeft = destinationSlotsLeft(db, workspaceId);
+  const groups = await provider.listGroups(workspaceId)
+  let slotsLeft = destinationSlotsLeft(db, workspaceId)
 
   for (const group of groups) {
     const existing = db
@@ -69,10 +69,10 @@ export async function syncDestinations(
         and(
           eq(destination.workspaceId, workspaceId),
           eq(destination.provider, group.provider),
-          eq(destination.externalId, group.externalId),
-        ),
+          eq(destination.externalId, group.externalId)
+        )
       )
-      .get();
+      .get()
 
     if (existing) {
       db.update(destination)
@@ -80,13 +80,13 @@ export async function syncDestinations(
         .where(
           and(
             eq(destination.id, existing.id),
-            eq(destination.workspaceId, workspaceId),
-          ),
+            eq(destination.workspaceId, workspaceId)
+          )
         )
-        .run();
+        .run()
     } else {
-      const enabled = slotsLeft > 0;
-      if (enabled) slotsLeft -= 1;
+      const enabled = slotsLeft > 0
+      if (enabled) slotsLeft -= 1
       db.insert(destination)
         .values({
           id: crypto.randomUUID(),
@@ -94,11 +94,11 @@ export async function syncDestinations(
           provider: group.provider,
           externalId: group.externalId,
           name: group.name,
-          enabled,
+          enabled
         })
-        .run();
+        .run()
     }
   }
 
-  return listDestinations(db, workspaceId);
+  return listDestinations(db, workspaceId)
 }

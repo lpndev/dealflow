@@ -1,18 +1,21 @@
-import { Button } from "@dealflow/ui/button";
-import { Textarea } from "@dealflow/ui/textarea";
-import { ClipboardTextIcon } from "@phosphor-icons/react";
-import { Panel } from "@/components";
+import { Button } from "@dealflow/ui/button"
+import { Textarea } from "@dealflow/ui/textarea"
+import { ClipboardTextIcon } from "@phosphor-icons/react"
+import { Panel } from "@/components"
 
 export function ImportPanel(
   props: Readonly<{
-    value: string;
-    onChange: (value: string) => void;
-    loading: boolean;
-    onImport: () => void;
-  }>,
+    value: string
+    onChange: (value: string) => void
+    loading: boolean
+    onImport: () => void
+  }>
 ) {
   return (
-    <Panel title="Importar" eyebrow="01">
+    <Panel
+      title="Importar"
+      eyebrow="01"
+    >
       <Textarea
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
@@ -28,5 +31,5 @@ export function ImportPanel(
         {props.loading ? "Importando…" : "Importar oferta"}
       </Button>
     </Panel>
-  );
+  )
 }
