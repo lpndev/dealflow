@@ -53,7 +53,9 @@ O web lê as variáveis `VITE_*` desse mesmo `.env` no build. Veja `.env.example
 para a lista completa. Em produção, `BETTER_AUTH_SECRET` é obrigatório.
 
 Ao hospedar (ex.: `meudominio.com`), **nenhuma URL se troca no código** — é só
-preencher o `.env`:
+preencher o `.env`. O flag global que ativa o modo produção é
+`NODE_ENV=production` (derruba as origens `localhost` da allowlist e garante que
+nenhum fake de teste rode); em dev fica `NODE_ENV=development`. Além dele:
 
 - `VITE_API_URL` e `BETTER_AUTH_URL` — endereço público da **API** (ex.:
   `https://api.meudominio.com`).
