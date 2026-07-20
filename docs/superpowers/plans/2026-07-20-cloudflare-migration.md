@@ -4,7 +4,7 @@
 
 **Goal:** Deploy the whole Dealflow product on Cloudflare — landing (Astro) and panel (React SPA) as Workers static assets, the API (Hono) as a Worker on D1, the WhatsApp gateway (Baileys) as an always-on Cloudflare Container — keeping the local Bun dev/test flow unchanged.
 
-**Architecture:** Everything that fits Workers' stateless request model runs on Workers; only the one stateful piece (the Baileys WhatsApp socket, which needs an always-on process) runs on a Cloudflare Container. The DB moves from `bun:sqlite` to D1 for the deployed API, behind a thin driver factory so local dev and Vitest keep `bun:sqlite`. The existing "use-cases receive `db` as an argument" design means the domain code does not change — only the boundary (route/scheduler) picks the driver.
+**Architecture:** Everything that fits Workers' stateless request model runs on Workers; only the one stateful piece (the Baileys WhatsApp socket, which needs an always-on process) runs on a Cloudflare Container. The DB moves from `bun:sqlite` to D1 for the deployed API. **CORRECTION (2026-07-20, mid-execution):** the original claim that "the domain code does not change" was WRONG. `bun:sqlite` is synchronous; D1 is async-only. The domain layer has 64 synchronous SQLite calls across 31 functions — moving to D1 requires making the whole data layer `async` (every terminator `await`-ed, every function `async`, callers + tests adjusted). Because type-aware lint forbids `await`-ing the sync `bun:sqlite` API, local dev and tests also switch to an async SQLite: **libSQL** (`drizzle-orm/libsql`, `:memory:`/file, runs under Bun/Vitest) locally/tests, **D1** in prod. Decision approved by the operator; see the revised Phase 3.
 
 **Tech Stack:** Bun workspaces, Hono, React + Vite (panel), Astro (landing), Drizzle ORM, Cloudflare Workers + Static Assets + D1 + Cron Triggers + Containers, better-auth, Baileys.
 
@@ -300,9 +300,18 @@ Add `apps/landing` (Astro SSG, reuses `@dealflow/ui`) to the Stack section and N
 
 ---
 
-## Phase 3 — Database driver factory (bun:sqlite local/tests, D1 in prod) + Cron scheduler
+## Phase 3 — Async data-layer refactor (libSQL local/tests, D1 in prod)
 
-**Rationale:** Workers cannot use `bun:sqlite` (no filesystem). Move the deployed API to D1 without disturbing local dev or the Vitest suite, which stay on `bun:sqlite :memory:`. The domain use-cases already take `db` as an argument, so they do not change — only `db.ts` (the factory) and the boundary that supplies `db` (routes, scheduler) change. The `setInterval` scheduler cannot run on Workers; it becomes a **Cron Trigger** handler.
+**Rationale (revised 2026-07-20):** Workers cannot use `bun:sqlite` (no filesystem, no persistent disk anywhere on Cloudflare) and D1 is **async-only**, while the domain layer today makes 64 **synchronous** SQLite calls across 31 sync functions. So this phase converts the entire data layer to `async` and swaps the local/test driver to **libSQL** (async, `:memory:`, runs under Bun/Vitest, Drizzle-official), keeping D1 as the prod driver (wired in Phase 4). This is the single largest phase; the whole suite must stay green on libSQL before D1 is introduced.
+
+**Approach (supersedes the "driver factory" steps that previously appeared here):**
+1. Add `@libsql/client`; type the shared `Db` as the drizzle **async** SQLite type so `.get()/.all()/.run()` are `Promise`-typed. `getDb()`/`createDb(":memory:")` return a libSQL-backed `drizzle-orm/libsql` instance.
+2. Make all 31 domain functions `async`; `await` all 64 terminator calls; make every caller (routes, scheduler, other use-cases) `await` them.
+3. Update the migrate-on-boot to the libSQL migrator; update every test to `await` the now-async use-cases and the `:memory:` setup.
+4. Keep `dispatchDue` and extract `runDueOnce(db, provider)` (async) for the Phase-4 cron.
+5. Verify: `bun run typecheck && bun run lint && bun run test` all green **on libSQL** (await-thenable clean, revenue invariants still asserted). D1 itself is introduced in Phase 4 — this phase proves the async refactor on libSQL first.
+
+The detailed execution brief for this phase lives alongside the run (task-3 brief); the numbered steps below are retained only for historical context and are superseded by the async approach above.
 
 **Deploy-iterate checkpoint:** the D1 binding only exists inside a Worker request/cron `env`. You will iterate on wiring `env.DB` through Hono context in Phase 4; this phase makes the factory able to accept either driver and keeps local/tests green.
 
@@ -432,7 +441,7 @@ app.use("*", async (c, next) => {
   await next()
 })
 ```
-Extend `AppEnv` variables with `db: Db`. Then replace `getDb()` in route handlers with `c.get("db")`. The use-cases are unchanged (they already receive `db`). This is mechanical but touches every route file; do it per-router and run typecheck between.
+Extend `AppEnv` variables with `db: Db`. Then replace `getDb()` in route handlers with `c.get("db")`. The use-cases are already `async` after Phase 3 (routes already `await` them); this step only changes where `db` comes from. Because Phase 3 made both drivers async and unified the `Db` type, the D1 instance is assignable to `Db` with no further domain changes. Mechanical but touches every route file; do it per-router and run typecheck between.
 
 - [ ] **Step 2: Verify local still works via the Bun entry**
 
