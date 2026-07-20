@@ -185,6 +185,13 @@ export function DangerZone() {
           actionLabel="Excluir conta"
           password
           onConfirm={async (pw) => {
+            const email = session?.user.email;
+            if (!email) throw new Error("sessão inválida");
+            const check = await authClient.signIn.email({
+              email,
+              password: pw,
+            });
+            if (check.error) throw new Error("senha incorreta");
             await apiPost("/workspace/reset", {});
             const { error } = await authClient.deleteUser({ password: pw });
             if (error)
