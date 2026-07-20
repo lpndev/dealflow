@@ -14,7 +14,8 @@ Signal → Product → DealSnapshot → AffiliateLink → Publication → Delive
 ## Stack
 
 - **Monorepo:** Bun workspaces (`apps/*`)
-- **Web:** React + Vite + Tailwind CSS — `apps/web`
+- **Painel:** React + Vite + Tailwind CSS — `apps/panel`
+- **Landing:** Astro + Tailwind CSS — `apps/landing`
 - **API:** Hono + Bun (porta 3001) — `apps/api`
 - **WhatsApp gateway:** Baileys (porta 3002) — `apps/wa-gateway`
 - **Extensão:** Chrome MV3 (captura de oferta + link de afiliado) — `apps/extension`
@@ -31,7 +32,7 @@ Signal → Product → DealSnapshot → AffiliateLink → Publication → Delive
 ```sh
 git clone <repo> dealflow && cd dealflow
 bun install
-bun run dev        # sobe web (5173) + api (3001) + wa-gateway (3002)
+bun run dev        # sobe panel (5173) + landing (4321) + api (3001) + wa-gateway (3002)
 ```
 
 Abra <http://localhost:5173>. Tudo roda 100% local; nenhum serviço pago é
