@@ -7,7 +7,10 @@ import { migrate as runMigrations } from "drizzle-orm/libsql/migrator"
 import * as schema from "./schema"
 import { organization } from "./schema"
 
-export type Db = LibSQLDatabase<typeof schema> & { $client: Client }
+export type Db = LibSQLDatabase<typeof schema> & {
+  $client: Client
+  $url: string
+}
 
 const migrationsFolder = fileURLToPath(
   new URL("../../drizzle", import.meta.url)
@@ -23,18 +26,22 @@ export function resolveDatabaseUrl(
   return env.NODE_ENV === "test" ? ":memory:" : defaultDatabaseUrl
 }
 
-function isLocalFile(url: string): boolean {
-  return url !== ":memory:" && !url.includes("://")
+function localPath(url: string): string | undefined {
+  const path = url.startsWith("file:") ? url.slice("file:".length) : url
+  if (path === "" || path.startsWith(":memory:")) return undefined
+  if (url === path && url.includes("://")) return undefined
+  return path
 }
 
-function libsqlUrl(url: string): string {
-  return isLocalFile(url) ? `file:${url}` : url
+export function libsqlUrl(url: string): string {
+  const path = localPath(url)
+  return path === undefined || url.startsWith("file:") ? url : `file:${path}`
 }
 
 export function createDb(url: string): Db {
-  if (isLocalFile(url)) process.umask(0o077)
+  if (localPath(url)) process.umask(0o077)
   const client = createClient({ url: libsqlUrl(url) })
-  return drizzle(client, { schema })
+  return Object.assign(drizzle(client, { schema }), { $url: url })
 }
 
 async function seedLegacyWorkspace(db: Db): Promise<void> {
@@ -55,13 +62,11 @@ async function seedLegacyWorkspace(db: Db): Promise<void> {
     .run()
 }
 
-export async function migrateDb(
-  db: Db,
-  url: string = resolveDatabaseUrl()
-): Promise<void> {
+export async function migrateDb(db: Db): Promise<void> {
   await db.$client.execute("PRAGMA foreign_keys = ON;")
   await runMigrations(db, { migrationsFolder })
-  if (isLocalFile(url)) chmodSync(url, 0o600)
+  const path = localPath(db.$url)
+  if (path) chmodSync(path, 0o600)
   await seedLegacyWorkspace(db)
 }
 
