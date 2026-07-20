@@ -15,7 +15,7 @@ const draft = {
   price: { original: 597.02, current: 197.02 }
 } as never
 
-it("capture slots are isolated per workspace and consumed once", async () => {
+it("capture slots are isolated per workspace and consumed once", () => {
   storeCapture("ws-a", draft)
   expect(takeCapture("ws-b")).toBeNull()
   expect(takeCapture("ws-a")).toEqual(draft)
@@ -35,7 +35,7 @@ it("adopts the captured affiliate tag only while settings has none", async () =>
   expect((await getSettings(db, "ws-a")).mlAffiliateTag).toBe("ct1234567890000")
 })
 
-it("sanitizeDraft keeps a well-formed extension capture intact", async () => {
+it("sanitizeDraft keeps a well-formed extension capture intact", () => {
   const clean = sanitizeDraft({
     sourceUrl: "https://www.mercadolivre.com.br/x/p/MLB123",
     affiliateUrl: "https://meli.la/abc",
@@ -60,7 +60,7 @@ it("sanitizeDraft keeps a well-formed extension capture intact", async () => {
   })
 })
 
-it("sanitizeDraft rejects drafts without valid http urls", async () => {
+it("sanitizeDraft rejects drafts without valid http urls", () => {
   expect(sanitizeDraft(null)).toBeNull()
   expect(sanitizeDraft("draft")).toBeNull()
   expect(sanitizeDraft({ product: {}, price: {} })).toBeNull()
@@ -78,7 +78,7 @@ it("sanitizeDraft rejects drafts without valid http urls", async () => {
   ).toBeNull()
 })
 
-it("sanitizeDraft drops malformed optional fields instead of storing them", async () => {
+it("sanitizeDraft drops malformed optional fields instead of storing them", () => {
   const clean = sanitizeDraft({
     sourceUrl: "https://www.mercadolivre.com.br/x/p/MLB123",
     affiliateUrl: "https://meli.la/abc",

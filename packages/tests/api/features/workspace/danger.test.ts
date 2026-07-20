@@ -33,7 +33,7 @@ it("deletes only the target workspace's domain rows", async () => {
   ).toEqual(["ws-b"])
 })
 
-it("cascade covers every workspace-scoped table in the schema", async () => {
+it("cascade covers every workspace-scoped table in the schema", () => {
   const scoped: string[] = (Object.values(schema) as unknown[])
     .filter((value): value is SQLiteTable => is(value, SQLiteTable))
     .filter((table) => "workspaceId" in getTableColumns(table))

@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest"
 import type { AppEnv } from "@/shared/auth"
 import { rateLimit } from "@/shared/rate-limit"
 
-async function appWithLimit(max: number, windowSeconds: number) {
+function appWithLimit(max: number, windowSeconds: number) {
   const app = new Hono<AppEnv>()
   app.use("*", async (c: Context<AppEnv>, next: Next) => {
     c.set("workspaceId", c.req.header("x-ws") ?? "ws-a")
@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 it("limits requests per workspace within the window", async () => {
-  const app = await appWithLimit(3, 60)
+  const app = appWithLimit(3, 60)
   for (let i = 0; i < 3; i += 1) {
     expect((await app.request("/x")).status).toBe(200)
   }
@@ -34,7 +34,7 @@ it("limits requests per workspace within the window", async () => {
 
 it("resets the counter after the window passes", async () => {
   vi.useFakeTimers()
-  const app = await appWithLimit(1, 60)
+  const app = appWithLimit(1, 60)
   expect((await app.request("/x")).status).toBe(200)
   expect((await app.request("/x")).status).toBe(429)
 
