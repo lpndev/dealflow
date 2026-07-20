@@ -1,11 +1,12 @@
+import { testDb } from "@support/db"
 import { expect, it } from "vitest"
 import { isWorkspaceMember } from "@/shared/auth"
-import { createDb } from "@/shared/db"
 import { member, organization, user } from "@/shared/schema"
 
-it("revokes workspace access as soon as membership is removed", () => {
-  const db = createDb(":memory:")
-  db.insert(user)
+it("revokes workspace access as soon as membership is removed", async () => {
+  const db = await testDb()
+  await db
+    .insert(user)
     .values({
       id: "user-1",
       name: "User",
@@ -15,10 +16,12 @@ it("revokes workspace access as soon as membership is removed", () => {
       updatedAt: new Date()
     })
     .run()
-  db.insert(organization)
+  await db
+    .insert(organization)
     .values({ id: "ws-1", name: "Ws", slug: "ws-1", createdAt: new Date() })
     .run()
-  db.insert(member)
+  await db
+    .insert(member)
     .values({
       id: "member-1",
       organizationId: "ws-1",
@@ -28,12 +31,12 @@ it("revokes workspace access as soon as membership is removed", () => {
     })
     .run()
 
-  expect(isWorkspaceMember(db, "user-1", "ws-1")).toBe(true)
-  db.delete(member).run()
-  expect(isWorkspaceMember(db, "user-1", "ws-1")).toBe(false)
+  expect(await isWorkspaceMember(db, "user-1", "ws-1")).toBe(true)
+  await db.delete(member).run()
+  expect(await isWorkspaceMember(db, "user-1", "ws-1")).toBe(false)
 })
 
-it("does not accept membership in a different workspace", () => {
-  const db = createDb(":memory:")
-  expect(isWorkspaceMember(db, "user-1", "ws-2")).toBe(false)
+it("does not accept membership in a different workspace", async () => {
+  const db = await testDb()
+  expect(await isWorkspaceMember(db, "user-1", "ws-2")).toBe(false)
 })

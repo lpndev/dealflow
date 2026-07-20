@@ -1,3 +1,4 @@
+import { testDb } from "@support/db"
 import { FakeMessaging } from "@support/fake-messaging"
 import { expect, it } from "vitest"
 import { dispatchDue } from "@/features/publications/schedule/scheduler"
@@ -5,7 +6,7 @@ import { schedulePublication } from "@/features/publications/schedule/use-case"
 import { createPublication } from "@/features/publications/use-case"
 import { setQueuePaused } from "@/features/queue/use-case"
 import { updateSettings } from "@/features/settings/use-case"
-import { createDb, type Db } from "@/shared/db"
+import { type Db } from "@/shared/db"
 import { delivery, destination, publication } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
 
@@ -20,10 +21,12 @@ const deal = {
 const T0 = new Date("2026-07-08T12:00:00Z")
 const past = new Date(T0.getTime() + 300_000)
 
-function seed(db: Db, names: string[]): string[] {
-  return names.map((name, i) => {
+async function seed(db: Db, names: string[]): Promise<string[]> {
+  const ids: string[] = []
+  for (const [i, name] of names.entries()) {
     const id = `dest-${i}`
-    db.insert(destination)
+    await db
+      .insert(destination)
       .values({
         id,
         workspaceId: DEFAULT_WORKSPACE_ID,
@@ -32,19 +35,20 @@ function seed(db: Db, names: string[]): string[] {
         name
       })
       .run()
-    return id
-  })
+    ids.push(id)
+  }
+  return ids
 }
 
-function setup(names: string[]) {
-  const db = createDb(":memory:")
-  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID)
-  const dests = seed(db, names)
-  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+async function setup(names: string[]) {
+  const db = await testDb()
+  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
+  const dests = await seed(db, names)
+  await updateSettings(db, DEFAULT_WORKSPACE_ID, {
     delayMinSeconds: 100,
     delayMaxSeconds: 100
   })
-  schedulePublication(
+  await schedulePublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
     DEFAULT_WORKSPACE_ID,
@@ -54,7 +58,7 @@ function setup(names: string[]) {
 }
 
 it("dispatches one due send at a time, earliest first", async () => {
-  const { db, dests } = setup(["G1", "G2"])
+  const { db, dests } = await setup(["G1", "G2"])
   const provider = new FakeMessaging()
 
   const r1 = await dispatchDue(db, provider, past)
@@ -70,14 +74,14 @@ it("dispatches one due send at a time, earliest first", async () => {
 })
 
 it("does not dispatch a send before it is due", async () => {
-  const db = createDb(":memory:")
-  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID)
-  const dests = seed(db, ["G1"])
-  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+  const db = await testDb()
+  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
+  const dests = await seed(db, ["G1"])
+  await updateSettings(db, DEFAULT_WORKSPACE_ID, {
     delayMinSeconds: 100,
     delayMaxSeconds: 100
   })
-  schedulePublication(
+  await schedulePublication(
     {
       publicationId: pub.id,
       destinationIds: dests,
@@ -95,37 +99,35 @@ it("does not dispatch a send before it is due", async () => {
 })
 
 it("dispatches nothing while the queue is paused", async () => {
-  const { db } = setup(["G1"])
+  const { db } = await setup(["G1"])
   const provider = new FakeMessaging()
-  setQueuePaused(db, DEFAULT_WORKSPACE_ID, true)
+  await setQueuePaused(db, DEFAULT_WORKSPACE_ID, true)
 
   const paused = await dispatchDue(db, provider, past)
   expect(paused).toBeNull()
   expect(provider.sent).toHaveLength(0)
 
-  setQueuePaused(db, DEFAULT_WORKSPACE_ID, false)
+  await setQueuePaused(db, DEFAULT_WORKSPACE_ID, false)
   const resumed = await dispatchDue(db, provider, past)
   expect(resumed).not.toBeNull()
   expect(provider.sent).toHaveLength(1)
 })
 
 it("marks the publication sent once every due send goes out", async () => {
-  const { db, pub } = setup(["G1", "G2"])
+  const { db, pub } = await setup(["G1", "G2"])
   const provider = new FakeMessaging()
 
   await dispatchDue(db, provider, past)
   await dispatchDue(db, provider, past)
 
-  const row = db
-    .select()
-    .from(publication)
-    .all()
-    .find((p) => p.id === pub.id)
+  const row = (await db.select().from(publication).all()).find(
+    (p) => p.id === pub.id
+  )
   expect(row?.status).toBe("sent")
 })
 
 it("marks a failed send failed and does not auto-retry it", async () => {
-  const { db } = setup(["G1"])
+  const { db } = await setup(["G1"])
   const provider = new FakeMessaging()
   provider.failNext = true
 
@@ -137,11 +139,12 @@ it("marks a failed send failed and does not auto-retry it", async () => {
 })
 
 it("does not let a paused workspace's older due item starve other workspaces", async () => {
-  const db = createDb(":memory:")
+  const db = await testDb()
   const provider = new FakeMessaging()
 
-  const pausedPub = createPublication(deal, db, "ws-paused")
-  db.insert(destination)
+  const pausedPub = await createPublication(deal, db, "ws-paused")
+  await db
+    .insert(destination)
     .values({
       id: "dest-paused",
       workspaceId: "ws-paused",
@@ -150,8 +153,9 @@ it("does not let a paused workspace's older due item starve other workspaces", a
       name: "Paused Group"
     })
     .run()
-  updateSettings(db, "ws-paused", { queuePaused: true })
-  db.insert(delivery)
+  await updateSettings(db, "ws-paused", { queuePaused: true })
+  await db
+    .insert(delivery)
     .values({
       id: "dl-paused",
       workspaceId: "ws-paused",
@@ -162,8 +166,9 @@ it("does not let a paused workspace's older due item starve other workspaces", a
     })
     .run()
 
-  const openPub = createPublication(deal, db, "ws-open")
-  db.insert(destination)
+  const openPub = await createPublication(deal, db, "ws-open")
+  await db
+    .insert(destination)
     .values({
       id: "dest-open",
       workspaceId: "ws-open",
@@ -172,7 +177,8 @@ it("does not let a paused workspace's older due item starve other workspaces", a
       name: "Open Group"
     })
     .run()
-  db.insert(delivery)
+  await db
+    .insert(delivery)
     .values({
       id: "dl-open",
       workspaceId: "ws-open",

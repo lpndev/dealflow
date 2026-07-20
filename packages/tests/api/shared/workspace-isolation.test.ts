@@ -1,7 +1,8 @@
+import { testDb } from "@support/db"
 import { expect, it } from "vitest"
 import { listDestinations } from "@/features/destinations/use-case"
 import { listQueue } from "@/features/queue/use-case"
-import { createDb, type Db } from "@/shared/db"
+import { type Db } from "@/shared/db"
 import {
   affiliateLink,
   dealSnapshot,
@@ -11,8 +12,9 @@ import {
   publication
 } from "@/shared/schema"
 
-function seedDest(db: Db, workspaceId: string, id: string) {
-  db.insert(destination)
+async function seedDest(db: Db, workspaceId: string, id: string) {
+  await db
+    .insert(destination)
     .values({
       id,
       workspaceId,
@@ -23,29 +25,33 @@ function seedDest(db: Db, workspaceId: string, id: string) {
     .run()
 }
 
-it("listDestinations returns only the caller's workspace", () => {
-  const db = createDb(":memory:")
-  seedDest(db, "ws-a", "a1")
-  seedDest(db, "ws-b", "b1")
-  const a = listDestinations(db, "ws-a")
+it("listDestinations returns only the caller's workspace", async () => {
+  const db = await testDb()
+  await seedDest(db, "ws-a", "a1")
+  await seedDest(db, "ws-b", "b1")
+  const a = await listDestinations(db, "ws-a")
   expect(a.map((d) => d.id)).toEqual(["a1"])
   expect(a.some((d) => d.id === "b1")).toBe(false)
 })
 
-it("listQueue never leaks another workspace's deliveries", () => {
-  const db = createDb(":memory:")
-  seedDest(db, "ws-a", "a1")
-  seedDest(db, "ws-b", "b1")
-  db.insert(product)
+it("listQueue never leaks another workspace's deliveries", async () => {
+  const db = await testDb()
+  await seedDest(db, "ws-a", "a1")
+  await seedDest(db, "ws-b", "b1")
+  await db
+    .insert(product)
     .values({ id: "prod-b", workspaceId: "ws-b", provider: "mercado-livre" })
     .run()
-  db.insert(dealSnapshot)
+  await db
+    .insert(dealSnapshot)
     .values({ id: "d", workspaceId: "ws-b", productId: "prod-b" })
     .run()
-  db.insert(affiliateLink)
+  await db
+    .insert(affiliateLink)
     .values({ id: "l", workspaceId: "ws-b", productId: "prod-b", url: "x" })
     .run()
-  db.insert(publication)
+  await db
+    .insert(publication)
     .values({
       id: "p-b",
       workspaceId: "ws-b",
@@ -55,7 +61,8 @@ it("listQueue never leaks another workspace's deliveries", () => {
       status: "ready"
     })
     .run()
-  db.insert(delivery)
+  await db
+    .insert(delivery)
     .values({
       id: "dl-b",
       workspaceId: "ws-b",
@@ -65,19 +72,22 @@ it("listQueue never leaks another workspace's deliveries", () => {
       dueAt: new Date()
     })
     .run()
-  expect(listQueue(db, "ws-a")).toEqual([])
+  expect(await listQueue(db, "ws-a")).toEqual([])
 })
 
-it("listQueue rejects cross-workspace relations even if the database is inconsistent", () => {
-  const db = createDb(":memory:")
-  seedDest(db, "ws-a", "a1")
-  db.insert(product)
+it("listQueue rejects cross-workspace relations even if the database is inconsistent", async () => {
+  const db = await testDb()
+  await seedDest(db, "ws-a", "a1")
+  await db
+    .insert(product)
     .values({ id: "prod-b", workspaceId: "ws-b", provider: "mercado-livre" })
     .run()
-  db.insert(dealSnapshot)
+  await db
+    .insert(dealSnapshot)
     .values({ id: "deal-b", workspaceId: "ws-b", productId: "prod-b" })
     .run()
-  db.insert(affiliateLink)
+  await db
+    .insert(affiliateLink)
     .values({
       id: "link-b",
       workspaceId: "ws-b",
@@ -85,7 +95,8 @@ it("listQueue rejects cross-workspace relations even if the database is inconsis
       url: "x"
     })
     .run()
-  db.insert(publication)
+  await db
+    .insert(publication)
     .values({
       id: "pub-a",
       workspaceId: "ws-a",
@@ -94,7 +105,8 @@ it("listQueue rejects cross-workspace relations even if the database is inconsis
       content: "secret title from ws-b"
     })
     .run()
-  db.insert(delivery)
+  await db
+    .insert(delivery)
     .values({
       id: "delivery-a",
       workspaceId: "ws-a",
@@ -105,5 +117,5 @@ it("listQueue rejects cross-workspace relations even if the database is inconsis
     })
     .run()
 
-  expect(listQueue(db, "ws-a")).toEqual([])
+  expect(await listQueue(db, "ws-a")).toEqual([])
 })

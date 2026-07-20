@@ -1,3 +1,4 @@
+import { testDb } from "@support/db"
 import { eq } from "drizzle-orm"
 import { expect, it } from "vitest"
 import { schedulePublication } from "@/features/publications/schedule/use-case"
@@ -13,7 +14,7 @@ import {
   setQueuePaused
 } from "@/features/queue/use-case"
 import { updateSettings } from "@/features/settings/use-case"
-import { createDb, type Db } from "@/shared/db"
+import { type Db } from "@/shared/db"
 import { ScheduleError } from "@/shared/errors"
 import { delivery, destination, publication } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
@@ -28,10 +29,12 @@ const deal = {
 
 const T0 = new Date("2026-07-08T12:00:00Z")
 
-function seed(db: Db, names: string[]): string[] {
-  return names.map((name, i) => {
+async function seed(db: Db, names: string[]): Promise<string[]> {
+  const ids: string[] = []
+  for (const [i, name] of names.entries()) {
     const id = `dest-${i}`
-    db.insert(destination)
+    await db
+      .insert(destination)
       .values({
         id,
         workspaceId: DEFAULT_WORKSPACE_ID,
@@ -40,19 +43,20 @@ function seed(db: Db, names: string[]): string[] {
         name
       })
       .run()
-    return id
-  })
+    ids.push(id)
+  }
+  return ids
 }
 
-function setup(names: string[]) {
-  const db = createDb(":memory:")
-  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID)
-  const dests = seed(db, names)
-  updateSettings(db, DEFAULT_WORKSPACE_ID, {
+async function setup(names: string[]) {
+  const db = await testDb()
+  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
+  const dests = await seed(db, names)
+  await updateSettings(db, DEFAULT_WORKSPACE_ID, {
     delayMinSeconds: 100,
     delayMaxSeconds: 100
   })
-  schedulePublication(
+  await schedulePublication(
     { publicationId: pub.id, destinationIds: dests },
     db,
     DEFAULT_WORKSPACE_ID,
@@ -61,24 +65,24 @@ function setup(names: string[]) {
   return { db, pub }
 }
 
-it("cancels a scheduled delivery and removes it from the queue", () => {
-  const { db } = setup(["G1", "G2"])
-  const first = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
+it("cancels a scheduled delivery and removes it from the queue", async () => {
+  const { db } = await setup(["G1", "G2"])
+  const first = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
 
-  cancelScheduled(db, DEFAULT_WORKSPACE_ID, first.id)
+  await cancelScheduled(db, DEFAULT_WORKSPACE_ID, first.id)
 
-  const remaining = listQueue(db, DEFAULT_WORKSPACE_ID)
+  const remaining = await listQueue(db, DEFAULT_WORKSPACE_ID)
   expect(remaining).toHaveLength(1)
   expect(remaining.map((r) => r.id)).not.toContain(first.id)
 })
 
-it("resets the publication to ready when its last item is cancelled", () => {
-  const { db, pub } = setup(["G1"])
-  const only = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
+it("resets the publication to ready when its last item is cancelled", async () => {
+  const { db, pub } = await setup(["G1"])
+  const only = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
 
-  cancelScheduled(db, DEFAULT_WORKSPACE_ID, only.id)
+  await cancelScheduled(db, DEFAULT_WORKSPACE_ID, only.id)
 
-  const row = db
+  const row = await db
     .select()
     .from(publication)
     .where(eq(publication.id, pub.id))
@@ -86,98 +90,101 @@ it("resets the publication to ready when its last item is cancelled", () => {
   expect(row?.status).toBe("ready")
 })
 
-it("refuses to cancel a delivery that already sent", () => {
-  const { db } = setup(["G1"])
-  const only = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
-  db.update(delivery)
+it("refuses to cancel a delivery that already sent", async () => {
+  const { db } = await setup(["G1"])
+  const only = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
+  await db
+    .update(delivery)
     .set({ status: "sent" })
     .where(eq(delivery.id, only.id))
     .run()
 
-  expect(() => cancelScheduled(db, DEFAULT_WORKSPACE_ID, only.id)).toThrow(
-    ScheduleError
-  )
+  await expect(
+    cancelScheduled(db, DEFAULT_WORKSPACE_ID, only.id)
+  ).rejects.toThrow(ScheduleError)
 })
 
-it("reorders items by reassigning the same time slots to the new order", () => {
-  const { db } = setup(["G1", "G2", "G3"])
-  const before = listQueue(db, DEFAULT_WORKSPACE_ID)
+it("reorders items by reassigning the same time slots to the new order", async () => {
+  const { db } = await setup(["G1", "G2", "G3"])
+  const before = await listQueue(db, DEFAULT_WORKSPACE_ID)
   const slots = before.map((i) => i.dueAt?.getTime())
   const reversed = [...before].reverse().map((i) => i.id)
 
-  reorderQueue(db, DEFAULT_WORKSPACE_ID, reversed)
+  await reorderQueue(db, DEFAULT_WORKSPACE_ID, reversed)
 
-  const after = listQueue(db, DEFAULT_WORKSPACE_ID)
+  const after = await listQueue(db, DEFAULT_WORKSPACE_ID)
   expect(after.map((i) => i.id)).toEqual(reversed)
   expect(after.map((i) => i.dueAt?.getTime())).toEqual(slots)
 })
 
-it("rejects reordering with an id that is not scheduled", () => {
-  const { db } = setup(["G1"])
-  const only = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
+it("rejects reordering with an id that is not scheduled", async () => {
+  const { db } = await setup(["G1"])
+  const only = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
 
-  expect(() =>
+  await expect(
     reorderQueue(db, DEFAULT_WORKSPACE_ID, [only.id, "bogus"])
-  ).toThrow(ScheduleError)
+  ).rejects.toThrow(ScheduleError)
 })
 
-it("reschedules a scheduled delivery to a new due time", () => {
-  const { db } = setup(["G1"])
-  const only = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
+it("reschedules a scheduled delivery to a new due time", async () => {
+  const { db } = await setup(["G1"])
+  const only = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
   const when = new Date("2026-07-10T15:00:00Z")
 
-  rescheduleDelivery(db, DEFAULT_WORKSPACE_ID, only.id, when)
+  await rescheduleDelivery(db, DEFAULT_WORKSPACE_ID, only.id, when)
 
-  expect(listQueue(db, DEFAULT_WORKSPACE_ID)[0].dueAt?.getTime()).toBe(
+  expect((await listQueue(db, DEFAULT_WORKSPACE_ID))[0].dueAt?.getTime()).toBe(
     when.getTime()
   )
 })
 
-it("refuses to reschedule a delivery that already sent", () => {
-  const { db } = setup(["G1"])
-  const only = listQueue(db, DEFAULT_WORKSPACE_ID)[0]
-  db.update(delivery)
+it("refuses to reschedule a delivery that already sent", async () => {
+  const { db } = await setup(["G1"])
+  const only = (await listQueue(db, DEFAULT_WORKSPACE_ID))[0]
+  await db
+    .update(delivery)
     .set({ status: "sent" })
     .where(eq(delivery.id, only.id))
     .run()
 
-  expect(() =>
+  await expect(
     rescheduleDelivery(
       db,
       DEFAULT_WORKSPACE_ID,
       only.id,
       new Date("2026-07-10T15:00:00Z")
     )
-  ).toThrow(ScheduleError)
+  ).rejects.toThrow(ScheduleError)
 })
 
-it("toggles the queue paused flag", () => {
-  const { db } = setup(["G1"])
-  expect(isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(false)
+it("toggles the queue paused flag", async () => {
+  const { db } = await setup(["G1"])
+  expect(await isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(false)
 
-  setQueuePaused(db, DEFAULT_WORKSPACE_ID, true)
-  expect(isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(true)
+  await setQueuePaused(db, DEFAULT_WORKSPACE_ID, true)
+  expect(await isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(true)
 
-  setQueuePaused(db, DEFAULT_WORKSPACE_ID, false)
-  expect(isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(false)
+  await setQueuePaused(db, DEFAULT_WORKSPACE_ID, false)
+  expect(await isQueuePaused(db, DEFAULT_WORKSPACE_ID)).toBe(false)
 })
 
-it("clears only sent and failed deliveries from history", () => {
-  const { db } = setup(["G1", "G2"])
-  const items = listQueue(db, DEFAULT_WORKSPACE_ID)
-  db.update(delivery)
+it("clears only sent and failed deliveries from history", async () => {
+  const { db } = await setup(["G1", "G2"])
+  const items = await listQueue(db, DEFAULT_WORKSPACE_ID)
+  await db
+    .update(delivery)
     .set({ status: "sent" })
     .where(eq(delivery.id, items[0].id))
     .run()
 
-  clearHistory(db, DEFAULT_WORKSPACE_ID)
+  await clearHistory(db, DEFAULT_WORKSPACE_ID)
 
-  expect(listHistory(db, DEFAULT_WORKSPACE_ID)).toHaveLength(0)
-  expect(listQueue(db, DEFAULT_WORKSPACE_ID).map((i) => i.id)).toEqual([
+  expect(await listHistory(db, DEFAULT_WORKSPACE_ID)).toHaveLength(0)
+  expect((await listQueue(db, DEFAULT_WORKSPACE_ID)).map((i) => i.id)).toEqual([
     items[1].id
   ])
 
-  const archived = db
+  const archived = await db
     .select()
     .from(delivery)
     .where(eq(delivery.id, items[0].id))

@@ -1,9 +1,9 @@
+import { testDb } from "@support/db"
 import { expect, it } from "vitest"
 import {
   createPublication,
   previewPublication
 } from "@/features/publications/use-case"
-import { createDb } from "@/shared/db"
 import { PublicationError } from "@/shared/errors"
 import {
   affiliateLink,
@@ -13,8 +13,8 @@ import {
 } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
 
-function db() {
-  return createDb(":memory:")
+async function db() {
+  return await testDb()
 }
 
 const valid = {
@@ -28,75 +28,79 @@ const valid = {
   externalId: "MLB123"
 }
 
-it("persists a publication and returns ready content", () => {
-  const conn = db()
-  const result = createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
+it("persists a publication and returns ready content", async () => {
+  const conn = await db()
+  const result = await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
 
   expect(result.status).toBe("ready")
   expect(result.content).toContain("Air Fryer Mondial 5L")
   expect(result.content).toContain("R$ 299,90")
 
-  expect(conn.select().from(product).all()).toHaveLength(1)
-  expect(conn.select().from(dealSnapshot).all()).toHaveLength(1)
-  expect(conn.select().from(affiliateLink).all()).toHaveLength(1)
-  expect(conn.select().from(publication).all()).toHaveLength(1)
+  expect(await conn.select().from(product).all()).toHaveLength(1)
+  expect(await conn.select().from(dealSnapshot).all()).toHaveLength(1)
+  expect(await conn.select().from(affiliateLink).all()).toHaveLength(1)
+  expect(await conn.select().from(publication).all()).toHaveLength(1)
 })
 
-it("never publishes the source affiliate link", () => {
-  const conn = db()
-  const result = createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
+it("never publishes the source affiliate link", async () => {
+  const conn = await db()
+  const result = await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
 
   expect(result.content).toContain("https://mercadolivre.com/sec/ours")
   expect(result.content).not.toContain(valid.sourceUrl)
 })
 
-it("rejects a publication without an affiliate link", () => {
-  expect(() =>
+it("rejects a publication without an affiliate link", async () => {
+  await expect(
     createPublication(
       { ...valid, affiliateUrl: "" },
-      db(),
+      await db(),
       DEFAULT_WORKSPACE_ID
     )
-  ).toThrow(PublicationError)
+  ).rejects.toThrow(PublicationError)
 })
 
-it("rejects an affiliate link equal to the source link", () => {
-  expect(() =>
+it("rejects an affiliate link equal to the source link", async () => {
+  await expect(
     createPublication(
       { ...valid, affiliateUrl: valid.sourceUrl },
-      db(),
+      await db(),
       DEFAULT_WORKSPACE_ID
     )
-  ).toThrow(PublicationError)
+  ).rejects.toThrow(PublicationError)
 })
 
-it("rejects image urls that could make the gateway fetch an internal host", () => {
-  expect(() =>
+it("rejects image urls that could make the gateway fetch an internal host", async () => {
+  await expect(
     createPublication(
       { ...valid, imageUrl: "http://127.0.0.1:3002/health" },
-      db(),
+      await db(),
       DEFAULT_WORKSPACE_ID
     )
-  ).toThrow(PublicationError)
+  ).rejects.toThrow(PublicationError)
 })
 
-it("reuses the same product across snapshots", () => {
-  const conn = db()
-  createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
-  createPublication(
+it("reuses the same product across snapshots", async () => {
+  const conn = await db()
+  await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
+  await createPublication(
     { ...valid, currentPrice: "279,90" },
     conn,
     DEFAULT_WORKSPACE_ID
   )
 
-  expect(conn.select().from(product).all()).toHaveLength(1)
-  expect(conn.select().from(dealSnapshot).all()).toHaveLength(2)
+  expect(await conn.select().from(product).all()).toHaveLength(1)
+  expect(await conn.select().from(dealSnapshot).all()).toHaveLength(2)
 })
 
-it("previews content without persisting", () => {
-  const conn = db()
-  const { content } = previewPublication(valid, conn, DEFAULT_WORKSPACE_ID)
+it("previews content without persisting", async () => {
+  const conn = await db()
+  const { content } = await previewPublication(
+    valid,
+    conn,
+    DEFAULT_WORKSPACE_ID
+  )
 
   expect(content).toContain("💰 *Por R$ 299,90*")
-  expect(conn.select().from(publication).all()).toHaveLength(0)
+  expect(await conn.select().from(publication).all()).toHaveLength(0)
 })

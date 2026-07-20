@@ -1,3 +1,4 @@
+import { testDb } from "@support/db"
 import { getTableColumns, getTableName, is } from "drizzle-orm"
 import { SQLiteTable } from "drizzle-orm/sqlite-core"
 import { expect, it } from "vitest"
@@ -6,7 +7,6 @@ import {
   deleteWorkspaceData,
   WORKSPACE_TABLES
 } from "@/features/workspace/danger/use-case"
-import { createDb } from "@/shared/db"
 import * as schema from "@/shared/schema"
 import { product, publication } from "@/shared/schema"
 
@@ -18,30 +18,22 @@ const deal = {
   affiliateUrl: "https://mercadolivre.com/sec/ours"
 }
 
-it("deletes only the target workspace's domain rows", () => {
-  const db = createDb(":memory:")
-  createPublication(deal, db, "ws-a")
-  createPublication(deal, db, "ws-b")
+it("deletes only the target workspace's domain rows", async () => {
+  const db = await testDb()
+  await createPublication(deal, db, "ws-a")
+  await createPublication(deal, db, "ws-b")
 
-  deleteWorkspaceData(db, "ws-a")
+  await deleteWorkspaceData(db, "ws-a")
 
   expect(
-    db
-      .select()
-      .from(publication)
-      .all()
-      .map((p) => p.workspaceId)
+    (await db.select().from(publication).all()).map((p) => p.workspaceId)
   ).toEqual(["ws-b"])
   expect(
-    db
-      .select()
-      .from(product)
-      .all()
-      .map((p) => p.workspaceId)
+    (await db.select().from(product).all()).map((p) => p.workspaceId)
   ).toEqual(["ws-b"])
 })
 
-it("cascade covers every workspace-scoped table in the schema", () => {
+it("cascade covers every workspace-scoped table in the schema", async () => {
   const scoped: string[] = (Object.values(schema) as unknown[])
     .filter((value): value is SQLiteTable => is(value, SQLiteTable))
     .filter((table) => "workspaceId" in getTableColumns(table))

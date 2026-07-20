@@ -1,8 +1,9 @@
+import { testDb } from "@support/db"
 import { FakeMessaging } from "@support/fake-messaging"
 import { expect, it } from "vitest"
 import { sendPublication } from "@/features/publications/send/use-case"
 import { createPublication } from "@/features/publications/use-case"
-import { createDb, type Db } from "@/shared/db"
+import { type Db } from "@/shared/db"
 import { DeliveryError } from "@/shared/errors"
 import { delivery, destination, publication } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
@@ -15,10 +16,12 @@ const deal = {
   affiliateUrl: "https://mercadolivre.com/sec/ours"
 }
 
-function seed(db: Db, names: string[]): string[] {
-  return names.map((name, i) => {
+async function seed(db: Db, names: string[]): Promise<string[]> {
+  const ids: string[] = []
+  for (const [i, name] of names.entries()) {
     const id = `dest-${i}`
-    db.insert(destination)
+    await db
+      .insert(destination)
       .values({
         id,
         workspaceId: DEFAULT_WORKSPACE_ID,
@@ -27,19 +30,20 @@ function seed(db: Db, names: string[]): string[] {
         name
       })
       .run()
-    return id
-  })
+    ids.push(id)
+  }
+  return ids
 }
 
-function setup() {
-  const db = createDb(":memory:")
-  const pub = createPublication(deal, db, DEFAULT_WORKSPACE_ID)
+async function setup() {
+  const db = await testDb()
+  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
   return { db, pub }
 }
 
 it("creates one delivery per selected destination", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1", "Grupo 2"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1", "Grupo 2"])
 
   const results = await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
@@ -49,13 +53,13 @@ it("creates one delivery per selected destination", async () => {
   )
 
   expect(results).toHaveLength(2)
-  expect(db.select().from(delivery).all()).toHaveLength(2)
+  expect(await db.select().from(delivery).all()).toHaveLength(2)
   expect(results.every((r) => r.status === "sent")).toBe(true)
 })
 
 it("sends our publication content, never the source link", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1"])
   const provider = new FakeMessaging()
 
   await sendPublication(
@@ -74,8 +78,8 @@ it("sends our publication content, never the source link", async () => {
 })
 
 it("does not create a second delivery for the same publication and destination", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1"])
   const provider = new FakeMessaging()
 
   await sendPublication(
@@ -91,12 +95,12 @@ it("does not create a second delivery for the same publication and destination",
     provider
   )
 
-  expect(db.select().from(delivery).all()).toHaveLength(1)
+  expect(await db.select().from(delivery).all()).toHaveLength(1)
 })
 
 it("retry does not resend an already sent delivery", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1"])
   const provider = new FakeMessaging()
 
   await sendPublication(
@@ -116,8 +120,8 @@ it("retry does not resend an already sent delivery", async () => {
 })
 
 it("marks a delivery failed on error and a retry can succeed", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1"])
   const provider = new FakeMessaging()
   provider.failNext = true
 
@@ -138,14 +142,14 @@ it("marks a delivery failed on error and a retry can succeed", async () => {
   expect(second[0].status).toBe("sent")
   expect(provider.sent).toHaveLength(1)
 
-  const row = db.select().from(delivery).all()[0]
+  const row = (await db.select().from(delivery).all())[0]
   expect(row.status).toBe("sent")
   expect(row.attempts).toBe(2)
 })
 
 it("marks the publication sent when all deliveries succeed", async () => {
-  const { db, pub } = setup()
-  const dests = seed(db, ["Grupo 1", "Grupo 2"])
+  const { db, pub } = await setup()
+  const dests = await seed(db, ["Grupo 1", "Grupo 2"])
 
   await sendPublication(
     { publicationId: pub.id, destinationIds: dests },
@@ -154,12 +158,12 @@ it("marks the publication sent when all deliveries succeed", async () => {
     new FakeMessaging()
   )
 
-  const row = db.select().from(publication).all()[0]
+  const row = (await db.select().from(publication).all())[0]
   expect(row.status).toBe("sent")
 })
 
 it("rejects sending an unknown publication", async () => {
-  const { db } = setup()
+  const { db } = await setup()
   await expect(
     sendPublication(
       { publicationId: "missing", destinationIds: ["dest-0"] },
@@ -171,8 +175,8 @@ it("rejects sending an unknown publication", async () => {
 })
 
 it("validates every destination before sending anything", async () => {
-  const { db, pub } = setup()
-  const [valid] = seed(db, ["Grupo 1"])
+  const { db, pub } = await setup()
+  const [valid] = await seed(db, ["Grupo 1"])
   const provider = new FakeMessaging()
 
   await expect(
@@ -184,5 +188,5 @@ it("validates every destination before sending anything", async () => {
     )
   ).rejects.toBeInstanceOf(DeliveryError)
   expect(provider.sent).toHaveLength(0)
-  expect(db.select().from(delivery).all()).toHaveLength(0)
+  expect(await db.select().from(delivery).all()).toHaveLength(0)
 })

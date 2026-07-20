@@ -4,31 +4,31 @@ import {
   supportsMercadoLivre
 } from "@/integrations/mercado-livre/source"
 
-it("supports a real mercado livre host", () => {
+it("supports a real mercado livre host", async () => {
   expect(supportsMercadoLivre("https://www.mercadolivre.com.br/p/MLB123")).toBe(
     true
   )
 })
 
-it("supports mercado libre short links", () => {
+it("supports mercado libre short links", async () => {
   expect(supportsMercadoLivre("https://mercadolivre.com/sec/abc")).toBe(true)
 })
 
-it("supports meli.la affiliate short links", () => {
+it("supports meli.la affiliate short links", async () => {
   expect(supportsMercadoLivre("https://meli.la/xxxxxxx")).toBe(true)
 })
 
-it("rejects a url that only mentions mercado livre in the path", () => {
+it("rejects a url that only mentions mercado livre in the path", async () => {
   expect(supportsMercadoLivre("http://169.254.169.254/mercadolivre.com")).toBe(
     false
   )
 })
 
-it("rejects other marketplaces", () => {
+it("rejects other marketplaces", async () => {
   expect(supportsMercadoLivre("https://www.amazon.com.br/dp/B0XYZ")).toBe(false)
 })
 
-it("rejects malformed urls", () => {
+it("rejects malformed urls", async () => {
   expect(supportsMercadoLivre("not a url")).toBe(false)
 })
 
