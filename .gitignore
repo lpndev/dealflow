@@ -13,3 +13,6 @@ wa-auth/
 # test artifacts
 test-results/
 playwright-report/
+
+# SDD controller scratch (not product)
+.superpowers/
