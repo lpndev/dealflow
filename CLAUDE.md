@@ -129,9 +129,9 @@ Slice 2: `POST /publications/preview` (render puro) e `POST /publications`
 (persiste `product` + `deal_snapshot` + `affiliate_link` + `publication`,
 status `ready`). Template em `features/publications/render.ts`. Prices parseiam
 no servidor (`parsePrice`: vírgula = decimal BRL; só ponto = decimal). Web: form →
-Preview / Salvar publicação. Persistência: SQLite (`bun:sqlite`) + Drizzle,
-migrations em `apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no
-boot. Auth real desde a fundação auth/tenancy: `workspaceId` vem do workspace
+Preview / Salvar publicação. Persistência: SQLite via **libSQL**
+(`drizzle-orm/libsql` + `@libsql/client`, ver Nota data layer async), migrations em
+`apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no boot. Auth real desde a fundação auth/tenancy: `workspaceId` vem do workspace
 ativo da sessão, não mais de `DEFAULT_WORKSPACE_ID` fixo (ver Nota auth/tenancy).
 
 Slice 3 (+ WhatsApp por workspace, 2026-07-12): `apps/wa-gateway` (porta 3002)
@@ -166,6 +166,35 @@ Invariantes cobertas por teste: publicação usa nosso `affiliateUrl` (nunca a
 reusado entre snapshots; `unique(publicationId, destinationId)` (sem delivery
 duplicada); retry não reenvia delivery já `sent`; falha marca `failed` e um
 retry pode virar `sent`.
+
+Nota data layer async (libSQL, pré-D1): a camada de dados da API é **assíncrona de
+ponta a ponta**. `bun:sqlite` (síncrono) saiu; entrou **libSQL**
+(`drizzle-orm/libsql` + `@libsql/client`) — `:memory:` nos testes, `file:` local, e
+é o mesmo contrato async do **D1** (que só existe em async), então trocar o driver
+pra Cloudflare depois não exige tocar em use-case, rota ou teste. Todo terminator
+(`.get()/.all()/.run()`) é `await`-ado; ~31 funções viraram `async` e os callers
+seguiram, transitivamente, até rotas, hooks do better-auth, scheduler e testes.
+Regras que a conversão fixou:
+
+- **`getDb()` continua SÍNCRONO** — é chamado no load do módulo em `auth.ts`
+  (`drizzleAdapter(getDb(), …)`), então não pode virar `Promise`. Ele só cria o
+  client. A migração saiu de dentro dele e virou **`migrateDb(db)` async**, rodada
+  uma vez no boot (`index.ts`, top-level await antes do `startScheduler`) e no
+  `testDb()` dos testes (`packages/tests/support/db.ts`). Requisição só chega
+  depois do boot, então o adapter nunca vê banco não-migrado.
+- **FK exige PRAGMA explícito**: `migrateDb` roda `db.$client.execute("PRAGMA
+foreign_keys = ON;")` — o local do libSQL usa uma conexão só, então o pragma vale
+  pro processo inteiro (verificado: FK violation continua estourando, é o que a
+  isolação por workspace testa). `Db` é `LibSQLDatabase<typeof schema> & { $client:
+Client }` porque o tipo exportado do drizzle não carrega o `$client`.
+- **Promise é truthy** — o perigo real da conversão não é o typecheck, é o guard
+  silencioso: `if (!isWorkspaceMember(...))` com a função async vira sempre falso e
+  **desliga a checagem**. `await-thenable`/`no-misused-promises` do lint type-aware
+  pegam; `c.json(usecase(...))` NÃO é pego pelo compilador (serializa `{}`), então
+  rota por rota tem que ser conferida à mão.
+- Testes: `createDb(":memory:")` virou `await testDb()`; `expect(() => x).toThrow`
+  virou `await expect(x).rejects.toThrow` (sem o `await` não assere nada — ver Nota
+  testes). Contagem preservada: 172 passed / 11 skipped, e2e 6/6.
 
 Nota aquisição de dados / anti-bot ML (investigado 2026-07-08): o ML fechou o
 acesso público. API (`/items`, `/products`, `/sites/MLB/search`) exige token OAuth
@@ -291,7 +320,7 @@ compartilhado se a API escalar horizontal. Erros 429 saem como
 `{ error: "too many requests" }`.
 
 Nota auth/tenancy (fundação, feat/auth-tenancy-foundation): **better-auth**
-montado no Hono em `/api/auth/*` (adapter Drizzle, mesmo `bun:sqlite`/migração;
+montado no Hono em `/api/auth/*` (adapter Drizzle, mesmo banco libSQL/migração;
 tabelas geradas em `shared/auth-schema.ts`, re-exportadas de `shared/schema.ts`).
 Plugins: `emailAndPassword` (registro público, sem verificação de email no MVP —
 custo-zero, sem envio), `organization` (**organization = workspace**) e `apiKey`
@@ -815,8 +844,7 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
 (Playwright).
 
 - **Vitest roda SOB o runtime do Bun** (`bun run --bun`, ver script `test`) —
-  obrigatório porque `apps/api/src/shared/db.ts` importa `bun:sqlite`, builtin
-  que só existe no Bun; workers de Node quebram. Formas que NÃO funcionam:
+  o projeto roda tudo sob o runtime do Bun. Formas que NÃO funcionam:
   `bun run vitest` procura um _script_ chamado vitest, e `bunx vitest` baixa uma
   cópia avulsa pro /tmp com resolução quebrada — sempre o bin local sob
   `--bun`. Config: `vitest.config.ts` com
@@ -995,7 +1023,7 @@ bun run gateway:dev                         # só o gateway
 bun run extension:dev / extension:build     # extension:dev (HMR) fica fora do dev raiz
 bun run lint
 bun run typecheck
-bun run test        # vitest (unit), sob o runtime do Bun (bun:sqlite)
+bun run test        # vitest (unit), sob o runtime do Bun
 bun run test:watch  # vitest em watch
 bun run test:e2e    # playwright (e2e); sobe api+web de teste em portas próprias
 bun run format
