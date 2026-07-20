@@ -10,7 +10,8 @@ export default [
       "**/dist/**",
       "**/node_modules/**",
       "**/components/ui/**",
-      "apps/api/drizzle/**"
+      "apps/api/drizzle/**",
+      "apps/landing/.astro/**"
     ]
   },
   js.configs.recommended,
