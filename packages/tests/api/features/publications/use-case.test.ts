@@ -13,10 +13,6 @@ import {
 } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
 
-async function db() {
-  return await testDb()
-}
-
 const valid = {
   title: "Air Fryer Mondial 5L",
   imageUrl: "https://http2.mlstatic.com/a.jpg",
@@ -29,7 +25,7 @@ const valid = {
 }
 
 it("persists a publication and returns ready content", async () => {
-  const conn = await db()
+  const conn = await testDb()
   const result = await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
 
   expect(result.status).toBe("ready")
@@ -43,7 +39,7 @@ it("persists a publication and returns ready content", async () => {
 })
 
 it("never publishes the source affiliate link", async () => {
-  const conn = await db()
+  const conn = await testDb()
   const result = await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
 
   expect(result.content).toContain("https://mercadolivre.com/sec/ours")
@@ -54,7 +50,7 @@ it("rejects a publication without an affiliate link", async () => {
   await expect(
     createPublication(
       { ...valid, affiliateUrl: "" },
-      await db(),
+      await testDb(),
       DEFAULT_WORKSPACE_ID
     )
   ).rejects.toThrow(PublicationError)
@@ -64,7 +60,7 @@ it("rejects an affiliate link equal to the source link", async () => {
   await expect(
     createPublication(
       { ...valid, affiliateUrl: valid.sourceUrl },
-      await db(),
+      await testDb(),
       DEFAULT_WORKSPACE_ID
     )
   ).rejects.toThrow(PublicationError)
@@ -74,14 +70,14 @@ it("rejects image urls that could make the gateway fetch an internal host", asyn
   await expect(
     createPublication(
       { ...valid, imageUrl: "http://127.0.0.1:3002/health" },
-      await db(),
+      await testDb(),
       DEFAULT_WORKSPACE_ID
     )
   ).rejects.toThrow(PublicationError)
 })
 
 it("reuses the same product across snapshots", async () => {
-  const conn = await db()
+  const conn = await testDb()
   await createPublication(valid, conn, DEFAULT_WORKSPACE_ID)
   await createPublication(
     { ...valid, currentPrice: "279,90" },
@@ -94,7 +90,7 @@ it("reuses the same product across snapshots", async () => {
 })
 
 it("previews content without persisting", async () => {
-  const conn = await db()
+  const conn = await testDb()
   const { content } = await previewPublication(
     valid,
     conn,

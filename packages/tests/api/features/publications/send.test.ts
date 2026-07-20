@@ -1,49 +1,14 @@
-import { testDb } from "@support/db"
 import { FakeMessaging } from "@support/fake-messaging"
+import { deal, seed, setupPublication as setup } from "@support/seed"
 import { expect, it } from "vitest"
 import {
   deliverOne,
   loadPublicationContent
 } from "@/features/publications/send/deliver"
 import { sendPublication } from "@/features/publications/send/use-case"
-import { createPublication } from "@/features/publications/use-case"
-import { type Db } from "@/shared/db"
 import { DeliveryError } from "@/shared/errors"
-import { delivery, destination, publication } from "@/shared/schema"
+import { delivery, publication } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
-
-const deal = {
-  title: "Air Fryer",
-  imageUrl: "https://http2.mlstatic.com/a.jpg",
-  currentPrice: "299,90",
-  sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
-  affiliateUrl: "https://mercadolivre.com/sec/ours"
-}
-
-async function seed(db: Db, names: string[]): Promise<string[]> {
-  const ids: string[] = []
-  for (const [i, name] of names.entries()) {
-    const id = `dest-${i}`
-    await db
-      .insert(destination)
-      .values({
-        id,
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        provider: "whatsapp",
-        externalId: `${i}@g.us`,
-        name
-      })
-      .run()
-    ids.push(id)
-  }
-  return ids
-}
-
-async function setup() {
-  const db = await testDb()
-  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
-  return { db, pub }
-}
 
 it("creates one delivery per selected destination", async () => {
   const { db, pub } = await setup()

@@ -1,8 +1,6 @@
-import { testDb } from "@support/db"
+import { setupScheduled as setup } from "@support/seed"
 import { eq } from "drizzle-orm"
 import { expect, it } from "vitest"
-import { schedulePublication } from "@/features/publications/schedule/use-case"
-import { createPublication } from "@/features/publications/use-case"
 import {
   cancelScheduled,
   clearHistory,
@@ -13,57 +11,9 @@ import {
   rescheduleDelivery,
   setQueuePaused
 } from "@/features/queue/use-case"
-import { updateSettings } from "@/features/settings/use-case"
-import { type Db } from "@/shared/db"
 import { ScheduleError } from "@/shared/errors"
-import { delivery, destination, publication } from "@/shared/schema"
+import { delivery, publication } from "@/shared/schema"
 import { DEFAULT_WORKSPACE_ID } from "@/shared/workspace"
-
-const deal = {
-  title: "Air Fryer",
-  imageUrl: "https://http2.mlstatic.com/a.jpg",
-  currentPrice: "299,90",
-  sourceUrl: "https://www.mercadolivre.com.br/air-fryer/p/MLB123",
-  affiliateUrl: "https://mercadolivre.com/sec/ours"
-}
-
-const T0 = new Date("2026-07-08T12:00:00Z")
-
-async function seed(db: Db, names: string[]): Promise<string[]> {
-  const ids: string[] = []
-  for (const [i, name] of names.entries()) {
-    const id = `dest-${i}`
-    await db
-      .insert(destination)
-      .values({
-        id,
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        provider: "whatsapp",
-        externalId: `${i}@g.us`,
-        name
-      })
-      .run()
-    ids.push(id)
-  }
-  return ids
-}
-
-async function setup(names: string[]) {
-  const db = await testDb()
-  const pub = await createPublication(deal, db, DEFAULT_WORKSPACE_ID)
-  const dests = await seed(db, names)
-  await updateSettings(db, DEFAULT_WORKSPACE_ID, {
-    delayMinSeconds: 100,
-    delayMaxSeconds: 100
-  })
-  await schedulePublication(
-    { publicationId: pub.id, destinationIds: dests },
-    db,
-    DEFAULT_WORKSPACE_ID,
-    { now: T0, rand: () => 0 }
-  )
-  return { db, pub }
-}
 
 it("cancels a scheduled delivery and removes it from the queue", async () => {
   const { db } = await setup(["G1", "G2"])
