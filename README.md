@@ -52,6 +52,20 @@ O `.env` fica na raiz; `bun run dev` (rodado da raiz) o carrega e os apps herdam
 O web lê as variáveis `VITE_*` desse mesmo `.env` no build. Veja `.env.example`
 para a lista completa. Em produção, `BETTER_AUTH_SECRET` é obrigatório.
 
+Ao hospedar (ex.: `meudominio.com`), **nenhuma URL se troca no código** — é só
+preencher o `.env`:
+
+- `VITE_API_URL` e `BETTER_AUTH_URL` — endereço público da **API** (ex.:
+  `https://api.meudominio.com`).
+- `TRUSTED_ORIGINS` — a(s) **origem(ns) de browser** que chamam a API, ou seja a
+  URL do **web** (ex.: `https://app.meudominio.com`). Não é a URL da API nem a da
+  extensão (a extensão autentica por API key e é dispensada do gate). Vários
+  frontends? Separe por vírgula. Em **dev pode ficar vazio**: os `localhost` de
+  dev/preview são confiados automaticamente quando `NODE_ENV != production`.
+- `WA_GATEWAY_URL` — interno (API → gateway), fica `http://127.0.0.1:3002`.
+- `BETTER_AUTH_SECRET` e, fora de loopback, `WA_GATEWAY_TOKEN` — segredos fortes
+  (a API recusa subir exposta com segredo fraco).
+
 ### Banco de dados
 
 SQLite em `dealflow.db` na raiz da API (ignorado no git), criado e migrado
