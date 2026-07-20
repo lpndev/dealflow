@@ -212,11 +212,13 @@ export async function reorderQueue(
     .map((r) => r.dueAt)
     .sort((a, b) => (a?.getTime() ?? 0) - (b?.getTime() ?? 0))
 
-  for (const [i, id] of orderedIds.entries()) {
-    await db
-      .update(delivery)
-      .set({ dueAt: slots[i] })
-      .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
-      .run()
-  }
+  await Promise.all(
+    orderedIds.map((id, i) =>
+      db
+        .update(delivery)
+        .set({ dueAt: slots[i] })
+        .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
+        .run()
+    )
+  )
 }

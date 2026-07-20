@@ -3,7 +3,7 @@ import type {
   DashboardData,
   DashboardRange
 } from "@dealflow/shared"
-import { and, eq, gte, inArray } from "drizzle-orm"
+import { and, count, eq, gte, inArray } from "drizzle-orm"
 import { listDestinations } from "@/features/destinations/use-case"
 import type { Db } from "@/shared/db"
 import { delivery } from "@/shared/schema"
@@ -95,9 +95,9 @@ export async function getDashboard(
   const defs = buckets(range, now)
   const windowStart = new Date(defs[0].start)
 
-  const pending = (
-    await db
-      .select({ id: delivery.id })
+  const [pendingRow, destinations, sentRows, failedRows] = await Promise.all([
+    db
+      .select({ n: count() })
       .from(delivery)
       .where(
         and(
@@ -105,15 +105,9 @@ export async function getDashboard(
           eq(delivery.workspaceId, workspaceId)
         )
       )
-      .all()
-  ).length
-
-  const groups = (await listDestinations(db, workspaceId)).filter(
-    (d) => d.enabled
-  ).length
-
-  const sentTs = (
-    await db
+      .get(),
+    listDestinations(db, workspaceId),
+    db
       .select({ at: delivery.sentAt })
       .from(delivery)
       .where(
@@ -123,11 +117,8 @@ export async function getDashboard(
           gte(delivery.sentAt, windowStart)
         )
       )
-      .all()
-  ).map((r) => r.at!.getTime())
-
-  const failedTs = (
-    await db
+      .all(),
+    db
       .select({ at: delivery.createdAt })
       .from(delivery)
       .where(
@@ -138,7 +129,12 @@ export async function getDashboard(
         )
       )
       .all()
-  ).map((r) => r.at.getTime())
+  ])
+
+  const pending = pendingRow?.n ?? 0
+  const groups = destinations.filter((d) => d.enabled).length
+  const sentTs = sentRows.map((r) => r.at!.getTime())
+  const failedTs = failedRows.map((r) => r.at.getTime())
 
   const series = buildSeries(defs, sentTs, failedTs)
 

@@ -185,13 +185,13 @@ export async function resolvePlanForWorkspace(
   return resolvePlanForUser(db, owner, now)
 }
 
-function scopeIds(
+async function scopeIds(
   db: Db,
   resolved: ResolvedPlan,
   workspaceId: string | null
 ): Promise<string[]> {
   if (resolved.ownerId) return ownedWorkspaceIds(db, resolved.ownerId)
-  return Promise.resolve(workspaceId ? [workspaceId] : [])
+  return workspaceId ? [workspaceId] : []
 }
 
 async function sendsThisMonth(
@@ -231,7 +231,11 @@ async function queuedSends(db: Db, ids: string[]): Promise<number> {
 }
 
 async function usedSends(db: Db, ids: string[], now: Date): Promise<number> {
-  return (await sendsThisMonth(db, ids, now)) + (await queuedSends(db, ids))
+  const [sent, queued] = await Promise.all([
+    sendsThisMonth(db, ids, now),
+    queuedSends(db, ids)
+  ])
+  return sent + queued
 }
 
 async function enabledDestinations(db: Db, ids: string[]): Promise<number> {
@@ -248,23 +252,24 @@ async function enabledDestinations(db: Db, ids: string[]): Promise<number> {
 
 async function memberSlotsUsed(db: Db, ids: string[]): Promise<number> {
   if (ids.length === 0) return 0
-  const rows = await db
-    .select({ userId: member.userId })
-    .from(member)
-    .where(inArray(member.organizationId, ids))
-    .all()
-  const memberUserIds = new Set(rows.map((r) => r.userId))
-  const pendingRow = await db
-    .select({ n: count() })
-    .from(invitation)
-    .where(
-      and(
-        inArray(invitation.organizationId, ids),
-        eq(invitation.status, "pending")
+  const [rows, pendingRow] = await Promise.all([
+    db
+      .select({ userId: member.userId })
+      .from(member)
+      .where(inArray(member.organizationId, ids))
+      .all(),
+    db
+      .select({ n: count() })
+      .from(invitation)
+      .where(
+        and(
+          inArray(invitation.organizationId, ids),
+          eq(invitation.status, "pending")
+        )
       )
-    )
-    .get()
-  return memberUserIds.size + (pendingRow?.n ?? 0)
+      .get()
+  ])
+  return new Set(rows.map((r) => r.userId)).size + (pendingRow?.n ?? 0)
 }
 
 async function usageForScope(
@@ -272,12 +277,12 @@ async function usageForScope(
   ids: string[],
   now: Date
 ): Promise<WorkspaceUsage> {
-  return {
-    sendsThisMonth: await usedSends(db, ids, now),
-    destinations: await enabledDestinations(db, ids),
-    members: await memberSlotsUsed(db, ids),
-    workspaces: ids.length
-  }
+  const [sendsThisMonth, destinations, members] = await Promise.all([
+    usedSends(db, ids, now),
+    enabledDestinations(db, ids),
+    memberSlotsUsed(db, ids)
+  ])
+  return { sendsThisMonth, destinations, members, workspaces: ids.length }
 }
 
 async function toStatus(

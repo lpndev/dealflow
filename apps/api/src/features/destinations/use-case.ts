@@ -61,23 +61,21 @@ export async function syncDestinations(
   workspaceId: string,
   provider: MessagingProvider
 ) {
-  const groups = await provider.listGroups(workspaceId)
-  let slotsLeft = await destinationSlotsLeft(db, workspaceId)
+  const [groups, slots, known] = await Promise.all([
+    provider.listGroups(workspaceId),
+    destinationSlotsLeft(db, workspaceId),
+    listDestinations(db, workspaceId)
+  ])
+  let slotsLeft = slots
+  const byExternalId = new Map(
+    known.map((row) => [`${row.provider}:${row.externalId}`, row])
+  )
 
   for (const group of groups) {
-    const existing = await db
-      .select({ id: destination.id })
-      .from(destination)
-      .where(
-        and(
-          eq(destination.workspaceId, workspaceId),
-          eq(destination.provider, group.provider),
-          eq(destination.externalId, group.externalId)
-        )
-      )
-      .get()
+    const existing = byExternalId.get(`${group.provider}:${group.externalId}`)
 
     if (existing) {
+      if (existing.name === group.name) continue
       await db
         .update(destination)
         .set({ name: group.name })

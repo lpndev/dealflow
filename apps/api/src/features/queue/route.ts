@@ -21,10 +21,11 @@ queue.use("*", requireAuth)
 queue.get("/queue", async (c) => {
   const db = getDb()
   const workspaceId = c.get("workspaceId")
-  return c.json({
-    items: await listQueue(db, workspaceId),
-    paused: await isQueuePaused(db, workspaceId)
-  })
+  const [items, paused] = await Promise.all([
+    listQueue(db, workspaceId),
+    isQueuePaused(db, workspaceId)
+  ])
+  return c.json({ items, paused })
 })
 
 queue.get("/history", async (c) =>
