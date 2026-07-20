@@ -746,7 +746,16 @@ Nota config/env (2026-07-15): local não exige `.env` — tudo cai em defaults d
 config toda vive em env pra hospedar sem caçar valor: `HOST`/`PORT` (api),
 `WA_GATEWAY_HOST`/`WA_GATEWAY_PORT` (gateway), `BETTER_AUTH_URL`/
 `BETTER_AUTH_SECRET`/`TRUSTED_ORIGINS`/`WA_GATEWAY_URL`/`DATABASE_URL` (api),
-`VITE_API_URL` (web, injetada no build). **Um `.env` na raiz**, mas cada app tem
+`VITE_API_URL` (web, injetada no build). Nenhuma URL se troca no código pra
+hospedar — todas são `process.env.X ?? "<default localhost>"`; subir em
+`meudominio.com` = preencher o `.env` (`BETTER_AUTH_URL`/`TRUSTED_ORIGINS`/
+`VITE_API_URL` = seu domínio; `WA_GATEWAY_URL` fica interno 127.0.0.1). **Origens
+confiáveis separam dev de prod** (`shared/auth/trusted-origins.ts`): os localhost
+de dev/preview (`5173`/`4173`) só entram na allowlist quando
+`NODE_ENV!=="production"`; em prod confia **só** no `TRUSTED_ORIGINS` (fail-closed —
+esquecer de setar bloqueia o web, avisando que faltou config). Os dois `localhost`
+que NÃO são URL e não se trocam são os `Set(["127.0.0.1","localhost","::1"])` que
+definem loopback pros guards de segurança. **Um `.env` na raiz**, mas cada app tem
 que ser apontado pra ele: o Bun só auto-carrega `.env` do **cwd**, e
 `bun run --filter '*' dev` roda cada app com cwd = a pasta do workspace
 (`apps/api`, `apps/wa-gateway`) — NÃO sobe pra raiz. Logo os apps **não** herdam o
