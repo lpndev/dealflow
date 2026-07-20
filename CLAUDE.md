@@ -78,7 +78,7 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
 ## Stack
 
 - **Monorepo:** Bun workspaces (`apps/*`, `packages/*`)
-- **Web:** React + Vite + Tailwind v4 (`@tailwindcss/vite`) — `apps/web`.
+- **Web:** React + Vite + Tailwind v4 (`@tailwindcss/vite`) — `apps/panel`.
   UI **shadcn/ui** (base-lyra, phosphor). Rotas reais com **React Router (data
   mode)**, server-state com **TanStack Query**, toasts com **Sonner** (shadcn),
   forms com **TanStack Form** ligado às primitives `Field` do shadcn; **Zustand**
@@ -104,7 +104,7 @@ Fronteiras previstas (interface só quando separa dependência externa real):
 
 ## Estado atual
 
-Fundação + Slices 1–5 + import de afiliado (`meli.la`) prontos. `apps/web`,
+Fundação + Slices 1–5 + import de afiliado (`meli.la`) prontos. `apps/panel`,
 `apps/api` e `apps/wa-gateway` sobem localmente; lint, typecheck, test e format
 funcionam. Detalhes de cada peça nas notas abaixo e no roadmap.
 
@@ -458,7 +458,7 @@ Verificado ao vivo: Grupos 1/3 idêntico em 2 workspaces (agrega), Workspaces 3/
 criar 4º workspace rejeitado pelo server ("Seu plano não permite criar mais workspaces").
 
 Nota fila/agendamento (S5): a UI é um dashboard de 5 telas (Início / Nova oferta /
-Fila / Histórico / Config), hoje **rotas reais** em `apps/web/src/routes/*` (ver
+Fila / Histórico / Config), hoje **rotas reais** em `apps/panel/src/routes/*` (ver
 Nota SPA; antes eram abas com `useState`). A "fila" NÃO é infra nova: um
 envio agendado é uma `delivery` com `status='scheduled'` + `dueAt` (coluna nova).
 `schedulePublication` (`features/publications/schedule/use-case.ts`) enfileira
@@ -709,12 +709,12 @@ limite). Toda a estrutura (Signal → Product → DealSnapshot → …, fronteir
 fila) já aponta pra esse fim — construir sempre sem fechar essa porta.
 
 Nota packages/ui (`@dealflow/ui`): o design system reutilizável foi extraído de
-`apps/web` pra um package próprio, consumido como **source `.tsx` sem build**
+`apps/panel` pra um package próprio, consumido como **source `.tsx` sem build**
 (igual ao `@dealflow/shared`). Contém SÓ o global/reutilizável: os primitives
 **shadcn** (`src/components/ui/*.tsx`), `theme-provider` + `mode-toggle` (o `sonner.tsx`
 depende do theme-provider, por isso vai junto), o `cn` (`src/lib/utils.ts`) e o
 tema (`src/styles/globals.css`) — **nada** de peça de feature (essas ficam em
-`apps/web/src/components/`). As deps do design mudaram pra cá (`@base-ui/react`,
+`apps/panel/src/components/`). As deps do design mudaram pra cá (`@base-ui/react`,
 `class-variance-authority`, `clsx`, `tailwind-merge`, `recharts`, `shadcn`,
 `tw-animate-css`, `@fontsource-variable/*`; `@phosphor-icons/react` e `sonner`
 ficam também no web porque o feature-code os importa direto; `react`/`react-dom`
@@ -723,7 +723,7 @@ reinstalar o design system. Consumo (exports map em `package.json`):
 `@dealflow/ui/<primitive>` (wildcard `./*` → `src/components/ui/*.tsx`),
 `@dealflow/ui/{theme-provider,mode-toggle}`, `@dealflow/ui/lib/utils` (o `cn`),
 `@dealflow/ui/styles.css`. O `@/` NÃO existe no BUILD do package (o alias `@`→`src` do web resolveria pra
-`apps/web/src`) — os arquivos consumidos usam **import relativo**. **`components.json`
+`apps/panel/src`) — os arquivos consumidos usam **import relativo**. **`components.json`
 (shadcn) vive no package** (aliases apontam pros dirs reais: `ui`→`@/components/ui`,
 `utils`→`@/lib/utils`; `paths @/*→./src/*` no `tsconfig` só pro CLI resolver):
 `bunx shadcn add` daqui em diante escreve os primitives em
@@ -733,7 +733,7 @@ base-lyra. **Os primitives MORAM em `components/ui/` de propósito**: o
 `.prettierignore` (`**/components/ui/`) só casa esse caminho, e base-lyra é
 **sem ponto-e-vírgula** — fora de `components/ui/` o `prettier --write .` os
 reformata (semicolons/trailing commas), fugindo do registry. Restaurados do estado
-pristine pré-extração (`apps/web/src/components/ui`, que era prettier-ignored) só
+pristine pré-extração (`apps/panel/src/components/ui`, que era prettier-ignored) só
 com o fix de import relativo, nunca via prettier. **Gotcha Tailwind v4**: v4 varre o module graph mas
 **ignora `node_modules`**, e um workspace package é symlinkado lá — sem ajuste os
 primitives saem sem estilo. Fix: `@source ".."` no `globals.css` (varre
@@ -765,7 +765,7 @@ better-auth era o sintoma). Fix: os scripts `dev`/`db:migrate` de api e gateway
 usam **`bun --env-file=../../.env ...`** (relativo ao cwd do app = `.env` da raiz;
 `--env-file` ausente não quebra — Bun ignora silenciosamente, então local sem
 `.env` continua caindo nos defaults). O web lê os `VITE_*` do MESMO arquivo via
-`envDir: "../.."` no `vite.config.ts` (senão o Vite só olharia `apps/web`). Portas:
+`envDir: "../.."` no `vite.config.ts` (senão o Vite só olharia `apps/panel`). Portas:
 api e gateway carregam o mesmo `.env`, então NÃO podem compartilhar `PORT` — o
 gateway usa `WA_GATEWAY_PORT` (nome distinto, senão colidiriam em 3001). Mudou o
 `.env`? **Reiniciar o dev** (Ctrl+C + `bun run dev`) — `--watch` recarrega só
@@ -824,7 +824,7 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
   `package.json` do `@dealflow/tests`; imports do src dos apps se resolvem
   sozinhos (relativos ao arquivo, caem no `node_modules` do app).
 - **Typecheck**: um `tsconfig.<escopo>.json` por projeto (api/wa-gateway/
-  extension/web/e2e), cada um com o `@` certo — um tsconfig único não resolveria
+  extension/panel/e2e), cada um com o `@` certo — um tsconfig único não resolveria
   o `@` ambíguo. O script `typecheck` encadeia os cinco `tsc -p`.
 - **Playwright e2e** (`playwright.config.ts`): sobe **API real + SQLite real +
   web real buildado** (não o dev server — `vite build && vite preview` em porta
@@ -868,7 +868,7 @@ espelham src"): centralizar tudo num lugar. Layout por alvo:
   `insertDealSnapshot`, `createDeliveries`, `markDeliverySent`.
 - Adapters isolados; detalhes externos (JID, `@g.us`, Baileys, seletores DOM)
   nunca vazam para o domínio.
-- **Web (`apps/web/src`) por responsabilidade, não por página:** primitives
+- **Web (`apps/panel/src`) por responsabilidade, não por página:** primitives
   **shadcn** (`Button`, `Field`, `Input`, `Card`, `sonner`, `tooltip`…) vêm de
   `@dealflow/ui` (ver Nota packages/ui), não mais de `components/ui/`;
   `components/` (peças de feature, ex.:
