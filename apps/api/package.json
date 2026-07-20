@@ -6,11 +6,12 @@
     "dev": "bun --env-file=../../.env --watch run src/index.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun --env-file=../../.env -e \"import('./src/shared/db').then((m) => m.getDb())\""
+    "db:migrate": "bun --env-file=../../.env -e \"import('./src/shared/db').then((m) => m.migrateDb(m.getDb()))\""
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.23",
     "@dealflow/shared": "workspace:*",
+    "@libsql/client": "^0.17.4",
     "better-auth": "^1.6.23",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.6.16"

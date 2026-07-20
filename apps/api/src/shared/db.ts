@@ -1,13 +1,13 @@
 import { chmodSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { Database } from "bun:sqlite"
+import { createClient, type Client } from "@libsql/client"
 import { eq } from "drizzle-orm"
-import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite"
-import { migrate as runMigrations } from "drizzle-orm/bun-sqlite/migrator"
+import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql"
+import { migrate as runMigrations } from "drizzle-orm/libsql/migrator"
 import * as schema from "./schema"
 import { organization } from "./schema"
 
-export type Db = BunSQLiteDatabase<typeof schema>
+export type Db = LibSQLDatabase<typeof schema> & { $client: Client }
 
 const migrationsFolder = fileURLToPath(
   new URL("../../drizzle", import.meta.url)
@@ -23,14 +23,29 @@ export function resolveDatabaseUrl(
   return env.NODE_ENV === "test" ? ":memory:" : defaultDatabaseUrl
 }
 
-function seedLegacyWorkspace(db: Db) {
-  const existing = db
+function isLocalFile(url: string): boolean {
+  return url !== ":memory:" && !url.includes("://")
+}
+
+function libsqlUrl(url: string): string {
+  return isLocalFile(url) ? `file:${url}` : url
+}
+
+export function createDb(url: string): Db {
+  if (isLocalFile(url)) process.umask(0o077)
+  const client = createClient({ url: libsqlUrl(url) })
+  return drizzle(client, { schema })
+}
+
+async function seedLegacyWorkspace(db: Db): Promise<void> {
+  const existing = await db
     .select()
     .from(organization)
     .where(eq(organization.id, "default"))
     .get()
   if (existing) return
-  db.insert(organization)
+  await db
+    .insert(organization)
     .values({
       id: "default",
       name: "Workspace",
@@ -40,15 +55,14 @@ function seedLegacyWorkspace(db: Db) {
     .run()
 }
 
-export function createDb(url: string): Db {
-  process.umask(0o077)
-  const sqlite = new Database(url)
-  if (url !== ":memory:") chmodSync(url, 0o600)
-  sqlite.run("PRAGMA foreign_keys = ON;")
-  const db = drizzle(sqlite, { schema })
-  runMigrations(db, { migrationsFolder })
-  seedLegacyWorkspace(db)
-  return db
+export async function migrateDb(
+  db: Db,
+  url: string = resolveDatabaseUrl()
+): Promise<void> {
+  await db.$client.execute("PRAGMA foreign_keys = ON;")
+  await runMigrations(db, { migrationsFolder })
+  if (isLocalFile(url)) chmodSync(url, 0o600)
+  await seedLegacyWorkspace(db)
 }
 
 let appDb: Db | undefined
