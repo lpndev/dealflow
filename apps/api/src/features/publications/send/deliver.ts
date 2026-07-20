@@ -1,5 +1,5 @@
 import type { DeliveryResult } from "@dealflow/shared"
-import { and, eq, inArray, notInArray } from "drizzle-orm"
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm"
 import type { Db } from "@/shared/db"
 import { DeliveryError } from "@/shared/errors"
 import type { MessagingProvider } from "@/shared/messaging"
@@ -99,67 +99,39 @@ function findDelivery(
 type DeliveryClaim =
   { claimed: true; id: string } | { claimed: false; result: DeliveryResult }
 
-async function insertDelivery(
-  db: Db,
-  workspaceId: string,
-  publicationId: string,
-  destinationId: string
-): Promise<void> {
-  try {
-    await db
-      .insert(delivery)
-      .values({
-        id: crypto.randomUUID(),
-        workspaceId,
-        publicationId,
-        destinationId
-      })
-      .run()
-  } catch (err) {
-    const raced = await findDelivery(
-      db,
-      workspaceId,
-      publicationId,
-      destinationId
-    )
-    if (!raced) throw err
-  }
-}
-
 async function claimDelivery(
   db: Db,
   workspaceId: string,
   publicationId: string,
   destinationId: string
 ): Promise<DeliveryClaim> {
-  const existing = await findDelivery(
-    db,
-    workspaceId,
-    publicationId,
-    destinationId
-  )
-  if (existing?.status === "sent") {
-    return { claimed: false, result: { destinationId, status: "sent" } }
-  }
-  if (!existing) {
-    await insertDelivery(db, workspaceId, publicationId, destinationId)
-  }
+  await db
+    .insert(delivery)
+    .values({
+      id: crypto.randomUUID(),
+      workspaceId,
+      publicationId,
+      destinationId
+    })
+    .onConflictDoNothing()
+    .run()
 
-  const row = await findDelivery(db, workspaceId, publicationId, destinationId)
-  if (!row) throw new DeliveryError(`delivery not found: ${destinationId}`)
-
-  const claimed = await db
+  const [claimed] = await db
     .update(delivery)
-    .set({ status: "processing", attempts: row.attempts + 1 })
+    .set({
+      status: "processing",
+      attempts: sql`${delivery.attempts} + 1`
+    })
     .where(
       and(
-        eq(delivery.id, row.id),
+        eq(delivery.publicationId, publicationId),
+        eq(delivery.destinationId, destinationId),
         eq(delivery.workspaceId, workspaceId),
         notInArray(delivery.status, ["sent", "processing"])
       )
     )
-    .run()
-  if (claimed.rowsAffected > 0) return { claimed: true, id: row.id }
+    .returning({ id: delivery.id })
+  if (claimed) return { claimed: true, id: claimed.id }
 
   const current = await findDelivery(
     db,
