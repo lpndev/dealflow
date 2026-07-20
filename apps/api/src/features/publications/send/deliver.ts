@@ -1,5 +1,5 @@
 import type { DeliveryResult } from "@dealflow/shared"
-import { and, eq, inArray } from "drizzle-orm"
+import { and, eq, inArray, notInArray } from "drizzle-orm"
 import type { Db } from "@/shared/db"
 import { DeliveryError } from "@/shared/errors"
 import type { MessagingProvider } from "@/shared/messaging"
@@ -77,6 +77,109 @@ export async function newSendCount(
   return destinationIds.filter((id) => !alreadySent.has(id)).length
 }
 
+function findDelivery(
+  db: Db,
+  workspaceId: string,
+  publicationId: string,
+  destinationId: string
+): Promise<typeof delivery.$inferSelect | undefined> {
+  return db
+    .select()
+    .from(delivery)
+    .where(
+      and(
+        eq(delivery.publicationId, publicationId),
+        eq(delivery.destinationId, destinationId),
+        eq(delivery.workspaceId, workspaceId)
+      )
+    )
+    .get()
+}
+
+type DeliveryClaim =
+  { claimed: true; id: string } | { claimed: false; result: DeliveryResult }
+
+async function insertDelivery(
+  db: Db,
+  workspaceId: string,
+  publicationId: string,
+  destinationId: string
+): Promise<void> {
+  try {
+    await db
+      .insert(delivery)
+      .values({
+        id: crypto.randomUUID(),
+        workspaceId,
+        publicationId,
+        destinationId
+      })
+      .run()
+  } catch (err) {
+    const raced = await findDelivery(
+      db,
+      workspaceId,
+      publicationId,
+      destinationId
+    )
+    if (!raced) throw err
+  }
+}
+
+async function claimDelivery(
+  db: Db,
+  workspaceId: string,
+  publicationId: string,
+  destinationId: string
+): Promise<DeliveryClaim> {
+  const existing = await findDelivery(
+    db,
+    workspaceId,
+    publicationId,
+    destinationId
+  )
+  if (existing?.status === "sent") {
+    return { claimed: false, result: { destinationId, status: "sent" } }
+  }
+  if (!existing) {
+    await insertDelivery(db, workspaceId, publicationId, destinationId)
+  }
+
+  const row = await findDelivery(db, workspaceId, publicationId, destinationId)
+  if (!row) throw new DeliveryError(`delivery not found: ${destinationId}`)
+
+  const claimed = await db
+    .update(delivery)
+    .set({ status: "processing", attempts: row.attempts + 1 })
+    .where(
+      and(
+        eq(delivery.id, row.id),
+        eq(delivery.workspaceId, workspaceId),
+        notInArray(delivery.status, ["sent", "processing"])
+      )
+    )
+    .run()
+  if (claimed.rowsAffected > 0) return { claimed: true, id: row.id }
+
+  const current = await findDelivery(
+    db,
+    workspaceId,
+    publicationId,
+    destinationId
+  )
+  return {
+    claimed: false,
+    result:
+      current?.status === "sent"
+        ? { destinationId, status: "sent" }
+        : {
+            destinationId,
+            status: "failed",
+            error: "send already in progress"
+          }
+  }
+}
+
 export async function deliverOne(
   db: Db,
   workspaceId: string,
@@ -99,40 +202,9 @@ export async function deliverOne(
       .get())
   if (!dest) throw new DeliveryError(`destination not found: ${destinationId}`)
 
-  const existing = await db
-    .select()
-    .from(delivery)
-    .where(
-      and(
-        eq(delivery.publicationId, pub.id),
-        eq(delivery.destinationId, destinationId),
-        eq(delivery.workspaceId, workspaceId)
-      )
-    )
-    .get()
-
-  if (existing?.status === "sent") {
-    return { destinationId, status: "sent" }
-  }
-
-  const id = existing?.id ?? crypto.randomUUID()
-  if (!existing) {
-    await db
-      .insert(delivery)
-      .values({
-        id,
-        workspaceId,
-        publicationId: pub.id,
-        destinationId
-      })
-      .run()
-  }
-
-  await db
-    .update(delivery)
-    .set({ status: "processing", attempts: (existing?.attempts ?? 0) + 1 })
-    .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
-    .run()
+  const claim = await claimDelivery(db, workspaceId, pub.id, destinationId)
+  if (!claim.claimed) return claim.result
+  const id = claim.id
 
   try {
     const { externalMessageId } = await provider.send({
