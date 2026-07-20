@@ -131,8 +131,9 @@ status `ready`). Template em `features/publications/render.ts`. Prices parseiam
 no servidor (`parsePrice`: vírgula = decimal BRL; só ponto = decimal). Web: form →
 Preview / Salvar publicação. Persistência: SQLite via **libSQL**
 (`drizzle-orm/libsql` + `@libsql/client`, ver Nota data layer async), migrations em
-`apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no boot. Auth real desde a fundação auth/tenancy: `workspaceId` vem do workspace
-ativo da sessão, não mais de `DEFAULT_WORKSPACE_ID` fixo (ver Nota auth/tenancy).
+`apps/api/drizzle/` (geradas por `bun run db:generate`), aplicadas no boot. Auth
+real desde a fundação auth/tenancy: `workspaceId` vem do workspace ativo da
+sessão, não mais de `DEFAULT_WORKSPACE_ID` fixo (ver Nota auth/tenancy).
 
 Slice 3 (+ WhatsApp por workspace, 2026-07-12): `apps/wa-gateway` (porta 3002)
 isola o Baileys — **multi-sessão por workspace**: cada sessão em
@@ -172,7 +173,7 @@ ponta a ponta**. `bun:sqlite` (síncrono) saiu; entrou **libSQL**
 (`drizzle-orm/libsql` + `@libsql/client`) — `:memory:` nos testes, `file:` local, e
 é o mesmo contrato async do **D1** (que só existe em async), então trocar o driver
 pra Cloudflare depois não exige tocar em use-case, rota ou teste. Todo terminator
-(`.get()/.all()/.run()`) é `await`-ado; ~31 funções viraram `async` e os callers
+(`.get()/.all()/.run()`) é `await`-ado; 45 funções viraram `async` e os callers
 seguiram, transitivamente, até rotas, hooks do better-auth, scheduler e testes.
 Regras que a conversão fixou:
 
@@ -182,11 +183,24 @@ Regras que a conversão fixou:
   uma vez no boot (`index.ts`, top-level await antes do `startScheduler`) e no
   `testDb()` dos testes (`packages/tests/support/db.ts`). Requisição só chega
   depois do boot, então o adapter nunca vê banco não-migrado.
-- **FK exige PRAGMA explícito**: `migrateDb` roda `db.$client.execute("PRAGMA
-foreign_keys = ON;")` — o local do libSQL usa uma conexão só, então o pragma vale
-  pro processo inteiro (verificado: FK violation continua estourando, é o que a
-  isolação por workspace testa). `Db` é `LibSQLDatabase<typeof schema> & { $client:
-Client }` porque o tipo exportado do drizzle não carrega o `$client`.
+- **`getDb()` devolve um handle NÃO-MIGRADO.** `createDb` só abre o client; quem
+  constrói um `Db` novo tem que `await migrateDb(db)` antes de qualquer query,
+  senão o schema está vazio e o erro sai confuso ("no such table"). Os dois
+  caminhos que já fazem isso são o boot (`index.ts`) e o `testDb()`; qualquer
+  entry/teste novo que importe `@/app` e bata numa rota de banco precisa do mesmo.
+- **A URL viaja junto com o handle**: `createDb(url)` carimba `$url` no objeto
+  (`Db = LibSQLDatabase<typeof schema> & { $client: Client; $url: string }` — o
+  tipo exportado do drizzle não carrega o `$client`), e `migrateDb(db)` lê dali o
+  caminho pro `chmod 0600`. Antes o `migrateDb(db, url = resolveDatabaseUrl())`
+  re-derivava a URL por conta própria e um par divergente chmodava o arquivo
+  errado. `libsqlUrl`/`localPath` tratam `file:` já prefixado (não vira
+  `file:file:x.db`), `:memory:` e `libsql://`/`https://`.
+- **FK vem LIGADO do driver, não do nosso PRAGMA**: `migrateDb` roda
+  `db.$client.execute("PRAGMA foreign_keys = ON;")`, mas medido (2026-07-20) que
+  trocar esse `ON` por `OFF` **não desliga** nada — o `@libsql/client` local abre
+  a conexão com FK on e o migrator do drizzle a devolve on. O pragma é cinto e
+  suspensório; o teste `enforces foreign keys` (`api/shared/db.test.ts`) trava o
+  comportamento efetivo (insert violando FK rejeita), não a linha do pragma.
 - **Promise é truthy** — o perigo real da conversão não é o typecheck, é o guard
   silencioso: `if (!isWorkspaceMember(...))` com a função async vira sempre falso e
   **desliga a checagem**. `await-thenable`/`no-misused-promises` do lint type-aware
@@ -194,7 +208,42 @@ Client }` porque o tipo exportado do drizzle não carrega o `$client`.
   rota por rota tem que ser conferida à mão.
 - Testes: `createDb(":memory:")` virou `await testDb()`; `expect(() => x).toThrow`
   virou `await expect(x).rejects.toThrow` (sem o `await` não assere nada — ver Nota
-  testes). Contagem preservada: 172 passed / 11 skipped, e2e 6/6.
+  testes). Contagem: 175 passed / 11 skipped, e2e 6/6 (eram 172 antes dos três
+  testes novos do fix pass).
+
+Nota claim atômico da delivery (2026-07-20, revenue-critical): a conversão async
+abriu uma janela entre **ler** a `delivery` e **escrever** o status — dois
+caminhos concorrentes (o `POST /publications/:id/send` imediato correndo com o
+tick do `dispatchDue`, ou um Enviar clicado duas vezes) liam ambos
+`status !== "sent"` e **os dois chamavam `provider.send`**: a mesma mensagem saía
+DUAS VEZES no grupo. A `unique(publicationId,destinationId)` impedia a linha
+duplicada, não o envio duplicado — e o insert perdedor ainda estourava
+`SQLITE_CONSTRAINT` de fora do `try` (que só envolvia o `provider.send`),
+virando 500. Fix em `features/publications/send/deliver.ts`:
+
+- **Claim condicional antes de enviar** (`claimDelivery`): o update pra
+  `processing` roda com `notInArray(delivery.status, ["sent","processing"])` e o
+  resultado é checado por **`rowsAffected`** (a propriedade real do
+  `drizzle-orm/libsql`; verificado no objeto de retorno, não chutado). 0 linhas
+  afetadas = outro caminho já enviou ou está enviando agora → **retorna sem
+  chamar `provider.send`**. Se a linha já está `sent`, o retorno é
+  `{status:"sent"}` (verdade); se está `processing`, devolver "sent" seria mentira
+  — sai `{status:"failed", error:"send already in progress"}` pro operador
+  reenviar. Fail-closed: melhor não enviar do que enviar duas vezes.
+- **Race do insert** (`insertDelivery`): o `db.insert` fica num try/catch; se
+  falhar e a linha JÁ existir (re-leitura), é o concorrente que a criou → segue
+  pro claim (que então retorna sem duplicar o envio). Se não existir linha
+  nenhuma, o erro é outro e **sobe** (não engole).
+- **Ceilings aceitos** (ponytail): (1) linha deixada em `processing` por processo
+  que crashou **não tem auto-recuperação** — sem lease/timeout, o operador
+  reenvia; upgrade path = `processingStartedAt` + lease expirando o claim.
+  (2) O claim é uma linha de UPDATE condicional, não transação — basta porque o
+  SQLite serializa o write.
+- TDD: `sends once when two concurrent deliveries race for the same destination`
+  (`api/features/publications/send.test.ts`) faz
+  `await Promise.all([deliverOne(...), deliverOne(...)])` no MESMO
+  `(publicationId,destinationId)` e assere `provider.sent` == 1. **Falhou antes do
+  fix** (estourava a UNIQUE constraint do insert perdedor), passa depois.
 
 Nota aquisição de dados / anti-bot ML (investigado 2026-07-08): o ML fechou o
 acesso público. API (`/items`, `/products`, `/sites/MLB/search`) exige token OAuth
