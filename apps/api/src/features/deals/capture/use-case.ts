@@ -56,13 +56,13 @@ export function takeCapture(workspaceId: string): ExtractedDeal | null {
   return draft
 }
 
-export function adoptAffiliateTag(
+export async function adoptAffiliateTag(
   db: Db,
   workspaceId: string,
   tag: unknown
-): void {
+): Promise<void> {
   const value = shortString(tag, 60)
   if (!value) return
-  if (getSettings(db, workspaceId).mlAffiliateTag) return
-  updateSettings(db, workspaceId, { mlAffiliateTag: value })
+  if ((await getSettings(db, workspaceId)).mlAffiliateTag) return
+  await updateSettings(db, workspaceId, { mlAffiliateTag: value })
 }

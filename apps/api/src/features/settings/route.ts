@@ -8,8 +8,8 @@ export const settingsRoutes = new Hono<AppEnv>()
 
 settingsRoutes.use("*", requireAuth)
 
-settingsRoutes.get("/", (c) =>
-  c.json(getSettings(getDb(), c.get("workspaceId")))
+settingsRoutes.get("/", async (c) =>
+  c.json(await getSettings(getDb(), c.get("workspaceId")))
 )
 
 settingsRoutes.put("/", requireRole("owner", "admin"), async (c) => {
@@ -36,7 +36,7 @@ settingsRoutes.put("/", requireRole("owner", "admin"), async (c) => {
 
   try {
     return c.json(
-      updateSettings(getDb(), c.get("workspaceId"), {
+      await updateSettings(getDb(), c.get("workspaceId"), {
         delayMinSeconds: body.delayMinSeconds,
         delayMaxSeconds: body.delayMaxSeconds,
         messageTemplate: body.messageTemplate,

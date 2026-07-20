@@ -15,11 +15,13 @@ export function listDestinations(db: Db, workspaceId: string) {
     .all()
 }
 
-export function publicDestinations(rows: ReturnType<typeof listDestinations>) {
+export function publicDestinations(
+  rows: Awaited<ReturnType<typeof listDestinations>>
+) {
   return rows.map(({ id, name, enabled }) => ({ id, name, enabled }))
 }
 
-export function listDestinationsByIds(
+export async function listDestinationsByIds(
   db: Db,
   workspaceId: string,
   ids: string[]
@@ -37,14 +39,15 @@ export function listDestinationsByIds(
     .all()
 }
 
-export function setDestinationEnabled(
+export async function setDestinationEnabled(
   db: Db,
   workspaceId: string,
   id: string,
   enabled: boolean
 ) {
-  if (enabled) assertCanEnableDestination(db, workspaceId)
-  db.update(destination)
+  if (enabled) await assertCanEnableDestination(db, workspaceId)
+  await db
+    .update(destination)
     .set({ enabled })
     .where(
       and(eq(destination.id, id), eq(destination.workspaceId, workspaceId))
@@ -59,10 +62,10 @@ export async function syncDestinations(
   provider: MessagingProvider
 ) {
   const groups = await provider.listGroups(workspaceId)
-  let slotsLeft = destinationSlotsLeft(db, workspaceId)
+  let slotsLeft = await destinationSlotsLeft(db, workspaceId)
 
   for (const group of groups) {
-    const existing = db
+    const existing = await db
       .select({ id: destination.id })
       .from(destination)
       .where(
@@ -75,7 +78,8 @@ export async function syncDestinations(
       .get()
 
     if (existing) {
-      db.update(destination)
+      await db
+        .update(destination)
         .set({ name: group.name })
         .where(
           and(
@@ -87,7 +91,8 @@ export async function syncDestinations(
     } else {
       const enabled = slotsLeft > 0
       if (enabled) slotsLeft -= 1
-      db.insert(destination)
+      await db
+        .insert(destination)
         .values({
           id: crypto.randomUUID(),
           workspaceId,

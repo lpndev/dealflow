@@ -8,28 +8,29 @@ export const isOwner = (role: string | null | undefined): boolean =>
     .map((r) => r.trim())
     .includes("owner")
 
-export function ownedWorkspaceIds(db: Db, userId: string): string[] {
-  return db
+export async function ownedWorkspaceIds(
+  db: Db,
+  userId: string
+): Promise<string[]> {
+  const rows = await db
     .select({ orgId: member.organizationId, role: member.role })
     .from(member)
     .where(eq(member.userId, userId))
     .all()
-    .filter((m) => isOwner(m.role))
-    .map((m) => m.orgId)
+  return rows.filter((m) => isOwner(m.role)).map((m) => m.orgId)
 }
 
-export function isWorkspaceMember(
+export async function isWorkspaceMember(
   db: Db,
   userId: string,
   workspaceId: string
-): boolean {
-  return Boolean(
-    db
-      .select({ id: member.id })
-      .from(member)
-      .where(
-        and(eq(member.userId, userId), eq(member.organizationId, workspaceId))
-      )
-      .get()
-  )
+): Promise<boolean> {
+  const row = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(
+      and(eq(member.userId, userId), eq(member.organizationId, workspaceId))
+    )
+    .get()
+  return Boolean(row)
 }

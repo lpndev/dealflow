@@ -23,9 +23,12 @@ export const WORKSPACE_TABLES = [
   settings
 ]
 
-export function deleteWorkspaceData(db: Db, workspaceId: string): void {
+export async function deleteWorkspaceData(
+  db: Db,
+  workspaceId: string
+): Promise<void> {
   for (const table of WORKSPACE_TABLES) {
-    db.delete(table).where(eq(table.workspaceId, workspaceId)).run()
+    await db.delete(table).where(eq(table.workspaceId, workspaceId)).run()
   }
 }
 
@@ -34,7 +37,7 @@ export async function deleteWorkspace(
   workspaceId: string
 ): Promise<void> {
   await revokeWorkspaceApiKeys(headers, workspaceId)
-  deleteWorkspaceData(getDb(), workspaceId)
+  await deleteWorkspaceData(getDb(), workspaceId)
   await whatsappGateway.logout(workspaceId).catch(() => {})
   await auth.api.deleteOrganization({
     headers,
@@ -46,7 +49,7 @@ export async function resetOwnedWorkspaces(
   headers: Headers,
   userId: string
 ): Promise<number> {
-  const owned = ownedWorkspaceIds(getDb(), userId)
+  const owned = await ownedWorkspaceIds(getDb(), userId)
   for (const workspaceId of owned) {
     await deleteWorkspace(headers, workspaceId)
   }

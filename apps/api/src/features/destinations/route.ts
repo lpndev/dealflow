@@ -14,10 +14,10 @@ export const destinations = new Hono<AppEnv>()
 
 destinations.use("*", requireAuth)
 
-destinations.get("/", (c) =>
+destinations.get("/", async (c) =>
   c.json({
     destinations: publicDestinations(
-      listDestinations(getDb(), c.get("workspaceId"))
+      await listDestinations(getDb(), c.get("workspaceId"))
     )
   })
 )
@@ -32,7 +32,7 @@ destinations.patch("/:id", requireRole("owner", "admin"), async (c) => {
   try {
     return c.json({
       destinations: publicDestinations(
-        setDestinationEnabled(
+        await setDestinationEnabled(
           getDb(),
           c.get("workspaceId"),
           c.req.param("id"),

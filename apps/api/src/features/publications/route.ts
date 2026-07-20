@@ -14,14 +14,16 @@ publications.use("*", requireAuth)
 
 publications.post("/preview", async (c) => {
   const body = (await c.req.json().catch(() => null)) as PublicationInput | null
-  return c.json(previewPublication(body ?? {}, getDb(), c.get("workspaceId")))
+  return c.json(
+    await previewPublication(body ?? {}, getDb(), c.get("workspaceId"))
+  )
 })
 
 publications.post("/", async (c) => {
   const body = (await c.req.json().catch(() => null)) as PublicationInput | null
   try {
     return c.json(
-      createPublication(body ?? {}, getDb(), c.get("workspaceId")),
+      await createPublication(body ?? {}, getDb(), c.get("workspaceId")),
       201
     )
   } catch (err) {

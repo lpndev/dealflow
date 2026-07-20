@@ -21,7 +21,7 @@ capture.post("/capture", requireApiKey, async (c) => {
   }
   const workspaceId = c.get("workspaceId")
   storeCapture(workspaceId, draft)
-  adoptAffiliateTag(getDb(), workspaceId, body?.affiliateTag)
+  await adoptAffiliateTag(getDb(), workspaceId, body?.affiliateTag)
   return c.json({ ok: true })
 })
 

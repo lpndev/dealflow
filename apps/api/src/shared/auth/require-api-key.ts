@@ -29,7 +29,7 @@ export const requireApiKey = createMiddleware<AppEnv>(async (c, next) => {
   if (
     !workspaceId ||
     !ownerId ||
-    !isWorkspaceMember(getDb(), ownerId, workspaceId)
+    !(await isWorkspaceMember(getDb(), ownerId, workspaceId))
   ) {
     return c.json({ error: "unauthorized" }, 401)
   }

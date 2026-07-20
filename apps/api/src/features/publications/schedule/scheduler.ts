@@ -19,7 +19,7 @@ export async function dispatchDue(
     .from(settings)
     .where(eq(settings.queuePaused, true))
 
-  const due = db
+  const due = await db
     .select()
     .from(delivery)
     .where(
@@ -33,7 +33,11 @@ export async function dispatchDue(
     .get()
   if (!due) return null
 
-  const pub = loadPublicationContent(db, due.workspaceId, due.publicationId)
+  const pub = await loadPublicationContent(
+    db,
+    due.workspaceId,
+    due.publicationId
+  )
   if (!pub) return null
 
   const result = await deliverOne(
@@ -43,7 +47,7 @@ export async function dispatchDue(
     pub,
     due.destinationId
   )
-  refreshPublicationStatus(db, due.workspaceId, due.publicationId)
+  await refreshPublicationStatus(db, due.workspaceId, due.publicationId)
   return result
 }
 

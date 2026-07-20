@@ -27,21 +27,20 @@ export const auth = betterAuth({
     organization({
       ac,
       roles: { owner, admin, member },
-      allowUserToCreateOrganization: (u) => canCreateWorkspace(getDb(), u.id)
+      allowUserToCreateOrganization: async (u) =>
+        canCreateWorkspace(getDb(), u.id)
     }),
     apiKey({ enableSessionForAPIKeys: false, enableMetadata: true })
   ],
   databaseHooks: {
     session: {
       create: {
-        before(session) {
-          const activeOrganizationId = resolveActiveWorkspace(
+        async before(session) {
+          const activeOrganizationId = await resolveActiveWorkspace(
             getDb(),
             session.userId
           )
-          return Promise.resolve({
-            data: { ...session, activeOrganizationId }
-          })
+          return { data: { ...session, activeOrganizationId } }
         }
       }
     }

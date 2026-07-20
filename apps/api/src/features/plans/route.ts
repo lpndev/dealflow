@@ -7,6 +7,6 @@ export const plans = new Hono<AppEnv>()
 
 plans.use("*", requireAuth)
 
-plans.get("/", (c) =>
-  c.json(planStatusForWorkspace(getDb(), c.get("workspaceId")))
+plans.get("/", async (c) =>
+  c.json(await planStatusForWorkspace(getDb(), c.get("workspaceId")))
 )

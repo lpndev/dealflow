@@ -13,8 +13,11 @@ const DEFAULTS: Settings = {
   mlAffiliateTag: null
 }
 
-export function getSettings(db: Db, workspaceId: string): Settings {
-  const row = db
+export async function getSettings(
+  db: Db,
+  workspaceId: string
+): Promise<Settings> {
+  const row = await db
     .select()
     .from(settings)
     .where(eq(settings.workspaceId, workspaceId))
@@ -29,12 +32,12 @@ export function getSettings(db: Db, workspaceId: string): Settings {
   }
 }
 
-export function updateSettings(
+export async function updateSettings(
   db: Db,
   workspaceId: string,
   input: Partial<Settings>
-): Settings {
-  const next: Settings = { ...getSettings(db, workspaceId), ...input }
+): Promise<Settings> {
+  const next: Settings = { ...(await getSettings(db, workspaceId)), ...input }
   next.mlAffiliateTag = next.mlAffiliateTag?.trim() || null
 
   if (next.mlAffiliateTag && next.mlAffiliateTag.length > 60) {
@@ -54,7 +57,8 @@ export function updateSettings(
     throw new SettingsError("template must include the {link} placeholder")
   }
 
-  db.insert(settings)
+  await db
+    .insert(settings)
     .values({
       workspaceId,
       ...next,

@@ -23,20 +23,20 @@ export type PublicationResult = {
   status: "ready"
 }
 
-export function previewPublication(
+export async function previewPublication(
   input: PublicationInput,
   db: Db,
   workspaceId: string
-): { content: string } {
-  const { messageTemplate } = getSettings(db, workspaceId)
+): Promise<{ content: string }> {
+  const { messageTemplate } = await getSettings(db, workspaceId)
   return { content: renderPublication(toRenderInput(input), messageTemplate) }
 }
 
-export function createPublication(
+export async function createPublication(
   input: PublicationInput,
   db: Db,
   workspaceId: string
-): PublicationResult {
+): Promise<PublicationResult> {
   const title = input.title?.trim()
   const affiliateUrl = input.affiliateUrl?.trim()
   const sourceUrl = input.sourceUrl?.trim()
@@ -56,10 +56,10 @@ export function createPublication(
   const render = toRenderInput(input)
   const content = renderPublication(
     render,
-    getSettings(db, workspaceId).messageTemplate
+    (await getSettings(db, workspaceId)).messageTemplate
   )
 
-  const productId = upsertProduct(db, {
+  const productId = await upsertProduct(db, {
     workspaceId,
     externalId: input.externalId?.trim() || undefined,
     canonicalUrl: sourceUrl,
@@ -68,7 +68,8 @@ export function createPublication(
   })
 
   const dealId = crypto.randomUUID()
-  db.insert(dealSnapshot)
+  await db
+    .insert(dealSnapshot)
     .values({
       id: dealId,
       workspaceId,
@@ -80,12 +81,14 @@ export function createPublication(
     .run()
 
   const affiliateLinkId = crypto.randomUUID()
-  db.insert(affiliateLink)
+  await db
+    .insert(affiliateLink)
     .values({ id: affiliateLinkId, workspaceId, productId, url: affiliateUrl })
     .run()
 
   const id = crypto.randomUUID()
-  db.insert(publication)
+  await db
+    .insert(publication)
     .values({ id, workspaceId, dealId, affiliateLinkId, content })
     .run()
 
@@ -106,7 +109,7 @@ function toRenderInput(input: PublicationInput): RenderInput {
   }
 }
 
-function upsertProduct(
+async function upsertProduct(
   db: Db,
   input: {
     workspaceId: string
@@ -115,9 +118,9 @@ function upsertProduct(
     title?: string
     imageUrl?: string
   }
-): string {
+): Promise<string> {
   if (input.externalId) {
-    const existing = db
+    const existing = await db
       .select({ id: product.id })
       .from(product)
       .where(
@@ -129,7 +132,8 @@ function upsertProduct(
       )
       .get()
     if (existing) {
-      db.update(product)
+      await db
+        .update(product)
         .set({ title: input.title, imageUrl: input.imageUrl })
         .where(eq(product.id, existing.id))
         .run()
@@ -138,7 +142,8 @@ function upsertProduct(
   }
 
   const id = crypto.randomUUID()
-  db.insert(product)
+  await db
+    .insert(product)
     .values({
       id,
       workspaceId: input.workspaceId,

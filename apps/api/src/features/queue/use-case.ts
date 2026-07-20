@@ -74,32 +74,42 @@ function query(
     )
 }
 
-export function listQueue(db: Db, workspaceId: string): QueueItemRow[] {
+export function listQueue(
+  db: Db,
+  workspaceId: string
+): Promise<QueueItemRow[]> {
   return query(db, workspaceId, ["scheduled", "processing"])
     .orderBy(asc(delivery.dueAt))
     .all()
 }
 
-export function listHistory(db: Db, workspaceId: string): QueueItemRow[] {
+export function listHistory(
+  db: Db,
+  workspaceId: string
+): Promise<QueueItemRow[]> {
   return query(db, workspaceId, ["sent", "failed"])
     .orderBy(desc(delivery.sentAt))
     .all()
 }
 
-export function isQueuePaused(db: Db, workspaceId: string): boolean {
-  return getSettings(db, workspaceId).queuePaused
+export async function isQueuePaused(
+  db: Db,
+  workspaceId: string
+): Promise<boolean> {
+  return (await getSettings(db, workspaceId)).queuePaused
 }
 
-export function setQueuePaused(
+export async function setQueuePaused(
   db: Db,
   workspaceId: string,
   paused: boolean
-): void {
-  updateSettings(db, workspaceId, { queuePaused: paused })
+): Promise<void> {
+  await updateSettings(db, workspaceId, { queuePaused: paused })
 }
 
-export function clearHistory(db: Db, workspaceId: string): void {
-  db.update(delivery)
+export async function clearHistory(db: Db, workspaceId: string): Promise<void> {
+  await db
+    .update(delivery)
     .set({ archivedAt: new Date() })
     .where(
       and(
@@ -111,13 +121,13 @@ export function clearHistory(db: Db, workspaceId: string): void {
     .run()
 }
 
-export function rescheduleDelivery(
+export async function rescheduleDelivery(
   db: Db,
   workspaceId: string,
   id: string,
   dueAt: Date
-): void {
-  const row = db
+): Promise<void> {
+  const row = await db
     .select()
     .from(delivery)
     .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
@@ -125,14 +135,19 @@ export function rescheduleDelivery(
   if (!row || row.status !== "scheduled") {
     throw new ScheduleError("only scheduled deliveries can be rescheduled")
   }
-  db.update(delivery)
+  await db
+    .update(delivery)
     .set({ dueAt })
     .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
     .run()
 }
 
-export function cancelScheduled(db: Db, workspaceId: string, id: string): void {
-  const row = db
+export async function cancelScheduled(
+  db: Db,
+  workspaceId: string,
+  id: string
+): Promise<void> {
+  const row = await db
     .select()
     .from(delivery)
     .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
@@ -141,11 +156,12 @@ export function cancelScheduled(db: Db, workspaceId: string, id: string): void {
     throw new ScheduleError("only scheduled deliveries can be cancelled")
   }
 
-  db.delete(delivery)
+  await db
+    .delete(delivery)
     .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
     .run()
 
-  const remaining = db
+  const remaining = await db
     .select({ id: delivery.id })
     .from(delivery)
     .where(
@@ -156,7 +172,8 @@ export function cancelScheduled(db: Db, workspaceId: string, id: string): void {
     )
     .all()
   if (remaining.length === 0) {
-    db.update(publication)
+    await db
+      .update(publication)
       .set({ status: "ready" })
       .where(
         and(
@@ -166,16 +183,16 @@ export function cancelScheduled(db: Db, workspaceId: string, id: string): void {
       )
       .run()
   } else {
-    refreshPublicationStatus(db, workspaceId, row.publicationId)
+    await refreshPublicationStatus(db, workspaceId, row.publicationId)
   }
 }
 
-export function reorderQueue(
+export async function reorderQueue(
   db: Db,
   workspaceId: string,
   orderedIds: string[]
-): void {
-  const rows = db
+): Promise<void> {
+  const rows = await db
     .select({ id: delivery.id, dueAt: delivery.dueAt })
     .from(delivery)
     .where(
@@ -195,10 +212,11 @@ export function reorderQueue(
     .map((r) => r.dueAt)
     .sort((a, b) => (a?.getTime() ?? 0) - (b?.getTime() ?? 0))
 
-  orderedIds.forEach((id, i) => {
-    db.update(delivery)
+  for (const [i, id] of orderedIds.entries()) {
+    await db
+      .update(delivery)
       .set({ dueAt: slots[i] })
       .where(and(eq(delivery.id, id), eq(delivery.workspaceId, workspaceId)))
       .run()
-  })
+  }
 }

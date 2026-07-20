@@ -86,55 +86,59 @@ export function buildSeries(
   }))
 }
 
-export function getDashboard(
+export async function getDashboard(
   db: Db,
   workspaceId: string,
   range: DashboardRange,
   now = new Date()
-): DashboardData {
+): Promise<DashboardData> {
   const defs = buckets(range, now)
   const windowStart = new Date(defs[0].start)
 
-  const pending = db
-    .select({ id: delivery.id })
-    .from(delivery)
-    .where(
-      and(
-        inArray(delivery.status, ["scheduled", "processing"]),
-        eq(delivery.workspaceId, workspaceId)
+  const pending = (
+    await db
+      .select({ id: delivery.id })
+      .from(delivery)
+      .where(
+        and(
+          inArray(delivery.status, ["scheduled", "processing"]),
+          eq(delivery.workspaceId, workspaceId)
+        )
       )
-    )
-    .all().length
+      .all()
+  ).length
 
-  const groups = listDestinations(db, workspaceId).filter(
+  const groups = (await listDestinations(db, workspaceId)).filter(
     (d) => d.enabled
   ).length
 
-  const sentTs = db
-    .select({ at: delivery.sentAt })
-    .from(delivery)
-    .where(
-      and(
-        eq(delivery.status, "sent"),
-        eq(delivery.workspaceId, workspaceId),
-        gte(delivery.sentAt, windowStart)
+  const sentTs = (
+    await db
+      .select({ at: delivery.sentAt })
+      .from(delivery)
+      .where(
+        and(
+          eq(delivery.status, "sent"),
+          eq(delivery.workspaceId, workspaceId),
+          gte(delivery.sentAt, windowStart)
+        )
       )
-    )
-    .all()
-    .map((r) => r.at!.getTime())
+      .all()
+  ).map((r) => r.at!.getTime())
 
-  const failedTs = db
-    .select({ at: delivery.createdAt })
-    .from(delivery)
-    .where(
-      and(
-        eq(delivery.status, "failed"),
-        eq(delivery.workspaceId, workspaceId),
-        gte(delivery.createdAt, windowStart)
+  const failedTs = (
+    await db
+      .select({ at: delivery.createdAt })
+      .from(delivery)
+      .where(
+        and(
+          eq(delivery.status, "failed"),
+          eq(delivery.workspaceId, workspaceId),
+          gte(delivery.createdAt, windowStart)
+        )
       )
-    )
-    .all()
-    .map((r) => r.at.getTime())
+      .all()
+  ).map((r) => r.at.getTime())
 
   const series = buildSeries(defs, sentTs, failedTs)
 

@@ -10,9 +10,9 @@ export const dashboard = new Hono<AppEnv>()
 
 dashboard.use("*", requireAuth)
 
-dashboard.get("/dashboard", (c) => {
+dashboard.get("/dashboard", async (c) => {
   const q = c.req.query("range")
   const range: DashboardRange =
     q !== undefined && RANGES.has(q) ? (q as DashboardRange) : "week"
-  return c.json(getDashboard(getDb(), c.get("workspaceId"), range))
+  return c.json(await getDashboard(getDb(), c.get("workspaceId"), range))
 })

@@ -32,19 +32,24 @@ const GUARDED = new Set([
   "/organization/invite-member"
 ])
 
-function memberRoleWhere(db: Db, where: SQL | undefined): string | null {
-  return (
-    db.select({ role: member.role }).from(member).where(where).get()?.role ??
-    null
-  )
+async function memberRoleWhere(
+  db: Db,
+  where: SQL | undefined
+): Promise<string | null> {
+  const row = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(where)
+    .get()
+  return row?.role ?? null
 }
 
-function resolveTargetRole(
+async function resolveTargetRole(
   db: Db,
   path: string,
   body: Record<string, unknown>,
   orgId: string
-): string | null {
+): Promise<string | null> {
   if (path === "/organization/update-member-role") {
     return typeof body.memberId === "string"
       ? memberRoleWhere(db, eq(member.id, body.memberId))
@@ -54,14 +59,13 @@ function resolveTargetRole(
     const ref = body.memberIdOrEmail
     if (typeof ref !== "string") return null
     if (ref.includes("@")) {
-      return (
-        db
-          .select({ role: member.role })
-          .from(member)
-          .innerJoin(user, eq(member.userId, user.id))
-          .where(and(eq(user.email, ref), eq(member.organizationId, orgId)))
-          .get()?.role ?? null
-      )
+      const row = await db
+        .select({ role: member.role })
+        .from(member)
+        .innerJoin(user, eq(member.userId, user.id))
+        .where(and(eq(user.email, ref), eq(member.organizationId, orgId)))
+        .get()
+      return row?.role ?? null
     }
     return memberRoleWhere(db, eq(member.id, ref))
   }
@@ -89,16 +93,19 @@ export const hierarchyGuard = createAuthMiddleware(async (ctx) => {
 
   const db = getDb()
   const allowed = hierarchyAllows({
-    actorRole: memberRoleWhere(
+    actorRole: await memberRoleWhere(
       db,
       and(eq(member.userId, userId), eq(member.organizationId, orgId))
     ),
-    targetRole: resolveTargetRole(db, ctx.path, body, orgId),
+    targetRole: await resolveTargetRole(db, ctx.path, body, orgId),
     requestedRole: requestedRole(body.role)
   })
   if (!allowed) throw new APIError("FORBIDDEN", { message: "forbidden" })
 
-  if (ctx.path === "/organization/invite-member" && !canAddMember(db, orgId)) {
+  if (
+    ctx.path === "/organization/invite-member" &&
+    !(await canAddMember(db, orgId))
+  ) {
     throw new APIError("FORBIDDEN", {
       message:
         "Limite de membros do plano atingido. Faça upgrade para convidar mais."

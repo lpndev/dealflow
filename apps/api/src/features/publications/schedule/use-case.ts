@@ -22,16 +22,16 @@ type Options = {
   rand?: () => number
 }
 
-export function schedulePublication(
+export async function schedulePublication(
   input: ScheduleInput,
   db: Db,
   workspaceId: string,
   opts: Options = {}
-): ScheduledDelivery[] {
+): Promise<ScheduledDelivery[]> {
   const now = opts.now ?? new Date()
   const rand = opts.rand ?? Math.random
 
-  const pub = db
+  const pub = await db
     .select()
     .from(publication)
     .where(
@@ -44,15 +44,19 @@ export function schedulePublication(
   if (!pub) throw new ScheduleError("publication not found")
 
   const destinationIds = [...new Set(input.destinationIds)]
-  const destinations = listDestinationsByIds(db, workspaceId, destinationIds)
+  const destinations = await listDestinationsByIds(
+    db,
+    workspaceId,
+    destinationIds
+  )
   const foundIds = new Set(destinations.map((item) => item.id))
   const missing = destinationIds.find((id) => !foundIds.has(id))
   if (missing) throw new ScheduleError(`destination not found: ${missing}`)
 
-  const existingIds = new Set(
+  const existingRows =
     destinationIds.length === 0
       ? []
-      : db
+      : await db
           .select({ destinationId: delivery.destinationId })
           .from(delivery)
           .where(
@@ -63,16 +67,18 @@ export function schedulePublication(
             )
           )
           .all()
-          .map((item) => item.destinationId)
-  )
+  const existingIds = new Set(existingRows.map((item) => item.destinationId))
 
   const newCount = destinationIds.filter((id) => !existingIds.has(id)).length
-  assertCanSend(db, workspaceId, newCount, now)
+  await assertCanSend(db, workspaceId, newCount, now)
 
-  const { delayMinSeconds, delayMaxSeconds } = getSettings(db, workspaceId)
+  const { delayMinSeconds, delayMaxSeconds } = await getSettings(
+    db,
+    workspaceId
+  )
 
   const startMs = Math.max(now.getTime(), input.startAt?.getTime() ?? 0)
-  const tail = queueTail(db, workspaceId)
+  const tail = await queueTail(db, workspaceId)
   let cursor: number | null = null
   const scheduled: ScheduledDelivery[] = []
 
@@ -86,7 +92,8 @@ export function schedulePublication(
       cursor += gap
     }
     const dueAt = new Date(cursor)
-    db.insert(delivery)
+    await db
+      .insert(delivery)
       .values({
         id: crypto.randomUUID(),
         workspaceId: pub.workspaceId,
@@ -100,7 +107,8 @@ export function schedulePublication(
   }
 
   if (scheduled.length > 0) {
-    db.update(publication)
+    await db
+      .update(publication)
       .set({ status: "sending" })
       .where(eq(publication.id, pub.id))
       .run()
@@ -109,8 +117,8 @@ export function schedulePublication(
   return scheduled
 }
 
-function queueTail(db: Db, workspaceId: string): number | null {
-  const last = db
+async function queueTail(db: Db, workspaceId: string): Promise<number | null> {
+  const last = await db
     .select({ dueAt: delivery.dueAt })
     .from(delivery)
     .where(

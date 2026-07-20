@@ -22,19 +22,23 @@ export async function sendPublication(
   workspaceId: string,
   provider: MessagingProvider
 ): Promise<DeliveryResult[]> {
-  const pub = loadPublicationContent(db, workspaceId, input.publicationId)
+  const pub = await loadPublicationContent(db, workspaceId, input.publicationId)
   if (!pub) throw new DeliveryError("publication not found")
 
   const destinationIds = [...new Set(input.destinationIds)]
-  const destinations = listDestinationsByIds(db, workspaceId, destinationIds)
+  const destinations = await listDestinationsByIds(
+    db,
+    workspaceId,
+    destinationIds
+  )
   const byId = new Map(destinations.map((item) => [item.id, item]))
   const missing = destinationIds.find((id) => !byId.has(id))
   if (missing) throw new DeliveryError(`destination not found: ${missing}`)
 
-  assertCanSend(
+  await assertCanSend(
     db,
     workspaceId,
-    newSendCount(db, workspaceId, pub.id, destinationIds)
+    await newSendCount(db, workspaceId, pub.id, destinationIds)
   )
 
   const results: DeliveryResult[] = []
@@ -51,6 +55,6 @@ export async function sendPublication(
     )
   }
 
-  refreshPublicationStatus(db, workspaceId, pub.id)
+  await refreshPublicationStatus(db, workspaceId, pub.id)
   return results
 }

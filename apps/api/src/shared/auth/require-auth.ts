@@ -17,7 +17,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   if (!user || !session) return c.json({ error: "unauthorized" }, 401)
   const workspaceId = session.activeOrganizationId
   if (!workspaceId) return c.json({ error: "no active workspace" }, 403)
-  if (!isWorkspaceMember(getDb(), user.id, workspaceId)) {
+  if (!(await isWorkspaceMember(getDb(), user.id, workspaceId))) {
     return c.json({ error: "workspace access revoked" }, 403)
   }
   c.set("workspaceId", workspaceId)

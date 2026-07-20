@@ -19,7 +19,10 @@ deals.post("/import", rateLimit(10, 60), async (c) => {
   }
 
   try {
-    const tag = getSettings(getDb(), c.get("workspaceId")).mlAffiliateTag
+    const { mlAffiliateTag: tag } = await getSettings(
+      getDb(),
+      c.get("workspaceId")
+    )
     const draft = await importDeal(input, fetchMercadoLivre, tag)
     return c.json({ draft })
   } catch (err) {

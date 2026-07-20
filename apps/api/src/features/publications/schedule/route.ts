@@ -35,7 +35,7 @@ schedule.post("/:id/schedule", rateLimit(20, 60), async (c) => {
   }
 
   try {
-    const scheduled = schedulePublication(
+    const scheduled = await schedulePublication(
       { publicationId, destinationIds, startAt },
       getDb(),
       c.get("workspaceId")
