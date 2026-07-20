@@ -26,16 +26,16 @@ import {
 import "@dealflow/ui/styles.css"
 
 async function protectedLoader() {
-  const { data, error } = await authClient.getSession()
-  if (error && error.status !== 401) return null
-  if (!data) throw redirect("/login")
-  if (!data.session.activeOrganizationId) throw redirect("/onboarding")
-  return data
+  const res = await authClient.getSession().catch(() => null)
+  if (!res || (res.error && res.error.status !== 401)) return null
+  if (!res.data) throw redirect("/login")
+  if (!res.data.session.activeOrganizationId) throw redirect("/onboarding")
+  return res.data
 }
 
 async function guestLoader({ request }: LoaderFunctionArgs) {
-  const { data } = await authClient.getSession()
-  if (!data) return null
+  const res = await authClient.getSession().catch(() => null)
+  if (!res?.data) return null
   throw redirect(
     safeRedirect(new URL(request.url).searchParams.get("redirect"))
   )
