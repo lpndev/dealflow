@@ -111,6 +111,7 @@ export const delivery = sqliteTable(
     externalMessageId: text("external_message_id"),
     error: text("error"),
     sentAt: integer("sent_at", { mode: "timestamp" }),
+    archivedAt: integer("archived_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(now),

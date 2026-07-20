@@ -176,4 +176,12 @@ it("clears only sent and failed deliveries from history", () => {
   expect(listQueue(db, DEFAULT_WORKSPACE_ID).map((i) => i.id)).toEqual([
     items[1].id,
   ]);
+
+  const archived = db
+    .select()
+    .from(delivery)
+    .where(eq(delivery.id, items[0].id))
+    .get();
+  expect(archived?.status).toBe("sent");
+  expect(archived?.archivedAt).toBeInstanceOf(Date);
 });

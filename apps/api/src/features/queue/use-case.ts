@@ -1,5 +1,5 @@
 import type { QueueItem } from "@dealflow/shared";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { refreshPublicationStatus } from "@/features/publications/send/deliver";
 import { getSettings, updateSettings } from "@/features/settings/use-case";
 import type { Db } from "@/shared/db";
@@ -69,6 +69,7 @@ function query(
       and(
         eq(delivery.workspaceId, workspaceId),
         inArray(delivery.status, statuses),
+        isNull(delivery.archivedAt),
       ),
     );
 }
@@ -98,11 +99,13 @@ export function setQueuePaused(
 }
 
 export function clearHistory(db: Db, workspaceId: string): void {
-  db.delete(delivery)
+  db.update(delivery)
+    .set({ archivedAt: new Date() })
     .where(
       and(
         inArray(delivery.status, ["sent", "failed"]),
         eq(delivery.workspaceId, workspaceId),
+        isNull(delivery.archivedAt),
       ),
     )
     .run();
