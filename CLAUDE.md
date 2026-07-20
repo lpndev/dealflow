@@ -1063,9 +1063,9 @@ o que sobra.
 
 ```sh
 bun run setup      # install + db:migrate + build (single-command onboarding)
-bun run dev        # web (vite) + api (:3001) + wa-gateway (:3002); extension fica fora (abre browser próprio)
-bun run build      # tudo que builda: web + extensão
-bun run preview    # preview do buildado: web
+bun run dev        # panel (vite :5173) + landing (astro :4321) + api (:3001) + wa-gateway (:3002); extension fica fora (abre browser próprio). Nota: o :4321 do landing coincide com a porta do preview do panel no e2e — só conflita se `dev` e `test:e2e` rodarem juntos (não é o fluxo normal)
+bun run build      # tudo que builda: panel + landing + extensão
+bun run preview    # preview do buildado: panel + landing
 bun run web:dev / web:build / web:preview   # só o web
 bun run api:dev                             # só a api
 bun run gateway:dev                         # só o gateway
