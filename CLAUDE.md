@@ -257,7 +257,10 @@ as creds do `6.x` são aceitas sem re-parear.
 Nota segurança: API e gateway ligam em `127.0.0.1` por default (uma máquina, um
 operador), agora via env `HOST`/`PORT` e `WA_GATEWAY_HOST`/`WA_GATEWAY_PORT` (ver
 Nota config/env — ao hospedar exposto direto, `HOST=0.0.0.0`; atrás de proxy,
-mantém 127.0.0.1).
+mantém 127.0.0.1). Como o gateway, a **API recusa subir fora de loopback sem
+`BETTER_AUTH_SECRET` forte** (`HOST` não-loopback + secret ausente ou
+`dev-secret-change-me` → throw no boot; `index.ts`, fail-closed) — o secret só
+cai no default de dev em loopback.
 A **API já exige auth por request** (better-auth, ver Nota auth/tenancy): toda
 rota de domínio passa por `requireAuth` e filtra pelo `workspaceId` da sessão —
 a isolação por workspace é a fronteira que impede um operador ver dado do outro
@@ -393,8 +396,13 @@ chaves (admin+, `DELETE /api-keys`), excluir workspace (owner, `DELETE /workspac
 das tabelas de domínio por `workspaceId` + revoga chaves + **logout da sessão de WhatsApp do
 workspace** + `deleteOrganization`; confirma digitando o nome), resetar tudo
 (`POST /workspace/reset` — apaga todos os workspaces que o user é dono, cada um deslogando a
-própria sessão de WhatsApp; mantém a conta), excluir conta (`reset` +
-`authClient.deleteUser({password})`; `user.deleteUser.enabled` ligado no auth).
+própria sessão de WhatsApp; mantém a conta), excluir conta (**verifica a senha
+ANTES de qualquer destruição** via `authClient.signIn.email` — senha errada
+aborta sem apagar nada — depois `reset` + `authClient.deleteUser({password})`;
+`user.deleteUser.enabled` ligado no auth). O verify-first existe porque `reset`
+tem que rodar autenticado (precede o `deleteUser`, que invalida a sessão), então
+sem o `signIn` de guarda uma senha errada apagava os dados e só falhava no
+`deleteUser`.
 `MessagingProvider.logout(sessionId)` → gateway `POST /sessions/:id/logout` (apaga
 `wa-auth/<id>/`). Boundary dito na UI: login ML + config da extensão vivem no navegador
 (o web não limpa — o user limpa lá).
@@ -473,6 +481,12 @@ caminho, mesma idempotência/dedupe). Falha vira `failed` e NÃO re-tenta sozinh
 (imediato) e "Agendar" coexistem. Sem Redis/fila externa — fiel ao custo-zero,
 exige só a API rodando. Fila é gerenciável (`features/queue/use-case.ts`):
 `cancelScheduled` deleta um `scheduled` (volta a pub p/ `ready` se era o último);
+`clearHistory` (limpar histórico) **arquiva, não apaga** — seta `delivery.archivedAt`
+(coluna nova, migration `0009`) nas `sent`/`failed` e a listagem filtra
+`archivedAt IS NULL`. O ledger é append-only de propósito: a linha `sent`
+sobrevive, então a `unique(publicationId,destinationId)` continua barrando reenvio
+duplicado ao mesmo destino e o cálculo de uso mensal do plano segue correto (limpar
+histórico não zera consumo nem reabre idempotência);
 `reorderQueue(orderedIds)` mantém os slots de `dueAt` fixos e só troca qual item
 ocupa cada slot (preserva o espaçamento); o server rejeita a lista se qualquer id
 não for `scheduled` (fail-closed), então o **web manda só os ids `scheduled`** e
