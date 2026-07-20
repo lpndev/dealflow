@@ -84,6 +84,9 @@ fronteira `ProductSource` pra permitir essa troca sem reescrever o resto.
   forms com **TanStack Form** ligado às primitives `Field` do shadcn; **Zustand**
   instalado e ocioso (staged p/ estado global futuro) (ver Nota SPA)
 - **API:** Hono + Bun (porta 3001) — `apps/api`
+- **Landing:** `@dealflow/landing` (`apps/landing`) — Astro SSG (site estático,
+  sem SSR/API calls), Tailwind v4 via `@tailwindcss/vite`, reúsa `@dealflow/ui`
+  (`src/styles/globals.css` importa `@dealflow/ui/styles.css`)
 - **Extensão:** `@dealflow/extension` (`apps/extension`) — MV3 via **Extension.js**
   (extension.js.org, Rspack) + React + TS; popup reúsa `@dealflow/ui` (ver Nota
   extensão de captura)
@@ -719,7 +722,8 @@ tema (`src/styles/globals.css`) — **nada** de peça de feature (essas ficam em
 `tw-animate-css`, `@fontsource-variable/*`; `@phosphor-icons/react` e `sonner`
 ficam também no web porque o feature-code os importa direto; `react`/`react-dom`
 são `peerDependencies`). Motivo: uma futura **landing page** reusa tudo sem
-reinstalar o design system. Consumo (exports map em `package.json`):
+reinstalar o design system — hoje já é real (`apps/landing`, Astro SSG). Consumo
+(exports map em `package.json`):
 `@dealflow/ui/<primitive>` (wildcard `./*` → `src/components/ui/*.tsx`),
 `@dealflow/ui/{theme-provider,mode-toggle}`, `@dealflow/ui/lib/utils` (o `cn`),
 `@dealflow/ui/styles.css`. O `@/` NÃO existe no BUILD do package (o alias `@`→`src` do web resolveria pra
@@ -738,7 +742,7 @@ com o fix de import relativo, nunca via prettier. **Gotcha Tailwind v4**: v4 var
 **ignora `node_modules`**, e um workspace package é symlinkado lá — sem ajuste os
 primitives saem sem estilo. Fix: `@source ".."` no `globals.css` (varre
 `packages/ui/src`, relativo ao arquivo CSS). O `src` do próprio web continua
-auto-detectado pelo plugin do web; cada app futuro (landing) tem seu próprio
+auto-detectado pelo plugin do web; cada app novo (`apps/landing`) tem seu próprio
 `@tailwindcss/vite` + importa `@dealflow/ui/styles.css` (padrão v4 monorepo).
 
 Nota config/env (2026-07-15): local não exige `.env` — tudo cai em defaults de
