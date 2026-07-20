@@ -63,8 +63,12 @@ preencher o `.env`:
   frontends? Separe por vírgula. Em **dev pode ficar vazio**: os `localhost` de
   dev/preview são confiados automaticamente quando `NODE_ENV != production`.
 - `WA_GATEWAY_URL` — interno (API → gateway), fica `http://127.0.0.1:3002`.
-- `BETTER_AUTH_SECRET` e, fora de loopback, `WA_GATEWAY_TOKEN` — segredos fortes
-  (a API recusa subir exposta com segredo fraco).
+- `BETTER_AUTH_SECRET` — segredo forte da sessão (gere com `bunx auth secret`); a
+  API recusa subir exposta (fora de loopback) sem ele.
+- `WA_GATEWAY_TOKEN` — segredo compartilhado que autentica as chamadas API →
+  gateway. O gateway controla a sessão do WhatsApp (conectar, listar grupos,
+  enviar), então quando ele sai do loopback passa a exigir esse token e recusa
+  subir sem ele. Numa máquina só, fica vazio.
 
 ### Banco de dados
 
